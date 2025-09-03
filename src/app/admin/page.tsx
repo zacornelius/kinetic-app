@@ -201,11 +201,48 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-semibold mb-4">Shopify Integration</h2>
           <div className="space-y-3">
             <button
+              onClick={async () => {
+                setIsSyncing(true);
+                setSyncMessage("");
+                setSyncProgress("Starting FULL sync of ALL orders...");
+                
+                try {
+                  const response = await fetch("/api/shopify/sync-all-orders", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      shop: "f184d9-2",
+                      accessToken: "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"
+                    }),
+                  });
+                  
+                  const result = await response.json();
+                  
+                  if (response.ok) {
+                    setSyncMessage(`✅ ${result.message} (${result.stats.inserted} new, ${result.stats.updated} updated)`);
+                    setSyncProgress("");
+                  } else {
+                    setSyncMessage(`❌ Error: ${result.error}`);
+                    setSyncProgress("");
+                  }
+                } catch (error) {
+                  setSyncMessage(`❌ Error: ${error instanceof Error ? error.message : "Failed to sync all orders"}`);
+                  setSyncProgress("");
+                } finally {
+                  setIsSyncing(false);
+                }
+              }}
+              disabled={isSyncing}
+              className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+            >
+              {isSyncing ? "Syncing ALL..." : "Sync ALL Orders (No Limit)"}
+            </button>
+            <button
               onClick={syncShopifyOrders}
               disabled={isSyncing}
               className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
             >
-              {isSyncing ? "Syncing..." : "Full Sync All Orders"}
+              {isSyncing ? "Syncing..." : "Full Sync All Orders (Limited)"}
             </button>
             <button
               onClick={syncNewOrders}

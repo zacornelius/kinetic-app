@@ -196,7 +196,6 @@ function mapShopifyLineItemToOrderLineItem(
     displayTitle = productName;
     
     // Try to extract SKU from the product name
-    // This is a heuristic - you may need to adjust based on your actual SKU patterns
     if (productName.includes("Vital 24K")) {
       extractedSku = "Vital-24K";
     } else if (productName.includes("Active 26K")) {
@@ -268,7 +267,7 @@ async function processShopifyOrders(shopifyOrders: ShopifyOrder[]) {
   return { customers, products, orders, lineItems };
 }
 
-async function fetchShopifyOrders(shop: string, accessToken: string, limit: number = 250, sinceId?: string, onProgress?: (progress: { fetched: number, page: number }) => void): Promise<ShopifyOrder[]> {
+async function fetchAllShopifyOrders(shop: string, accessToken: string): Promise<ShopifyOrder[]> {
   const orders: ShopifyOrder[] = [];
   let pageInfo = '';
   let hasNextPage = true;
@@ -278,25 +277,21 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
   // Helper function to add delay between requests
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  console.log('Starting to fetch ALL orders from Shopify...');
+
   while (hasNextPage) {
     pageCount++;
-    // Ensure shop name doesn't already include .myshopify.com
     const cleanShop = shop.replace('.myshopify.com', '');
-    // Don't include status parameter when using page_info for pagination
     let url: string;
+    
     if (pageInfo) {
-      url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=${limit}&page_info=${pageInfo}`;
-    } else if (sinceId) {
-      // For incremental sync, get orders created after the last synced order
-      url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=${limit}&since_id=${sinceId}`;
+      url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=${pageInfo}`;
     } else {
-      // Full sync - get all orders from the end (newest first)
-      url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=${limit}&status=any&order=created_at+desc`;
+      // Start from the beginning (oldest orders first)
+      url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&order=created_at+asc`;
     }
     
-    console.log('Making request to:', url);
-    console.log('Shop:', cleanShop);
-    console.log('Access token:', accessToken.substring(0, 10) + '...');
+    console.log(`Page ${pageCount}: Making request to:`, url);
     
     const response = await fetch(url, {
       headers: {
@@ -305,9 +300,6 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
       },
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
     if (!response.ok) {
       const errorText = await response.text();
       console.log('Error response body:', errorText);
@@ -315,10 +307,10 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
       // Handle rate limiting with retry
       if (response.status === 429) {
         const retryAfter = response.headers.get('retry-after');
-        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 2000; // Default 2 seconds
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 2000;
         console.log(`Rate limited. Waiting ${waitTime}ms before retry...`);
         await delay(waitTime);
-        continue; // Retry the same request
+        continue;
       }
       
       throw new Error(`Shopify API error: ${response.status} ${response.statusText} - ${errorText}`);
@@ -326,12 +318,7 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
 
     const data = await response.json();
     orders.push(...data.orders);
-    console.log(`Fetched ${data.orders.length} orders. Total so far: ${orders.length}`);
-
-    // Call progress callback
-    if (onProgress) {
-      onProgress({ fetched: orders.length, page: pageCount });
-    }
+    console.log(`Page ${pageCount}: Fetched ${data.orders.length} orders. Total so far: ${orders.length}`);
 
     // Check for pagination
     const linkHeader = response.headers.get('Link');
@@ -339,15 +326,14 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
       const nextMatch = linkHeader.match(/page_info=([^&>]+)/);
       if (nextMatch) {
         const newPageInfo = nextMatch[1];
-        // Prevent infinite loops by checking if we've seen this page before
         if (seenPageInfos.has(newPageInfo)) {
-          console.log('Detected pagination loop, but continuing to get all orders');
-          // Don't stop, just continue to get all orders
+          console.log('Detected pagination loop, stopping sync');
+          hasNextPage = false;
+        } else {
+          seenPageInfos.add(newPageInfo);
+          pageInfo = newPageInfo;
+          await delay(200); // 200ms delay between requests
         }
-        seenPageInfos.add(newPageInfo);
-        pageInfo = newPageInfo;
-        // Add minimal delay between requests to respect rate limits
-        await delay(100); // Reduced to 100ms for faster sync
       } else {
         hasNextPage = false;
       }
@@ -355,19 +341,17 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
       hasNextPage = false;
     }
 
-    // Safety limit to prevent infinite loops (increased for large stores)
-    if (pageCount > 100) {
-      console.log('Reached safety limit of 100 pages, stopping sync');
-      hasNextPage = false;
-    }
+    // No safety limit - get ALL orders
+    console.log(`Completed page ${pageCount}, total orders: ${orders.length}`);
   }
 
+  console.log(`Finished fetching ALL orders. Total: ${orders.length} orders from ${pageCount} pages`);
   return orders;
 }
 
 export async function POST(request: Request) {
   try {
-    const { shop, accessToken, limit, sinceId } = await request.json();
+    const { shop, accessToken } = await request.json();
 
     if (!shop || !accessToken) {
       return NextResponse.json(
@@ -376,20 +360,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the last synced order ID for incremental sync
-    let lastOrderId: string | undefined = sinceId;
-    if (sinceId === undefined) {
-      // For full sync, don't use sinceId - get all orders from the beginning
-      lastOrderId = undefined;
-    }
+    console.log('Starting FULL sync of ALL orders from Shopify...');
 
-    // Fetch orders from Shopify - all orders or incremental
-    const shopifyOrders = await fetchShopifyOrders(shop, accessToken, limit || 250, lastOrderId, (progress) => {
-      console.log(`Progress: Fetched ${progress.fetched} orders from ${progress.page} pages`);
-    });
+    // Fetch ALL orders from Shopify
+    const shopifyOrders = await fetchAllShopifyOrders(shop, accessToken);
+    
+    console.log(`Processing ${shopifyOrders.length} orders...`);
     
     // Process orders with full data structure
     const processedData = await processShopifyOrders(shopifyOrders);
+
+    console.log('Inserting data into database...');
 
     // Use transaction for better performance
     const insertMany = db.transaction(() => {
@@ -410,6 +391,7 @@ export async function POST(request: Request) {
             customer.id, customer.email, customer.firstName, customer.lastName,
             customer.phone, customer.createdAt, customer.updatedAt
           );
+          insertedCount++;
         }
       }
 
@@ -428,6 +410,7 @@ export async function POST(request: Request) {
             product.vendor, product.productType, product.price, product.cost,
             product.createdAt, product.updatedAt
           );
+          insertedCount++;
         }
       }
 
@@ -463,15 +446,12 @@ export async function POST(request: Request) {
       `);
 
       for (const lineItem of processedData.lineItems) {
-        // Only insert if the order exists (foreign key constraint)
-        const orderExists = db.prepare('SELECT id FROM orders WHERE id = ?').get(lineItem.orderId);
-        if (orderExists) {
-          lineItemStmt.run(
-            lineItem.id, lineItem.orderId, lineItem.productId, lineItem.shopifyVariantId,
-            lineItem.sku, lineItem.title, lineItem.quantity, lineItem.price,
-            lineItem.totalPrice, lineItem.vendor
-          );
-        }
+        lineItemStmt.run(
+          lineItem.id, lineItem.orderId, lineItem.productId, lineItem.shopifyVariantId,
+          lineItem.sku, lineItem.title, lineItem.quantity, lineItem.price,
+          lineItem.totalPrice, lineItem.vendor
+        );
+        insertedCount++;
       }
 
       return { insertedCount, updatedCount };
@@ -479,9 +459,11 @@ export async function POST(request: Request) {
 
     const { insertedCount, updatedCount } = insertMany();
 
+    console.log('Sync completed successfully!');
+
     return NextResponse.json({
       success: true,
-      message: `Successfully synced ${processedData.orders.length} orders with ${processedData.lineItems.length} line items from Shopify`,
+      message: `Successfully synced ALL ${processedData.orders.length} orders with ${processedData.lineItems.length} line items from Shopify`,
       stats: {
         orders: processedData.orders.length,
         customers: processedData.customers.length,
@@ -493,33 +475,9 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Shopify sync error:', error);
+    console.error('Shopify full sync error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to sync orders" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET endpoint to check sync status
-export async function GET() {
-  try {
-    const totalOrders = db.prepare('SELECT COUNT(*) as count FROM orders').get() as { count: number };
-    const recentOrders = db.prepare(`
-      SELECT orderNumber, customerEmail, totalAmount, status, createdAt 
-      FROM orders 
-      ORDER BY createdAt DESC 
-      LIMIT 10
-    `).all();
-
-    return NextResponse.json({
-      totalOrders: totalOrders.count,
-      recentOrders
-    });
-  } catch (error) {
-    console.error('Error fetching sync status:', error);
-    return NextResponse.json(
-      { error: "Failed to fetch sync status" },
+      { error: error instanceof Error ? error.message : "Failed to sync all orders" },
       { status: 500 }
     );
   }
