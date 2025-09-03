@@ -28,22 +28,22 @@ export async function GET() {
     
     const shopifyCustomersCount = db.prepare('SELECT COUNT(*) as count FROM shopify_customers').get() as { count: number };
     const quickbooksCustomersCount = db.prepare('SELECT COUNT(*) as count FROM quickbooks_customers').get() as { count: number };
-    const unifiedCustomersCount = db.prepare('SELECT COUNT(*) as count FROM customers').get() as { count: number };
+    const allCustomersCount = db.prepare('SELECT COUNT(*) as count FROM all_customers').get() as { count: number };
     
     const shopifyOrdersCount = db.prepare('SELECT COUNT(*) as count FROM shopify_orders').get() as { count: number };
     const quickbooksOrdersCount = db.prepare('SELECT COUNT(*) as count FROM quickbooks_orders').get() as { count: number };
-    const unifiedOrdersCount = db.prepare('SELECT COUNT(*) as count FROM orders').get() as { count: number };
+    const allOrdersCount = db.prepare('SELECT COUNT(*) as count FROM all_orders').get() as { count: number };
     
     return NextResponse.json({
       customers: {
         shopify: shopifyCustomersCount.count,
         quickbooks: quickbooksCustomersCount.count,
-        unified: unifiedCustomersCount.count
+        all: allCustomersCount.count
       },
       orders: {
         shopify: shopifyOrdersCount.count,
         quickbooks: quickbooksOrdersCount.count,
-        unified: unifiedOrdersCount.count
+        all: allOrdersCount.count
       }
     });
   } catch (error) {

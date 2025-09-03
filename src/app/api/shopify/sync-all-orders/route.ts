@@ -95,6 +95,7 @@ type Order = {
   trackingNumber?: string;
   notes?: string;
   ownerEmail?: string;
+  lineItems?: string; // JSON string of line items
 };
 
 type OrderLineItem = {
@@ -166,6 +167,21 @@ function mapShopifyOrderToOrder(shopifyOrder: ShopifyOrder): Order {
     status = 'processing';
   }
 
+  // Convert line items to JSON
+  const lineItemsJson = JSON.stringify(shopifyOrder.line_items.map(item => ({
+    id: item.id,
+    title: item.title,
+    name: item.name,
+    quantity: item.quantity,
+    price: parseFloat(item.price),
+    totalPrice: parseFloat(item.price) * item.quantity - parseFloat(item.total_discount),
+    sku: item.sku,
+    vendor: item.vendor,
+    productType: item.product_type,
+    variantId: item.variant_id,
+    productId: item.product_id
+  })));
+
   return {
     id: generateId(),
     createdAt: new Date(shopifyOrder.created_at).toISOString(),
@@ -178,6 +194,7 @@ function mapShopifyOrderToOrder(shopifyOrder: ShopifyOrder): Order {
     status,
     shippingAddress,
     notes: shopifyOrder.note,
+    lineItems: lineItemsJson,
   };
 }
 
@@ -278,6 +295,8 @@ async function fetchAllShopifyOrders(shop: string, accessToken: string): Promise
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   console.log('Starting to fetch ALL orders from Shopify...');
+  console.log('Shop:', shop);
+  console.log('Access token:', accessToken.substring(0, 10) + '...');
 
   while (hasNextPage) {
     pageCount++;
@@ -292,6 +311,7 @@ async function fetchAllShopifyOrders(shop: string, accessToken: string): Promise
     }
     
     console.log(`Page ${pageCount}: Making request to:`, url);
+    console.log(`Current total orders: ${orders.length}`);
     
     const response = await fetch(url, {
       headers: {
@@ -303,6 +323,8 @@ async function fetchAllShopifyOrders(shop: string, accessToken: string): Promise
     if (!response.ok) {
       const errorText = await response.text();
       console.log('Error response body:', errorText);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       
       // Handle rate limiting with retry
       if (response.status === 429) {
@@ -322,22 +344,29 @@ async function fetchAllShopifyOrders(shop: string, accessToken: string): Promise
 
     // Check for pagination
     const linkHeader = response.headers.get('Link');
+    console.log(`Page ${pageCount}: Link header:`, linkHeader);
+    
     if (linkHeader && linkHeader.includes('rel="next"')) {
       const nextMatch = linkHeader.match(/page_info=([^&>]+)/);
       if (nextMatch) {
         const newPageInfo = nextMatch[1];
+        console.log(`Page ${pageCount}: Next page_info:`, newPageInfo);
+        
         if (seenPageInfos.has(newPageInfo)) {
           console.log('Detected pagination loop, stopping sync');
           hasNextPage = false;
         } else {
           seenPageInfos.add(newPageInfo);
           pageInfo = newPageInfo;
+          console.log(`Page ${pageCount}: Continuing to next page...`);
           await delay(200); // 200ms delay between requests
         }
       } else {
+        console.log(`Page ${pageCount}: No page_info found in Link header`);
         hasNextPage = false;
       }
     } else {
+      console.log(`Page ${pageCount}: No next page found in Link header`);
       hasNextPage = false;
     }
 
@@ -379,7 +408,7 @@ export async function POST(request: Request) {
 
       // Insert customers into shopify_customers table
       const customerStmt = db.prepare(`
-        INSERT OR REPLACE INTO shopify_customers (
+        INSERT OR IGNORE INTO shopify_customers (
           id, email, firstName, lastName, phone, createdAt, updatedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
@@ -397,7 +426,7 @@ export async function POST(request: Request) {
 
       // Insert products
       const productStmt = db.prepare(`
-        INSERT OR REPLACE INTO products (
+        INSERT OR IGNORE INTO products (
           id, shopifyProductId, sku, title, vendor, productType, price, cost, createdAt, updatedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
@@ -416,10 +445,10 @@ export async function POST(request: Request) {
 
       // Insert orders into shopify_orders table
       const orderStmt = db.prepare(`
-        INSERT OR REPLACE INTO shopify_orders (
+        INSERT OR IGNORE INTO shopify_orders (
           id, createdAt, orderNumber, shopifyOrderId, customerEmail, customerName, 
-          totalAmount, currency, status, shippingAddress, notes, ownerEmail
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          totalAmount, currency, status, shippingAddress, notes, ownerEmail, lineItems
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const order of processedData.orders) {
@@ -434,25 +463,11 @@ export async function POST(request: Request) {
         orderStmt.run(
           order.id, order.createdAt, order.orderNumber, order.shopifyOrderId,
           order.customerEmail, order.customerName, order.totalAmount, 
-          order.currency, order.status, order.shippingAddress, order.notes, order.ownerEmail
+          order.currency, order.status, order.shippingAddress, order.notes, order.ownerEmail, order.lineItems
         );
       }
 
-      // Insert order line items
-      const lineItemStmt = db.prepare(`
-        INSERT OR REPLACE INTO orderLineItems (
-          id, orderId, productId, shopifyVariantId, sku, title, quantity, price, totalPrice, vendor
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const lineItem of processedData.lineItems) {
-        lineItemStmt.run(
-          lineItem.id, lineItem.orderId, lineItem.productId, lineItem.shopifyVariantId,
-          lineItem.sku, lineItem.title, lineItem.quantity, lineItem.price,
-          lineItem.totalPrice, lineItem.vendor
-        );
-        insertedCount++;
-      }
+      // Line items are now stored as JSON in the orders table, no separate processing needed
 
       return { insertedCount, updatedCount };
     });
@@ -463,12 +478,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully synced ALL ${processedData.orders.length} orders with ${processedData.lineItems.length} line items from Shopify`,
+      message: `Successfully synced ALL ${processedData.orders.length} orders (with line items) from Shopify`,
       stats: {
         orders: processedData.orders.length,
         customers: processedData.customers.length,
         products: processedData.products.length,
-        lineItems: processedData.lineItems.length,
         inserted: insertedCount,
         updated: updatedCount
       }

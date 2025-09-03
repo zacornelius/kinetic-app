@@ -67,35 +67,99 @@ export default function DataExplorer() {
   const [users, setUsers] = useState<User[]>([]);
   const [lineItems, setLineItems] = useState<OrderLineItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [activeTab, setActiveTab] = useState<"inquiries" | "orders" | "lineItems" | "customers">("inquiries");
+  const [shopifyOrders, setShopifyOrders] = useState<any[]>([]);
+  const [shopifyCustomers, setShopifyCustomers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"inquiries" | "orders" | "lineItems" | "customers" | "debug">("inquiries");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{ table: string; id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
 
   async function loadData() {
+    if (isLoading) {
+      console.log('Already loading data, skipping...');
+      return;
+    }
+    
+    setIsLoading(true);
     try {
-      const [inquiriesRes, ordersRes, usersRes, lineItemsRes, customersRes] = await Promise.all([
-        fetch("/api/inquiries"),
-        fetch("/api/orders"),
-        fetch("/api/users"),
-        fetch("/api/line-items"),
-        fetch("/api/customers")
-      ]);
+      console.log('Loading data...');
       
+      // Load data sequentially to avoid race conditions
+      const inquiriesRes = await fetch("/api/inquiries");
       const inquiriesData = await inquiriesRes.json();
+      console.log('Inquiries loaded:', inquiriesData.length);
+      
+      const ordersRes = await fetch("/api/all-orders");
       const ordersData = await ordersRes.json();
+      console.log('All orders loaded:', ordersData.length);
+      
+      const usersRes = await fetch("/api/users");
       const usersData = await usersRes.json();
-      const lineItemsData = await lineItemsRes.json();
+      console.log('Users loaded:', usersData.length);
+      
+      const customersRes = await fetch("/api/all-customers");
       const customersData = await customersRes.json();
+      console.log('All customers loaded:', customersData.length);
+      
+      const shopifyOrdersRes = await fetch("/api/shopify/orders");
+      const shopifyOrdersData = await shopifyOrdersRes.json();
+      console.log('Shopify orders loaded:', shopifyOrdersData.length);
+      
+      const shopifyCustomersRes = await fetch("/api/shopify/customers");
+      const shopifyCustomersData = await shopifyCustomersRes.json();
+      console.log('Shopify customers loaded:', shopifyCustomersData.length);
       
       setInquiries(inquiriesData);
       setOrders(ordersData);
       setUsers(usersData);
-      setLineItems(lineItemsData);
       setCustomers(customersData);
+      setShopifyOrders(shopifyOrdersData);
+      setShopifyCustomers(shopifyCustomersData);
+      
+      // Calculate line items from orders (since they're stored as JSON now)
+      const allLineItems = [];
+      [...ordersData, ...shopifyOrdersData].forEach(order => {
+        if (order.lineItems) {
+          try {
+            const lineItems = JSON.parse(order.lineItems);
+            lineItems.forEach(item => {
+              allLineItems.push({
+                ...item,
+                orderNumber: order.orderNumber,
+                customerEmail: order.customerEmail,
+                customerName: order.customerName
+              });
+            });
+          } catch (e) {
+            console.error('Error parsing line items for order:', order.orderNumber, e);
+          }
+        }
+      });
+      setLineItems(allLineItems);
+      
+      // Log the data for debugging
+      console.log('=== DATA LOADED ===');
+      console.log('Inquiries:', inquiriesData.length);
+      console.log('All orders:', ordersData.length);
+      console.log('All customers:', customersData.length);
+      console.log('Shopify orders:', shopifyOrdersData.length);
+      console.log('Shopify customers:', shopifyCustomersData.length);
+      console.log('Line items:', allLineItems.length);
+      console.log('==================');
     } catch (error) {
       console.error("Error loading data:", error);
+      // Set empty arrays on error to prevent undefined states
+      setInquiries([]);
+      setOrders([]);
+      setUsers([]);
+      setCustomers([]);
+      setShopifyOrders([]);
+      setShopifyCustomers([]);
+      setLineItems([]);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -184,8 +248,15 @@ export default function DataExplorer() {
   return (
     <div className="min-h-screen p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Data Explorer</h1>
+        <h1 className="text-2xl font-semibold">Data Explorer {isLoading && <span className="text-sm text-blue-600">(Loading...)</span>}</h1>
         <div className="flex gap-2">
+          <button
+            onClick={loadData}
+            disabled={isLoading}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+          >
+            {isLoading ? "Loading..." : "Refresh Data"}
+          </button>
           <button
             onClick={() => setActiveTab("inquiries")}
             className={`px-4 py-2 rounded ${activeTab === "inquiries" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
@@ -209,6 +280,12 @@ export default function DataExplorer() {
             className={`px-4 py-2 rounded ${activeTab === "customers" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
           >
             Customers ({customers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("debug")}
+            className={`px-4 py-2 rounded ${activeTab === "debug" ? "bg-red-600 text-white" : "bg-gray-200"}`}
+          >
+            Debug Data
           </button>
         </div>
       </div>
@@ -685,6 +762,68 @@ export default function DataExplorer() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "debug" && (
+        <div className="bg-white border rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Data Debug Information</h2>
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-medium mb-3">All Tables (What Data Explorer Shows)</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>All Orders:</span>
+                  <span className="font-mono">{orders.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>All Customers:</span>
+                  <span className="font-mono">{customers.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Line Items (from JSON):</span>
+                  <span className="font-mono">{lineItems.length}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-medium mb-3">Source Tables (Where Sync Puts Data)</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Shopify Orders:</span>
+                  <span className="font-mono">{shopifyOrders.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shopify Customers:</span>
+                  <span className="font-mono">{shopifyCustomers.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Line Items:</span>
+                  <span className="font-mono">{lineItems.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
+            <h4 className="font-medium text-yellow-800 mb-2">Issue Analysis:</h4>
+            <ul className="text-sm text-yellow-700 space-y-1">
+              <li>• If All tables are empty but Source tables have data, the sync to unified tables failed</li>
+              <li>• If Source tables have fewer orders than expected, the Shopify sync hit a limit</li>
+              <li>• If Line Items are 0, there's an issue with the line item JSON processing</li>
+            </ul>
+          </div>
+          
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">Next Steps:</h4>
+            <ol className="text-sm text-blue-700 space-y-1">
+              <li>1. Use the RED "Sync ALL Orders (No Limit)" button in Admin Cockpit</li>
+              <li>2. After sync completes, click "Sync to Unified Tables"</li>
+              <li>3. Refresh this page to see updated counts</li>
+            </ol>
           </div>
         </div>
       )}

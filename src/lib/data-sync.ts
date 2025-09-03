@@ -50,15 +50,22 @@ export function syncShopifyCustomersToUnified(): { synced: number; errors: numbe
     `).all();
 
     const insertStmt = db.prepare(`
-      INSERT OR REPLACE INTO customers (
+      INSERT OR IGNORE INTO all_customers (
         id, email, firstName, lastName, phone, companyName, billingAddress, 
         shippingAddress, source, sourceId, createdAt, updatedAt
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'shopify', ?, ?, ?)
     `);
+    
+    const updateStmt = db.prepare(`
+      UPDATE all_customers SET 
+        firstName = ?, lastName = ?, phone = ?, updatedAt = ?
+      WHERE email = ? AND source = 'shopify'
+    `);
 
     for (const customer of shopifyCustomers) {
       try {
-        insertStmt.run(
+        // Try to insert first (will ignore if exists)
+        const result = insertStmt.run(
           customer.id,
           customer.email,
           customer.firstName,
@@ -71,6 +78,18 @@ export function syncShopifyCustomersToUnified(): { synced: number; errors: numbe
           customer.createdAt,
           customer.updatedAt
         );
+        
+        // If no rows were inserted, update existing record
+        if (result.changes === 0) {
+          updateStmt.run(
+            customer.firstName,
+            customer.lastName,
+            customer.phone,
+            customer.updatedAt,
+            customer.email
+          );
+        }
+        
         synced++;
       } catch (error) {
         console.error('Error syncing Shopify customer:', customer.id, error);
@@ -100,15 +119,23 @@ export function syncQuickBooksCustomersToUnified(): { synced: number; errors: nu
     `).all();
 
     const insertStmt = db.prepare(`
-      INSERT OR REPLACE INTO customers (
+      INSERT OR IGNORE INTO all_customers (
         id, email, firstName, lastName, phone, companyName, billingAddress, 
         shippingAddress, source, sourceId, createdAt, updatedAt
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'quickbooks', ?, ?, ?)
     `);
+    
+    const updateStmt = db.prepare(`
+      UPDATE all_customers SET 
+        firstName = ?, lastName = ?, phone = ?, companyName = ?, 
+        billingAddress = ?, shippingAddress = ?, updatedAt = ?
+      WHERE email = ? AND source = 'quickbooks'
+    `);
 
     for (const customer of quickbooksCustomers) {
       try {
-        insertStmt.run(
+        // Try to insert first (will ignore if exists)
+        const result = insertStmt.run(
           customer.id,
           customer.email,
           customer.firstName,
@@ -121,6 +148,21 @@ export function syncQuickBooksCustomersToUnified(): { synced: number; errors: nu
           customer.createdAt,
           customer.updatedAt
         );
+        
+        // If no rows were inserted, update existing record
+        if (result.changes === 0) {
+          updateStmt.run(
+            customer.firstName,
+            customer.lastName,
+            customer.phone,
+            customer.companyName,
+            customer.billingAddress,
+            customer.shippingAddress,
+            customer.updatedAt,
+            customer.email
+          );
+        }
+        
         synced++;
       } catch (error) {
         console.error('Error syncing QuickBooks customer:', customer.id, error);
@@ -145,21 +187,29 @@ export function syncShopifyOrdersToUnified(): { synced: number; errors: number }
   try {
     const shopifyOrders = db.prepare(`
       SELECT id, createdAt, orderNumber, shopifyOrderId, customerEmail, customerName, 
-             totalAmount, currency, status, shippingAddress, trackingNumber, notes, ownerEmail
+             totalAmount, currency, status, shippingAddress, trackingNumber, notes, ownerEmail, lineItems
       FROM shopify_orders
     `).all();
 
     const insertStmt = db.prepare(`
-      INSERT OR REPLACE INTO orders (
+      INSERT OR IGNORE INTO all_orders (
         id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, 
         status, shippingAddress, billingAddress, trackingNumber, dueDate, notes, 
-        ownerEmail, source, sourceId
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'shopify', ?)
+        ownerEmail, source, sourceId, lineItems
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'shopify', ?, ?)
+    `);
+    
+    const updateStmt = db.prepare(`
+      UPDATE all_orders SET 
+        customerName = ?, totalAmount = ?, status = ?, shippingAddress = ?, 
+        trackingNumber = ?, notes = ?, ownerEmail = ?, lineItems = ?
+      WHERE orderNumber = ? AND source = 'shopify'
     `);
 
     for (const order of shopifyOrders) {
       try {
-        insertStmt.run(
+        // Try to insert first (will ignore if exists)
+        const result = insertStmt.run(
           order.id,
           order.createdAt,
           order.orderNumber,
@@ -174,8 +224,25 @@ export function syncShopifyOrdersToUnified(): { synced: number; errors: number }
           null, // dueDate
           order.notes,
           order.ownerEmail,
-          order.shopifyOrderId || order.id // sourceId
+          order.shopifyOrderId || order.id, // sourceId
+          order.lineItems
         );
+        
+        // If no rows were inserted, update existing record
+        if (result.changes === 0) {
+          updateStmt.run(
+            order.customerName,
+            order.totalAmount,
+            order.status,
+            order.shippingAddress,
+            order.trackingNumber,
+            order.notes,
+            order.ownerEmail,
+            order.lineItems,
+            order.orderNumber
+          );
+        }
+        
         synced++;
       } catch (error) {
         console.error('Error syncing Shopify order:', order.id, error);
@@ -205,16 +272,24 @@ export function syncQuickBooksOrdersToUnified(): { synced: number; errors: numbe
     `).all();
 
     const insertStmt = db.prepare(`
-      INSERT OR REPLACE INTO orders (
+      INSERT OR IGNORE INTO all_orders (
         id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, 
         status, shippingAddress, billingAddress, trackingNumber, dueDate, notes, 
         ownerEmail, source, sourceId
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'quickbooks', ?)
     `);
+    
+    const updateStmt = db.prepare(`
+      UPDATE all_orders SET 
+        customerName = ?, totalAmount = ?, status = ?, shippingAddress = ?, 
+        billingAddress = ?, dueDate = ?, notes = ?, ownerEmail = ?
+      WHERE orderNumber = ? AND source = 'quickbooks'
+    `);
 
     for (const order of quickbooksOrders) {
       try {
-        insertStmt.run(
+        // Try to insert first (will ignore if exists)
+        const result = insertStmt.run(
           order.id,
           order.createdAt,
           order.orderNumber,
@@ -231,6 +306,22 @@ export function syncQuickBooksOrdersToUnified(): { synced: number; errors: numbe
           order.ownerEmail,
           order.quickbooksInvoiceId // sourceId
         );
+        
+        // If no rows were inserted, update existing record
+        if (result.changes === 0) {
+          updateStmt.run(
+            order.customerName,
+            order.totalAmount,
+            order.status,
+            order.shippingAddress,
+            order.billingAddress,
+            order.dueDate,
+            order.notes,
+            order.ownerEmail,
+            order.orderNumber
+          );
+        }
+        
         synced++;
       } catch (error) {
         console.error('Error syncing QuickBooks order:', order.id, error);
@@ -277,7 +368,7 @@ export function getUnifiedCustomers(filters?: {
   source?: 'shopify' | 'quickbooks' | 'manual';
   email?: string;
 }): UnifiedCustomer[] {
-  let query = 'SELECT * FROM customers WHERE 1=1';
+  let query = 'SELECT * FROM all_customers WHERE 1=1';
   const params: any[] = [];
 
   if (filters?.source) {
@@ -303,7 +394,7 @@ export function getUnifiedOrders(filters?: {
   status?: string;
   customerEmail?: string;
 }): UnifiedOrder[] {
-  let query = 'SELECT * FROM orders WHERE 1=1';
+  let query = 'SELECT * FROM all_orders WHERE 1=1';
   const params: any[] = [];
 
   if (filters?.source) {

@@ -3,7 +3,7 @@ import { join } from 'path';
 
 // Use persistent storage for Heroku (ephemeral filesystem)
 const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/tmp/kinetic.db' 
+  ? join(process.cwd(), 'kinetic.db')  // Heroku has persistent filesystem
   : join(process.cwd(), 'kinetic.db');
 
 // Create database connection with WAL mode for better concurrency
@@ -74,9 +74,9 @@ function initializeDatabase() {
     )
   `);
 
-  // Unified Customers table (clean, deduplicated data)
+  // All Customers table (clean, deduplicated data from all sources)
   db.exec(`
-    CREATE TABLE IF NOT EXISTS customers (
+    CREATE TABLE IF NOT EXISTS all_customers (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       firstName TEXT,
@@ -123,7 +123,8 @@ function initializeDatabase() {
       shippingAddress TEXT,
       trackingNumber TEXT,
       notes TEXT,
-      ownerEmail TEXT
+      ownerEmail TEXT,
+      lineItems TEXT
     )
   `);
 
@@ -143,13 +144,14 @@ function initializeDatabase() {
       billingAddress TEXT,
       dueDate TEXT,
       notes TEXT,
-      ownerEmail TEXT
+      ownerEmail TEXT,
+      lineItems TEXT
     )
   `);
 
-  // Unified Orders table (clean, deduplicated data)
+  // All Orders table (clean, deduplicated data from all sources)
   db.exec(`
-    CREATE TABLE IF NOT EXISTS orders (
+    CREATE TABLE IF NOT EXISTS all_orders (
       id TEXT PRIMARY KEY,
       createdAt TEXT NOT NULL,
       orderNumber TEXT UNIQUE NOT NULL,
@@ -165,35 +167,19 @@ function initializeDatabase() {
       notes TEXT,
       ownerEmail TEXT,
       source TEXT NOT NULL CHECK (source IN ('shopify', 'quickbooks', 'manual')),
-      sourceId TEXT NOT NULL
+      sourceId TEXT NOT NULL,
+      lineItems TEXT
     )
   `);
 
-  // Order line items table (updated to work with unified orders)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS orderLineItems (
-      id TEXT PRIMARY KEY,
-      orderId TEXT NOT NULL,
-      productId TEXT,
-      shopifyVariantId TEXT,
-      quickbooksItemId TEXT,
-      sku TEXT,
-      title TEXT NOT NULL,
-      quantity INTEGER NOT NULL,
-      price REAL NOT NULL,
-      totalPrice REAL NOT NULL,
-      vendor TEXT,
-      description TEXT,
-      FOREIGN KEY (orderId) REFERENCES orders(id),
-      FOREIGN KEY (productId) REFERENCES products(id)
-    )
-  `);
+
 
   // Migration: Move existing data to new table structure
   try {
     // Check if old tables exist and migrate data
     const oldCustomersExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='customers'").get();
     const oldOrdersExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='orders'").get();
+    const oldLineItemsExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='orderLineItems'").get();
     
     if (oldCustomersExists && !db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='shopify_customers'").get()) {
       // Migrate customers to shopify_customers
@@ -212,70 +198,72 @@ function initializeDatabase() {
       `);
       console.log('Migrated orders to shopify_orders');
     }
+    
+
   } catch (error) {
     console.log('Migration completed or not needed:', error.message);
   }
 
   // Add missing columns to existing tables (migration)
   try {
-    // Add companyName column to customers table if it doesn't exist
-    db.exec(`ALTER TABLE customers ADD COLUMN companyName TEXT`);
+    // Add companyName column to all_customers table if it doesn't exist
+    db.exec(`ALTER TABLE all_customers ADD COLUMN companyName TEXT`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add billingAddress column to customers table if it doesn't exist
-    db.exec(`ALTER TABLE customers ADD COLUMN billingAddress TEXT`);
+    // Add billingAddress column to all_customers table if it doesn't exist
+    db.exec(`ALTER TABLE all_customers ADD COLUMN billingAddress TEXT`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add shippingAddress column to customers table if it doesn't exist
-    db.exec(`ALTER TABLE customers ADD COLUMN shippingAddress TEXT`);
+    // Add shippingAddress column to all_customers table if it doesn't exist
+    db.exec(`ALTER TABLE all_customers ADD COLUMN shippingAddress TEXT`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add source column to customers table if it doesn't exist
-    db.exec(`ALTER TABLE customers ADD COLUMN source TEXT DEFAULT 'manual'`);
+    // Add source column to all_customers table if it doesn't exist
+    db.exec(`ALTER TABLE all_customers ADD COLUMN source TEXT DEFAULT 'manual'`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add sourceId column to customers table if it doesn't exist
-    db.exec(`ALTER TABLE customers ADD COLUMN sourceId TEXT`);
+    // Add sourceId column to all_customers table if it doesn't exist
+    db.exec(`ALTER TABLE all_customers ADD COLUMN sourceId TEXT`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add billingAddress column to orders table if it doesn't exist
-    db.exec(`ALTER TABLE orders ADD COLUMN billingAddress TEXT`);
+    // Add billingAddress column to all_orders table if it doesn't exist
+    db.exec(`ALTER TABLE all_orders ADD COLUMN billingAddress TEXT`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add dueDate column to orders table if it doesn't exist
-    db.exec(`ALTER TABLE orders ADD COLUMN dueDate TEXT`);
+    // Add dueDate column to all_orders table if it doesn't exist
+    db.exec(`ALTER TABLE all_orders ADD COLUMN dueDate TEXT`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add source column to orders table if it doesn't exist
-    db.exec(`ALTER TABLE orders ADD COLUMN source TEXT DEFAULT 'manual'`);
+    // Add source column to all_orders table if it doesn't exist
+    db.exec(`ALTER TABLE all_orders ADD COLUMN source TEXT DEFAULT 'manual'`);
   } catch (error) {
     // Column already exists, ignore error
   }
 
   try {
-    // Add sourceId column to orders table if it doesn't exist
-    db.exec(`ALTER TABLE orders ADD COLUMN sourceId TEXT`);
+    // Add sourceId column to all_orders table if it doesn't exist
+    db.exec(`ALTER TABLE all_orders ADD COLUMN sourceId TEXT`);
   } catch (error) {
     // Column already exists, ignore error
   }
@@ -310,22 +298,19 @@ function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_quickbooks_orders_number ON quickbooks_orders(orderNumber);
       CREATE INDEX IF NOT EXISTS idx_quickbooks_orders_qb_id ON quickbooks_orders(quickbooksInvoiceId);
       
-      -- Unified tables indexes
-      CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
-      CREATE INDEX IF NOT EXISTS idx_customers_source ON customers(source);
-      CREATE INDEX IF NOT EXISTS idx_customers_source_id ON customers(sourceId);
-      CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-      CREATE INDEX IF NOT EXISTS idx_orders_owner ON orders(ownerEmail);
-      CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(orderNumber);
-      CREATE INDEX IF NOT EXISTS idx_orders_source ON orders(source);
-      CREATE INDEX IF NOT EXISTS idx_orders_source_id ON orders(sourceId);
+      -- All tables indexes
+      CREATE INDEX IF NOT EXISTS idx_all_customers_email ON all_customers(email);
+      CREATE INDEX IF NOT EXISTS idx_all_customers_source ON all_customers(source);
+      CREATE INDEX IF NOT EXISTS idx_all_customers_source_id ON all_customers(sourceId);
+      CREATE INDEX IF NOT EXISTS idx_all_orders_status ON all_orders(status);
+      CREATE INDEX IF NOT EXISTS idx_all_orders_owner ON all_orders(ownerEmail);
+      CREATE INDEX IF NOT EXISTS idx_all_orders_number ON all_orders(orderNumber);
+      CREATE INDEX IF NOT EXISTS idx_all_orders_source ON all_orders(source);
+      CREATE INDEX IF NOT EXISTS idx_all_orders_source_id ON all_orders(sourceId);
       
-      -- Products and line items indexes
+      -- Products indexes
       CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
       CREATE INDEX IF NOT EXISTS idx_products_shopify_id ON products(shopifyProductId);
-      CREATE INDEX IF NOT EXISTS idx_orderLineItems_order ON orderLineItems(orderId);
-      CREATE INDEX IF NOT EXISTS idx_orderLineItems_product ON orderLineItems(productId);
-      CREATE INDEX IF NOT EXISTS idx_orderLineItems_sku ON orderLineItems(sku);
     `);
   } catch (error) {
     // Some indexes might fail if tables don't exist yet, ignore
