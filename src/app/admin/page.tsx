@@ -215,7 +215,18 @@ export default function AdminDashboard() {
               {isSyncing ? "Syncing..." : "Sync New Orders Only"}
             </button>
             <button
-              onClick={handleQbSyncToUnified}
+              onClick={async () => {
+                setIsSyncing(true);
+                try {
+                  const response = await fetch('/api/sync/unified', { method: 'POST' });
+                  const data = await response.json();
+                  setSyncMessage(`✅ ${data.message || 'Unified sync completed'}`);
+                } catch (error) {
+                  setSyncMessage(`❌ Error: ${error.message}`);
+                } finally {
+                  setIsSyncing(false);
+                }
+              }}
               disabled={isSyncing}
               className="w-full px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
             >
