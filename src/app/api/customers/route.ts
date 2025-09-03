@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(o.totalAmount), 0) as lifetimeValue,
         MAX(o.createdAt) as lastOrderDate,
         MIN(o.createdAt) as firstOrderDate
-      FROM customers c
-      LEFT JOIN orders o ON c.email = o.customerEmail
+      FROM all_customers c
+      LEFT JOIN all_orders o ON c.email = o.customerEmail
       WHERE 1=1
     `;
     
