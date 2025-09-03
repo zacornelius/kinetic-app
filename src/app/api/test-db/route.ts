@@ -29,7 +29,7 @@ export async function GET() {
     return NextResponse.json({
       message: "Database persistence test",
       counter: counter,
-      databasePath: process.env.NODE_ENV === 'production' ? '/tmp/kinetic.db' : 'local',
+      databasePath: process.env.NODE_ENV === 'production' ? 'Heroku persistent' : 'local',
       tableCounts: {
         shopifyOrders: shopifyOrders.count,
         allOrders: allOrders.count,
