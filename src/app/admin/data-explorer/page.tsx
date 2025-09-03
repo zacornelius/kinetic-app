@@ -1,0 +1,697 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Inquiry = {
+  id: string;
+  createdAt: string;
+  category: "bulk" | "issues" | "questions";
+  subject: string;
+  customerEmail: string;
+  ownerEmail?: string;
+  status: "open" | "assigned" | "closed";
+};
+
+type Order = {
+  id: string;
+  createdAt: string;
+  orderNumber: string;
+  customerEmail: string;
+  customerName?: string;
+  totalAmount?: number;
+  currency: string;
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  shippingAddress?: string;
+  trackingNumber?: string;
+  notes?: string;
+  ownerEmail?: string;
+};
+
+type User = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+};
+
+type OrderLineItem = {
+  id: string;
+  orderId: string;
+  productId?: string;
+  shopifyVariantId?: string;
+  sku?: string;
+  title: string;
+  quantity: number;
+  price: number;
+  totalPrice: number;
+  vendor?: string;
+};
+
+type Customer = {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  createdAt: string;
+  totalOrders: number;
+  lifetimeValue: number;
+  lastOrderDate?: string;
+  firstOrderDate?: string;
+};
+
+export default function DataExplorer() {
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [lineItems, setLineItems] = useState<OrderLineItem[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [activeTab, setActiveTab] = useState<"inquiries" | "orders" | "lineItems" | "customers">("inquiries");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [editingCell, setEditingCell] = useState<{ table: string; id: string; field: string } | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  async function loadData() {
+    try {
+      const [inquiriesRes, ordersRes, usersRes, lineItemsRes, customersRes] = await Promise.all([
+        fetch("/api/inquiries"),
+        fetch("/api/orders"),
+        fetch("/api/users"),
+        fetch("/api/line-items"),
+        fetch("/api/customers")
+      ]);
+      
+      const inquiriesData = await inquiriesRes.json();
+      const ordersData = await ordersRes.json();
+      const usersData = await usersRes.json();
+      const lineItemsData = await lineItemsRes.json();
+      const customersData = await customersRes.json();
+      
+      setInquiries(inquiriesData);
+      setOrders(ordersData);
+      setUsers(usersData);
+      setLineItems(lineItemsData);
+      setCustomers(customersData);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    }
+  }
+
+  async function loadCustomerOrders(customer: Customer) {
+    try {
+      const response = await fetch(`/api/customers/${encodeURIComponent(customer.email)}/orders`);
+      const orders = await response.json();
+      setCustomerOrders(orders);
+      setSelectedCustomer(customer);
+    } catch (error) {
+      console.error("Error loading customer orders:", error);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function updateInquiry(id: string, field: string, value: string) {
+    try {
+      const updateData: any = { id };
+      updateData[field] = value;
+      
+      await fetch("/api/inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+      
+      loadData();
+    } catch (error) {
+      console.error("Error updating inquiry:", error);
+    }
+  }
+
+  async function updateOrder(id: string, field: string, value: string) {
+    try {
+      const updateData: any = { id };
+      updateData[field] = value;
+      
+      await fetch("/api/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+      
+      loadData();
+    } catch (error) {
+      console.error("Error updating order:", error);
+    }
+  }
+
+  function startEdit(table: string, id: string, field: string, currentValue: string) {
+    setEditingCell({ table, id, field });
+    setEditValue(currentValue || "");
+  }
+
+  function saveEdit() {
+    if (!editingCell) return;
+    
+    const { table, id, field } = editingCell;
+    
+    if (table === "inquiries") {
+      updateInquiry(id, field, editValue);
+    } else if (table === "orders") {
+      updateOrder(id, field, editValue);
+    }
+    
+    setEditingCell(null);
+    setEditValue("");
+  }
+
+  function cancelEdit() {
+    setEditingCell(null);
+    setEditValue("");
+  }
+
+  function handleKeyPress(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      saveEdit();
+    } else if (e.key === "Escape") {
+      cancelEdit();
+    }
+  }
+
+  return (
+    <div className="min-h-screen p-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Data Explorer</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("inquiries")}
+            className={`px-4 py-2 rounded ${activeTab === "inquiries" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          >
+            Website Inquiries ({inquiries.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("orders")}
+            className={`px-4 py-2 rounded ${activeTab === "orders" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          >
+            Orders ({orders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("lineItems")}
+            className={`px-4 py-2 rounded ${activeTab === "lineItems" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          >
+            Line Items ({lineItems.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("customers")}
+            className={`px-4 py-2 rounded ${activeTab === "customers" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          >
+            Customers ({customers.length})
+          </button>
+        </div>
+      </div>
+
+      {activeTab === "inquiries" && (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {inquiries.map((inquiry) => (
+                  <tr key={inquiry.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{inquiry.id}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {new Date(inquiry.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "inquiries" && editingCell.id === inquiry.id && editingCell.field === "category" ? (
+                        <select
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1"
+                          autoFocus
+                        >
+                          <option value="bulk">bulk</option>
+                          <option value="issues">issues</option>
+                          <option value="questions">questions</option>
+                        </select>
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("inquiries", inquiry.id, "category", inquiry.category)}
+                        >
+                          {inquiry.category}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "inquiries" && editingCell.id === inquiry.id && editingCell.field === "subject" ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1 w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("inquiries", inquiry.id, "subject", inquiry.subject)}
+                        >
+                          {inquiry.subject}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "inquiries" && editingCell.id === inquiry.id && editingCell.field === "customerEmail" ? (
+                        <input
+                          type="email"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1 w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("inquiries", inquiry.id, "customerEmail", inquiry.customerEmail)}
+                        >
+                          {inquiry.customerEmail}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "inquiries" && editingCell.id === inquiry.id && editingCell.field === "ownerEmail" ? (
+                        <select
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1"
+                          autoFocus
+                        >
+                          <option value="">Unassigned</option>
+                          {users.map((user) => (
+                            <option key={user.id} value={user.email}>
+                              {user.firstName} {user.lastName} ({user.email})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("inquiries", inquiry.id, "ownerEmail", inquiry.ownerEmail || "")}
+                        >
+                          {inquiry.ownerEmail || "Unassigned"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "inquiries" && editingCell.id === inquiry.id && editingCell.field === "status" ? (
+                        <select
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1"
+                          autoFocus
+                        >
+                          <option value="open">open</option>
+                          <option value="assigned">assigned</option>
+                          <option value="closed">closed</option>
+                        </select>
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("inquiries", inquiry.id, "status", inquiry.status)}
+                        >
+                          {inquiry.status}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "orders" && (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{order.id}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "orders" && editingCell.id === order.id && editingCell.field === "orderNumber" ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1 w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("orders", order.id, "orderNumber", order.orderNumber)}
+                        >
+                          {order.orderNumber}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div>
+                        {editingCell?.table === "orders" && editingCell.id === order.id && editingCell.field === "customerName" ? (
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={saveEdit}
+                            onKeyDown={handleKeyPress}
+                            className="border rounded px-2 py-1 w-full mb-1"
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded mb-1"
+                            onClick={() => startEdit("orders", order.id, "customerName", order.customerName || "")}
+                          >
+                            {order.customerName || "N/A"}
+                          </div>
+                        )}
+                        {editingCell?.table === "orders" && editingCell.id === order.id && editingCell.field === "customerEmail" ? (
+                          <input
+                            type="email"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={saveEdit}
+                            onKeyDown={handleKeyPress}
+                            className="border rounded px-2 py-1 w-full"
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded text-xs text-gray-600"
+                            onClick={() => startEdit("orders", order.id, "customerEmail", order.customerEmail)}
+                          >
+                            {order.customerEmail}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "orders" && editingCell.id === order.id && editingCell.field === "totalAmount" ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1 w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("orders", order.id, "totalAmount", order.totalAmount?.toString() || "")}
+                        >
+                          {order.totalAmount ? `$${order.totalAmount.toFixed(2)}` : "N/A"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "orders" && editingCell.id === order.id && editingCell.field === "status" ? (
+                        <select
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1"
+                          autoFocus
+                        >
+                          <option value="pending">pending</option>
+                          <option value="processing">processing</option>
+                          <option value="shipped">shipped</option>
+                          <option value="delivered">delivered</option>
+                          <option value="cancelled">cancelled</option>
+                        </select>
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("orders", order.id, "status", order.status)}
+                        >
+                          {order.status}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "orders" && editingCell.id === order.id && editingCell.field === "trackingNumber" ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1 w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("orders", order.id, "trackingNumber", order.trackingNumber || "")}
+                        >
+                          {order.trackingNumber || "N/A"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {editingCell?.table === "orders" && editingCell.id === order.id && editingCell.field === "ownerEmail" ? (
+                        <select
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={saveEdit}
+                          onKeyDown={handleKeyPress}
+                          className="border rounded px-2 py-1"
+                          autoFocus
+                        >
+                          <option value="">Unassigned</option>
+                          {users.map((user) => (
+                            <option key={user.id} value={user.email}>
+                              {user.firstName} {user.lastName} ({user.email})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                          onClick={() => startEdit("orders", order.id, "ownerEmail", order.ownerEmail || "")}
+                        >
+                          {order.ownerEmail || "Unassigned"}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "lineItems" && (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU/Variant</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {lineItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.orderNumber || "N/A"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      <div>
+                        <div className="font-medium">{item.customerName || "N/A"}</div>
+                        <div className="text-xs text-gray-500">{item.customerEmail || "N/A"}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {item.sku || (item.shopifyVariantId ? `V-${item.shopifyVariantId}` : "N/A")}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">${item.price.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">${item.totalPrice.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.vendor || "N/A"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "customers" && (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lifetime Value</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">First Order</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Order</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {customers.map((customer, index) => (
+                  <tr key={customer.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => loadCustomerOrders(customer)}>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                        index === 1 ? 'bg-gray-100 text-gray-800' :
+                        index === 2 ? 'bg-orange-100 text-orange-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        #{index + 1}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      <div>
+                        <div className="font-medium">{customer.firstName} {customer.lastName}</div>
+                        <div className="text-xs text-gray-500">{customer.email}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{customer.totalOrders}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                      ${customer.lifetimeValue.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {customer.firstOrderDate ? new Date(customer.firstOrderDate).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {customer.lastOrderDate ? new Date(customer.lastOrderDate).toLocaleDateString() : 'N/A'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Orders Modal */}
+      {selectedCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {selectedCustomer.firstName} {selectedCustomer.lastName} - Purchase History
+              </h2>
+              <button
+                onClick={() => setSelectedCustomer(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="mb-4 text-sm text-gray-600">
+              <p><strong>Email:</strong> {selectedCustomer.email}</p>
+              <p><strong>Total Orders:</strong> {selectedCustomer.totalOrders}</p>
+              <p><strong>Lifetime Value:</strong> ${selectedCustomer.lifetimeValue.toFixed(2)}</p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Products</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {customerOrders.map((order) => (
+                    <tr key={order.id}>
+                      <td className="px-4 py-3 text-sm text-gray-900">{order.orderNumber}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        ${order.totalAmount?.toFixed(2) || '0.00'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{order.status}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="max-w-xs truncate" title={order.lineItems}>
+                          {order.lineItems || 'N/A'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 text-sm text-gray-600">
+        <p>💡 Click on any cell to edit. Press Enter to save, Escape to cancel. Click on customers to view their purchase history.</p>
+      </div>
+    </div>
+  );
+}

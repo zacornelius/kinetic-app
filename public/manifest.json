@@ -1,0 +1,13 @@
+{
+  "name": "Kinetic Sales",
+  "short_name": "Kinetic",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "description": "PWA for managing sales inquiries and orders",
+  "icons": []
+}
+
+
+
