@@ -135,7 +135,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen p-6 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Admin Cockpit</h1>
+      <h1 className="text-3xl font-bold mb-8">Admin Cockpit ⚡</h1>
       
       {/* User Management Section */}
       <div className="bg-white border rounded-lg p-6 mb-6">
