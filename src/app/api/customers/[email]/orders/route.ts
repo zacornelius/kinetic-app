@@ -11,28 +11,20 @@ export async function GET(
     
     const orders = db.prepare(`
       SELECT 
-        o.id,
-        o.createdAt,
-        o.orderNumber,
-        o.totalAmount,
-        o.currency,
-        o.status,
-        o.shippingAddress,
-        o.trackingNumber,
-        o.notes,
-        o.ownerEmail,
-        COALESCE(
-          GROUP_CONCAT(
-            oli.title || ' (Qty: ' || oli.quantity || ', $' || oli.totalPrice || ')',
-            '; '
-          ), 
-          'No line items'
-        ) as lineItems
-      FROM orders o
-      LEFT JOIN orderLineItems oli ON o.id = oli.orderId
-      WHERE o.customerEmail = ?
-      GROUP BY o.id, o.createdAt, o.orderNumber, o.totalAmount, o.currency, o.status, o.shippingAddress, o.trackingNumber, o.notes, o.ownerEmail
-      ORDER BY o.createdAt DESC
+        id,
+        createdAt,
+        orderNumber,
+        totalAmount,
+        currency,
+        status,
+        shippingAddress,
+        trackingNumber,
+        notes,
+        ownerEmail,
+        lineItems
+      FROM all_orders
+      WHERE customerEmail = ?
+      ORDER BY createdAt DESC
     `).all(email);
 
     return NextResponse.json(orders);

@@ -101,3 +101,108 @@ Error fetching customer orders: SqliteError: no such table: orders
  GET /admin 200 in 107ms
  GET /api/users 200 in 254ms
  GET /admin/data-explorer 200 in 323ms
+ ✓ Compiled /api/shopify/sync-incremental in 182ms
+ ✓ Compiled /api/shopify/sync-orders in 104ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031487336645
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f220cfc09725b-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=7fc7352a-ca29-4762-87a3-a180f686e4fd-1757006169; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:16:09 GMT',
+  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE2NTY2MTYxMzMsImxhc3RfdmFsdWUiOiI2MDMxNjU2NjE2MTMzIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=J12TtadR92m48GpzLrEcC5FZ%2BpLpNEtVanoDhziMJ2G6rTRb4OV%2BIs%2BWAjPhxh3%2FcKZbyvFHtcC9X0RxKehUjYgNemlQA7adhWdVWMkJyNyNHe0zV3ffx3MywDnTuFsRCNoOTe%2BFejc%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=7fc7352a-ca29-4762-87a3-a180f686e4fd-1757006169"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=141, _y;desc="49ee3215-a225-4091-9daa-e58e75d5f2da", _s;desc="a294f107-85d0-4975-9d30-645b9b3141f9", cfRequestDuration;dur=203.000069',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': '7fc7352a-ca29-4762-87a3-a180f686e4fd-1757006169',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 1 orders. Total so far: 1
+Progress: Fetched 1 orders from 1 pages
+Shopify sync error: SqliteError: no such table: orderLineItems
+    at <unknown> (src/app/api/shopify/sync-orders/route.ts:459:31)
+    at POST (src/app/api/shopify/sync-orders/route.ts:480:45)
+  457 |
+  458 |       // Insert order line items
+> 459 |       const lineItemStmt = db.prepare(`
+      |                               ^
+  460 |         INSERT OR REPLACE INTO orderLineItems (
+  461 |           id, orderId, productId, shopifyVariantId, sku, title, quantity, price, totalPrice, vendor
+  462 |         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) {
+  code: 'SQLITE_ERROR'
+}
+ POST /api/shopify/sync-orders 500 in 687ms
+ POST /api/shopify/sync-incremental 500 in 1129ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031487336645
+Shop: f184d9-2
+Access token: shpat_1234...
+Response status: 401
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f255cbefc8a31-CMH',
+  connection: 'keep-alive',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=ca4a1e8b-e1b1-4efb-bdda-ee94eedda608-1757006304; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:18:24 GMT',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=RSs40U793osa4y479X6fLLFgN1DWL5bJSgKtnBEJ3hVUnvD1KapYmDONyjc7Xpsxwvp91FkBVB1cXFkmRGZmq9lVXHfPy6qoLA2qxTdcff3todEpwyKHh7yRU4LEbZcWxlHKFaxPgRM%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=ca4a1e8b-e1b1-4efb-bdda-ee94eedda608-1757006304"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=23, _y;desc="220870dd-8535-4f0c-aa83-27a27b104e29", _s;desc="71da2881-c22f-4f86-b2cc-5e76ae88a751", cfRequestDuration;dur=118.999958',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  'www-authenticate': 'Basic Realm="Shopify API Authentication"',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': 'ca4a1e8b-e1b1-4efb-bdda-ee94eedda608-1757006304',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-xss-protection': '1; mode=block'
+}
+Error response body: {"errors":"[API] Invalid API key or access token (unrecognized login or wrong password)"}
+Shopify sync error: Error: Shopify API error: 401 Unauthorized - {"errors":"[API] Invalid API key or access token (unrecognized login or wrong password)"}
+    at fetchShopifyOrders (src/app/api/shopify/sync-orders/route.ts:324:13)
+    at async POST (src/app/api/shopify/sync-orders/route.ts:387:27)
+  322 |       }
+  323 |       
+> 324 |       throw new Error(`Shopify API error: ${response.status} ${response.statusText} - ${errorText}`);
+      |             ^
+  325 |     }
+  326 |
+  327 |     const data = await response.json();
+ POST /api/shopify/sync-orders 500 in 558ms
+ POST /api/shopify/sync-incremental 500 in 826ms

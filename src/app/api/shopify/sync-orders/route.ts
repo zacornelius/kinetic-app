@@ -455,24 +455,8 @@ export async function POST(request: Request) {
         );
       }
 
-      // Insert order line items
-      const lineItemStmt = db.prepare(`
-        INSERT OR REPLACE INTO orderLineItems (
-          id, orderId, productId, shopifyVariantId, sku, title, quantity, price, totalPrice, vendor
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const lineItem of processedData.lineItems) {
-        // Only insert if the order exists (foreign key constraint)
-        const orderExists = db.prepare('SELECT id FROM shopify_orders WHERE id = ?').get(lineItem.orderId);
-        if (orderExists) {
-          lineItemStmt.run(
-            lineItem.id, lineItem.orderId, lineItem.productId, lineItem.shopifyVariantId,
-            lineItem.sku, lineItem.title, lineItem.quantity, lineItem.price,
-            lineItem.totalPrice, lineItem.vendor
-          );
-        }
-      }
+      // Line items are now stored as JSON in the shopify_orders table
+      // No separate line items table needed
 
       return { insertedCount, updatedCount };
     });

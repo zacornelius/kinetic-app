@@ -31,17 +31,20 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Insert into quickbooks_orders table
+    // Insert into quickbooks_orders table with line items as JSON
     const insertStmt = db.prepare(`
       INSERT OR REPLACE INTO quickbooks_orders (
         id, createdAt, orderNumber, quickbooksInvoiceId, customerEmail, customerName, 
-        totalAmount, currency, status, shippingAddress, billingAddress, dueDate, notes, ownerEmail
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        totalAmount, currency, status, shippingAddress, billingAddress, dueDate, notes, ownerEmail, lineItems
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const orderId = `qb_invoice_${id}`;
     const status = 'pending'; // Default status
     const createdDate = createdAt || new Date().toISOString();
+
+    // Store line items as JSON
+    const lineItemsJson = lineItems && lineItems.length > 0 ? JSON.stringify(lineItems) : null;
 
     insertStmt.run(
       orderId,
@@ -57,31 +60,9 @@ export async function POST(request: Request) {
       billingAddress || null,
       dueDate || null,
       notes || '',
-      null
+      null,
+      lineItemsJson
     );
-
-    // Insert line items if provided
-    if (lineItems && lineItems.length > 0) {
-      const lineItemStmt = db.prepare(`
-        INSERT OR REPLACE INTO orderLineItems (
-          id, orderId, productName, quantity, price, total, quickbooksItemId, description
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const item of lineItems) {
-        const lineItemId = `qb_line_${id}_${item.id || Math.random()}`;
-        lineItemStmt.run(
-          lineItemId,
-          orderId,
-          item.name || item.productName || 'Unknown Item',
-          item.quantity || 1,
-          item.price || 0,
-          item.total || (item.quantity * item.price) || 0,
-          item.id || null,
-          item.description || ''
-        );
-      }
-    }
 
     // Insert customer if provided
     if (customerEmail && customerName) {
