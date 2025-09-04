@@ -469,7 +469,15 @@ export default function DataExplorer() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {getFilteredOrders().map((order) => (
+                {getFilteredOrders()
+                  .filter(order => {
+                    // Only show orders that have pallet products
+                    return lineItems.some(item => 
+                      item.orderNumber === order.orderNumber && 
+                      (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                    );
+                  })
+                  .map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{order.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
@@ -766,7 +774,15 @@ export default function DataExplorer() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {customers.map((customer, index) => (
+                {customers
+                  .filter(customer => {
+                    // Only show customers who have pallet orders
+                    return lineItems.some(item => 
+                      item.customerEmail === customer.email && 
+                      (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                    );
+                  })
+                  .map((customer, index) => (
                   <tr key={customer.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => loadCustomerOrders(customer)}>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
