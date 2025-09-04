@@ -198,69 +198,25 @@ export default function AdminDashboard() {
         
         {/* Shopify Integration */}
         <div className="bg-white border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Shopify Integration</h2>
-          <div className="mb-4 p-3 bg-blue-50 rounded-md">
-            <h3 className="font-medium text-blue-900 mb-2 text-sm">Sync Strategy:</h3>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• <strong>One-Time Full Sync:</strong> Get all 677 historical orders (run once)</li>
-              <li>• <strong>Incremental Sync:</strong> Get only new orders since last sync (run regularly)</li>
-              <li>• <strong>Recent Orders:</strong> Get last 250 orders (for testing)</li>
+          <h2 className="text-xl font-semibold mb-4">Data Sync</h2>
+          <div className="mb-4 p-3 bg-green-50 rounded-md">
+            <h3 className="font-medium text-green-900 mb-2 text-sm">✅ Historical Data Complete:</h3>
+            <ul className="text-xs text-green-800 space-y-1">
+              <li>• <strong>677 Shopify orders</strong> synced and available</li>
+              <li>• <strong>All data accessible</strong> in Data Explorer</li>
+              <li>• <strong>Ready for development</strong> and GUI building</li>
             </ul>
           </div>
           <div className="space-y-3">
-            <button
-              onClick={async () => {
-                setIsSyncing(true);
-                setSyncMessage("");
-                setSyncProgress("Starting FULL sync of ALL orders...");
-                
-                try {
-                  const response = await fetch("/api/shopify/sync-all-orders", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      shop: "f184d9-2",
-                      accessToken: "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"
-                    }),
-                  });
-                  
-                  const result = await response.json();
-                  
-                  if (response.ok) {
-                    setSyncMessage(`✅ ${result.message} (${result.stats.inserted} new, ${result.stats.updated} updated)`);
-                    setSyncProgress("");
-                  } else {
-                    setSyncMessage(`❌ Error: ${result.error}`);
-                    setSyncProgress("");
-                  }
-                } catch (error) {
-                  setSyncMessage(`❌ Error: ${error instanceof Error ? error.message : "Failed to sync all orders"}`);
-                  setSyncProgress("");
-                } finally {
-                  setIsSyncing(false);
-                }
-              }}
-              disabled={isSyncing}
-              className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-            >
-              {isSyncing ? "Syncing ALL..." : "One-Time Full Sync (All 677 Orders)"}
-            </button>
             <button
               onClick={syncNewOrders}
               disabled={isSyncing}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {isSyncing ? "Syncing..." : "Sync New Orders Only (Incremental)"}
+              {isSyncing ? "Syncing..." : "Fetch New Orders"}
             </button>
-            <button
-              onClick={syncShopifyOrders}
-              disabled={isSyncing}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-            >
-              {isSyncing ? "Syncing..." : "Sync Recent Orders (250 limit)"}
-            </button>
-            <div className="w-full px-4 py-2 bg-gray-100 text-gray-600 rounded text-center">
-              Unified sync not needed - data already synced
+            <div className="text-center text-sm text-gray-500">
+              Use Data Explorer to view and filter all data
             </div>
           </div>
           

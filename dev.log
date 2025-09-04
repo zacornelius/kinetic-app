@@ -102,3 +102,305 @@ Sync completed successfully!
  POST /api/sync/unified 404 in 75ms
  ✓ Compiled in 154ms
  GET /admin 200 in 311ms
+ GET /admin/data-explorer 200 in 95ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
+ GET /api/inquiries 200 in 253ms
+ GET /api/orders 200 in 310ms
+ GET /api/users 200 in 235ms
+ GET /api/customers 200 in 240ms
+ GET /api/shopify/orders 200 in 245ms
+ GET /api/shopify/customers 200 in 247ms
+ GET /admin 200 in 144ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 263ms
+ GET /api/users 200 in 261ms
+Starting FULL sync of ALL orders from Shopify...
+Starting to fetch ALL orders from Shopify using since_id method...
+Shop: f184d9-2
+Access token: shpat_f934...
+Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
+Current total orders: 0
+Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
+Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
+Current total orders: 250
+Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
+Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
+Current total orders: 500
+Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
+Page 3: Got fewer orders than limit (177 < 250), stopping sync
+Finished fetching ALL orders. Total: 677 orders from 3 pages
+Processing 677 orders...
+Inserting data into database...
+Sync completed successfully!
+ POST /api/shopify/sync-all-orders 200 in 1749ms
+ GET /admin/data-explorer 200 in 100ms
+ GET /api/inquiries 200 in 242ms
+ GET /api/orders 200 in 329ms
+ GET /api/users 200 in 241ms
+ GET /api/customers 200 in 254ms
+ GET /api/shopify/orders 200 in 240ms
+ GET /api/shopify/customers 200 in 246ms
+ GET /api/shopify/sync-orders 200 in 253ms
+ GET /api/shopify/sync-orders 200 in 241ms
+ GET /api/shopify/sync-orders 200 in 244ms
+Shopify full sync error: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/shopify/sync-all-orders/route.ts:363:35)
+  361 | export async function POST(request: Request) {
+  362 |   try {
+> 363 |     const { shop, accessToken } = await request.json();
+      |                                   ^
+  364 |
+  365 |     if (!shop || !accessToken) {
+  366 |       return NextResponse.json(
+ POST /api/shopify/sync-all-orders 500 in 472ms
+Starting FULL sync of ALL orders from Shopify...
+Starting to fetch ALL orders from Shopify using since_id method...
+Shop: f184d9-2
+Access token: shpat_f934...
+Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
+Current total orders: 0
+Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
+Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
+Current total orders: 250
+Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
+Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
+Current total orders: 500
+Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
+Page 3: Got fewer orders than limit (177 < 250), stopping sync
+Finished fetching ALL orders. Total: 677 orders from 3 pages
+Processing 677 orders...
+Inserting data into database...
+Sync completed successfully!
+ POST /api/shopify/sync-all-orders 200 in 1723ms
+ GET /api/shopify/sync-orders 200 in 247ms
+ GET /api/shopify/sync-orders 200 in 238ms
+ GET /api/shopify/sync-orders 200 in 238ms
+ GET /admin/data-explorer 200 in 126ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 248ms
+ GET /api/inquiries 200 in 251ms
+ GET /api/orders 200 in 321ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 254ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/customers 200 in 250ms
+ GET /api/orders 200 in 242ms
+ GET /admin/data-explorer 200 in 98ms
+ GET /api/inquiries 200 in 248ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 250ms
+ GET /api/orders 200 in 356ms
+ GET /api/users 200 in 241ms
+ GET /api/customers 200 in 243ms
+ GET /api/shopify/orders 200 in 255ms
+ GET /api/shopify/customers 200 in 242ms
+ GET /api/orders 200 in 254ms
+ GET /api/orders 200 in 243ms
+ GET /api/orders 200 in 267ms
+ GET /api/orders 200 in 251ms
+ GET /api/shopify/sync-orders 200 in 240ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/orders 200 in 251ms
+ GET /admin/data-explorer 200 in 93ms
+ GET /api/inquiries 200 in 277ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 277ms
+ GET /api/orders 200 in 271ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 249ms
+ GET /api/shopify/orders 200 in 253ms
+ GET /api/shopify/customers 200 in 242ms
+ GET /admin/data-explorer 200 in 89ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 253ms
+ GET /api/inquiries 200 in 251ms
+ GET /api/orders 200 in 291ms
+ GET /api/users 200 in 247ms
+ GET /api/customers 200 in 242ms
+ GET /api/shopify/orders 200 in 243ms
+ GET /api/shopify/customers 200 in 253ms
+ GET /api/quickbooks/orders 404 in 74ms
+ GET /api/quickbooks/orders 404 in 72ms
+ GET /admin/data-explorer 200 in 82ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 274ms
+ GET /api/inquiries 200 in 277ms
+ GET /api/orders 200 in 335ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 243ms
+ GET /api/shopify/orders 200 in 243ms
+ GET /api/shopify/customers 200 in 245ms
+ GET /api/orders 200 in 241ms
+ GET /admin 200 in 96ms
+ GET /api/users 200 in 248ms
+ GET /api/shopify/orders 200 in 241ms
+ GET /api/orders 200 in 261ms
+ GET /admin 200 in 90ms
+ GET /api/users 200 in 250ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 252ms
+ GET /admin 200 in 116ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 259ms
+ GET /api/users 200 in 254ms
+ GET /api/orders 200 in 248ms
+Starting FULL sync of ALL orders from Shopify...
+Starting to fetch ALL orders from Shopify using since_id method...
+Shop: f184d9-2
+Access token: shpat_f934...
+Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
+Current total orders: 0
+Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
+Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
+Current total orders: 250
+Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
+Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
+Current total orders: 500
+Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
+Page 3: Got fewer orders than limit (177 < 250), stopping sync
+Finished fetching ALL orders. Total: 677 orders from 3 pages
+Processing 677 orders...
+Inserting data into database...
+Sync completed successfully!
+ POST /api/shopify/sync-all-orders 200 in 2213ms
+ GET /admin 200 in 239ms
+ GET /admin 200 in 240ms
+ GET /admin 200 in 153ms
+ GET /admin 200 in 168ms
+ ✓ Compiled /api/sync/unified in 89ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 677 Shopify orders to sync
+Synced 677 Shopify orders to all_orders
+Found 0 QuickBooks orders to sync
+Synced 0 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 677
+Total shopify_orders: 677
+Total quickbooks_orders: 0
+ POST /api/sync/unified 200 in 479ms
+ GET /api/orders 200 in 264ms
+ GET /api/orders 200 in 238ms
+ GET /admin 200 in 263ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 292ms
+ GET /api/users 200 in 311ms
+ GET /admin/data-explorer 200 in 125ms
+ GET /api/inquiries 200 in 258ms
+ GET /api/orders 200 in 283ms
+ GET /api/users 200 in 242ms
+ GET /api/customers 200 in 284ms
+ GET /api/shopify/orders 200 in 264ms
+ GET /api/shopify/customers 200 in 255ms
+ ✓ Compiled in 119ms
+ GET /admin/data-explorer 200 in 229ms
+ GET /api/inquiries 200 in 259ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 261ms
+ GET /api/orders 200 in 270ms
+ GET /api/users 200 in 237ms
+ GET /api/customers 200 in 239ms
+ GET /api/shopify/orders 200 in 237ms
+ GET /api/shopify/customers 200 in 248ms
+ ✓ Compiled in 161ms
+ GET /api/inquiries 200 in 239ms
+ GET /api/orders 200 in 316ms
+ GET /api/users 200 in 239ms
+ GET /api/customers 200 in 249ms
+ GET /api/shopify/orders 200 in 238ms
+ GET /api/shopify/customers 200 in 240ms
+ ✓ Compiled in 169ms
+ ✓ Compiled in 155ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:661:8
+Parsing ecmascript source code failed
+[0m [90m 659 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 660 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 661 |[39m       )}
+ [90m     |[39m        [31m[1m^[22m[39m
+ [90m 662 |[39m
+ [90m 663 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
+ [90m 664 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./src/app/admin/data-explorer/page.tsx [Client Component Browser]
+    ./src/app/admin/data-explorer/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/admin/data-explorer/page.tsx [Client Component SSR]
+    ./src/app/admin/data-explorer/page.tsx [Server Component]
+
+
+ GET /admin/data-explorer 500 in 99ms
+ GET /favicon.ico 500 in 47ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:661:8
+Parsing ecmascript source code failed
+[0m [90m 659 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 660 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 661 |[39m       )}
+ [90m     |[39m        [31m[1m^[22m[39m
+ [90m 662 |[39m
+ [90m 663 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
+ [90m 664 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./src/app/admin/data-explorer/page.tsx [Client Component Browser]
+    ./src/app/admin/data-explorer/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/admin/data-explorer/page.tsx [Client Component SSR]
+    ./src/app/admin/data-explorer/page.tsx [Server Component]
+
+
+ GET /admin/data-explorer 500 in 246ms
+ GET /favicon.ico 500 in 39ms
+ GET /admin 200 in 98ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 86ms
+ GET /api/users 500 in 121ms
+ GET /admin 200 in 90ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 93ms
+ GET /api/users 500 in 118ms
+ GET /admin 200 in 93ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 69ms
+ GET /api/users 500 in 107ms
+ GET /admin 200 in 91ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 63ms
+ GET /api/users 500 in 97ms
+ GET /admin 200 in 90ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 78ms
+ GET /api/users 500 in 110ms
+ GET /admin 200 in 76ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 66ms
+ GET /api/users 500 in 116ms
+ GET /admin 200 in 77ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 84ms
+ GET /api/users 500 in 114ms
+ GET /admin 200 in 83ms
+ GET /favicon.ico?favicon.0b3bf435.ico 500 in 55ms
+ GET /api/users 500 in 97ms
+ ✓ Compiled in 156ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:661:8
+Parsing ecmascript source code failed
+[0m [90m 659 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 660 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 661 |[39m       )}
+ [90m     |[39m        [31m[1m^[22m[39m
+ [90m 662 |[39m
+ [90m 663 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
+ [90m 664 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./src/app/admin/data-explorer/page.tsx [Client Component Browser]
+    ./src/app/admin/data-explorer/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/admin/data-explorer/page.tsx [Client Component SSR]
+    ./src/app/admin/data-explorer/page.tsx [Server Component]
+
+
+ GET /admin/data-explorer 500 in 81ms
+ ✓ Compiled in 143ms
+ GET /admin 200 in 149ms
+ GET /admin 200 in 146ms
+ ✓ Compiled /admin/data-explorer in 19ms
+ GET /admin/data-explorer 200 in 410ms
+ GET /admin 200 in 83ms

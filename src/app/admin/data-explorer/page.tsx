@@ -20,11 +20,16 @@ type Order = {
   customerName?: string;
   totalAmount?: number;
   currency: string;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "paid" | "overdue";
   shippingAddress?: string;
+  billingAddress?: string;
   trackingNumber?: string;
+  dueDate?: string;
   notes?: string;
   ownerEmail?: string;
+  source: "shopify" | "quickbooks" | "manual";
+  sourceId: string;
+  lineItems?: string;
 };
 
 type User = {
@@ -75,6 +80,7 @@ export default function DataExplorer() {
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{ table: string; id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "shopify" | "quickbooks" | "manual">("all");
 
   async function loadData() {
     if (isLoading) {
@@ -172,6 +178,14 @@ export default function DataExplorer() {
     } catch (error) {
       console.error("Error loading customer orders:", error);
     }
+  }
+
+  // Filter orders by source
+  function getFilteredOrders() {
+    if (sourceFilter === "all") {
+      return orders;
+    }
+    return orders.filter(order => order.source === sourceFilter);
   }
 
   useEffect(() => {
@@ -433,14 +447,36 @@ export default function DataExplorer() {
       )}
 
       {activeTab === "orders" && (
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="space-y-4">
+          {/* Source Filter */}
+          <div className="bg-white border rounded-lg p-4">
+            <div className="flex items-center space-x-4">
+              <label className="text-sm font-medium text-gray-700">Filter by Source:</label>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value as "all" | "shopify" | "quickbooks" | "manual")}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Sources ({orders.length})</option>
+                <option value="shopify">Shopify ({orders.filter(o => o.source === 'shopify').length})</option>
+                <option value="quickbooks">QuickBooks ({orders.filter(o => o.source === 'quickbooks').length})</option>
+                <option value="manual">Manual ({orders.filter(o => o.source === 'manual').length})</option>
+              </select>
+              <div className="text-sm text-gray-500">
+                Showing {getFilteredOrders().length} orders
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -449,7 +485,7 @@ export default function DataExplorer() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {orders.map((order) => (
+                {getFilteredOrders().map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{order.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
@@ -474,6 +510,15 @@ export default function DataExplorer() {
                           {order.orderNumber}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        order.source === 'shopify' ? 'bg-green-100 text-green-800' :
+                        order.source === 'quickbooks' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.source}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div>
@@ -612,6 +657,7 @@ export default function DataExplorer() {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 
