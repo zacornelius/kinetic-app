@@ -7,92 +7,41 @@
    - Network:      http://172.31.31.34:3000
 
  ✓ Starting...
- ✓ Ready in 1268ms
+ ✓ Ready in 954ms
  ○ Compiling /admin/data-explorer ...
- ✓ Compiled /admin/data-explorer in 4.1s
- ⨯ ./src/app/admin/data-explorer/page.tsx:894:8
+ ✓ Compiled /admin/data-explorer in 4.7s
+ ⨯ ./src/app/admin/data-explorer/page.tsx:696:8
 Parsing ecmascript source code failed
-[0m [90m 892 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 893 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 894 |[39m       )}
+[0m [90m 694 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 695 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 696 |[39m       )}
  [90m     |[39m        [31m[1m^[22m[39m
- [90m 895 |[39m
- [90m 896 |[39m       {[90m/* Customer Orders Modal */[39m}
- [90m 897 |[39m       {selectedCustomer [33m&&[39m ([0m
+ [90m 697 |[39m
+ [90m 698 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
+ [90m 699 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
 
 Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
 
 
  ○ Compiling /_error ...
- ✓ Compiled /_error in 1479ms
- GET /admin/data-explorer 500 in 5852ms
- ⨯ ./src/app/admin/data-explorer/page.tsx:894:8
+ ✓ Compiled /_error in 1847ms
+ GET /admin/data-explorer 500 in 6715ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:696:8
 Parsing ecmascript source code failed
-[0m [90m 892 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 893 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 894 |[39m       )}
+[0m [90m 694 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 695 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 696 |[39m       )}
  [90m     |[39m        [31m[1m^[22m[39m
- [90m 895 |[39m
- [90m 896 |[39m       {[90m/* Customer Orders Modal */[39m}
- [90m 897 |[39m       {selectedCustomer [33m&&[39m ([0m
+ [90m 697 |[39m
+ [90m 698 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
+ [90m 699 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
 
 Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
 
 
  GET /admin/data-explorer 500 in 51ms
- ⨯ ./src/app/admin/data-explorer/page.tsx:894:8
-Parsing ecmascript source code failed
-[0m [90m 892 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 893 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 894 |[39m       )}
- [90m     |[39m        [31m[1m^[22m[39m
- [90m 895 |[39m
- [90m 896 |[39m       {[90m/* Customer Orders Modal */[39m}
- [90m 897 |[39m       {selectedCustomer [33m&&[39m ([0m
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-
- GET /admin/data-explorer 500 in 46ms
- ⨯ ./src/app/admin/data-explorer/page.tsx:696:8
-Parsing ecmascript source code failed
-[0m [90m 694 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 695 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 696 |[39m       )}
- [90m     |[39m        [31m[1m^[22m[39m
- [90m 697 |[39m
- [90m 698 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
- [90m 699 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-
-
-./src/app/admin/data-explorer/page.tsx:893:8
-Parsing ecmascript source code failed
-[0m [90m 891 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 892 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 893 |[39m       )}
- [90m     |[39m        [31m[1m^[22m[39m
- [90m 894 |[39m
- [90m 895 |[39m       {[90m/* Customer Orders Modal */[39m}
- [90m 896 |[39m       {selectedCustomer [33m&&[39m ([0m
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-
- GET /admin/data-explorer 500 in 98ms
- ⨯ ./src/app/admin/data-explorer/page.tsx:696:8
-Parsing ecmascript source code failed
-[0m [90m 694 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 695 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 696 |[39m       )}
- [90m     |[39m        [31m[1m^[22m[39m
- [90m 697 |[39m
- [90m 698 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
- [90m 699 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
-
-Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-
-
- GET /admin/data-explorer 500 in 40ms
+ ✓ Compiled in 145ms
+ ✓ Compiled /admin/data-explorer in 17ms
+ GET /admin/data-explorer 200 in 419ms
+ GET /admin/data-explorer 200 in 121ms
+ GET /admin/data-explorer 200 in 111ms

@@ -693,6 +693,7 @@ export default function DataExplorer() {
             </table>
           </div>
         </div>
+        </div>
       )}
 
       {activeTab === "lineItems" && (
