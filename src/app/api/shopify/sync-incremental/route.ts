@@ -38,10 +38,21 @@ export async function POST(request: Request) {
     const result = await syncResponse.json();
     
     if (syncResponse.ok) {
+      // Sync new orders to unified table
+      const unifiedResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/sync/unified`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const unifiedResult = await unifiedResponse.json();
+      
       return NextResponse.json({
         success: true,
-        message: `Incremental sync completed. ${result.stats.inserted} new orders added.`,
-        stats: result.stats
+        message: `Incremental sync completed. ${result.stats.inserted} new orders added and synced to data explorer.`,
+        stats: {
+          ...result.stats,
+          unified: unifiedResult.stats
+        }
       });
     } else {
       return NextResponse.json(result, { status: syncResponse.status });

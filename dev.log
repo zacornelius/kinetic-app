@@ -206,3 +206,163 @@ Shopify sync error: Error: Shopify API error: 401 Unauthorized - {"errors":"[API
   327 |     const data = await response.json();
  POST /api/shopify/sync-orders 500 in 558ms
  POST /api/shopify/sync-incremental 500 in 826ms
+ GET /admin 200 in 107ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 275ms
+ GET /api/users 200 in 279ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031487336645
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f3364aa88845c-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=62f26d5b-cc44-456a-8cd2-90feb416f1f8-1757006879; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:27:59 GMT',
+  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE2NTY2MTYxMzMsImxhc3RfdmFsdWUiOiI2MDMxNjU2NjE2MTMzIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=tH2uUoiJdukrebmJG0DvYxyQvJ4Wi9dDRN5Hz4okL5wjMOi96j6olDYszC2Q62bKeth%2BBdFuH35fxeBIcALZO%2BXBrPsTYfhj5W%2BLcBj9JhK9b2TVZtaOBVrY3MY9j17bS3yN6ua%2BcF4%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=62f26d5b-cc44-456a-8cd2-90feb416f1f8-1757006879"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=73, _y;desc="0905cf6a-6e95-4860-9fec-6b298c4742bf", _s;desc="89856bfa-c4c3-448c-aaa3-30fa52b34e4d", cfRequestDuration;dur=150.999784',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': '62f26d5b-cc44-456a-8cd2-90feb416f1f8-1757006879',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 1 orders. Total so far: 1
+Progress: Fetched 1 orders from 1 pages
+ POST /api/shopify/sync-orders 200 in 416ms
+ POST /api/shopify/sync-incremental 200 in 663ms
+ GET /admin/data-explorer 200 in 193ms
+ GET /api/inquiries 200 in 251ms
+ GET /api/orders 200 in 344ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 250ms
+ GET /api/shopify/orders 200 in 249ms
+ GET /api/shopify/customers 200 in 298ms
+ GET /api/line-items 200 in 244ms
+ GET /admin/data-explorer 200 in 84ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 260ms
+ GET /api/inquiries 200 in 258ms
+ GET /api/orders 200 in 244ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 242ms
+ GET /api/shopify/orders 200 in 241ms
+ GET /api/shopify/customers 200 in 244ms
+ GET /api/line-items 200 in 240ms
+ GET /admin/data-explorer 200 in 88ms
+ GET /api/inquiries 200 in 259ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 254ms
+ GET /api/orders 200 in 341ms
+ GET /api/users 200 in 236ms
+ GET /api/customers 200 in 239ms
+ GET /api/shopify/orders 200 in 254ms
+ GET /api/shopify/customers 200 in 243ms
+ GET /api/line-items 200 in 246ms
+ GET /admin/data-explorer 200 in 99ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 253ms
+ GET /api/inquiries 200 in 257ms
+ GET /api/orders 200 in 272ms
+ GET /api/users 200 in 241ms
+ GET /api/customers 200 in 248ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/customers 200 in 285ms
+ GET /api/line-items 200 in 244ms
+ GET /api/inquiries 200 in 243ms
+ GET /api/orders 200 in 241ms
+ GET /api/users 200 in 235ms
+ GET /api/customers 200 in 247ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/customers 200 in 249ms
+ GET /api/line-items 200 in 244ms
+ GET /admin/data-explorer 200 in 83ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 284ms
+ GET /api/inquiries 200 in 280ms
+ GET /api/orders 200 in 304ms
+ GET /api/users 200 in 241ms
+ GET /api/customers 200 in 241ms
+ GET /api/shopify/orders 200 in 246ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 243ms
+ GET /api/orders 200 in 250ms
+ GET /api/shopify/orders 200 in 242ms
+ ✓ Compiled /api/sync/unified in 95ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 678 Shopify orders to sync
+Synced 678 Shopify orders to all_orders
+Found 0 QuickBooks orders to sync
+Synced 0 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 678
+Total shopify_orders: 678
+Total quickbooks_orders: 0
+ POST /api/sync/unified 200 in 895ms
+ GET /api/orders 200 in 245ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031656616133
+Shop: f184d9-2
+Access token: shpat_1234...
+Response status: 401
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f36031a3190ce-CMH',
+  connection: 'keep-alive',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=ff8d7df5-8906-4709-a2a1-d8d5a22f39d0-1757006986; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:29:46 GMT',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=loGUexoFdOi5pR%2BYwSRgzm3cKzJz4F0VKkeHIR4PAuR6P3JFWhO00XV1RNuh9%2F9%2Fzu7I9YJAmV9C%2BUSnd86oJdqN0lwRF%2BVRNHQPnNarlgBM2r3SgqK1qRdREzvX%2F%2BX4LjQA0n6xQ%2BI%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=ff8d7df5-8906-4709-a2a1-d8d5a22f39d0-1757006986"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=34, _y;desc="98cea208-f8bc-4646-a2f5-c90814e5b23a", _s;desc="9438c061-f0ce-43e9-a10b-0370a583419b", cfRequestDuration;dur=89.999914',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  'www-authenticate': 'Basic Realm="Shopify API Authentication"',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': 'ff8d7df5-8906-4709-a2a1-d8d5a22f39d0-1757006986',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-xss-protection': '1; mode=block'
+}
+Error response body: {"errors":"[API] Invalid API key or access token (unrecognized login or wrong password)"}
+Shopify sync error: Error: Shopify API error: 401 Unauthorized - {"errors":"[API] Invalid API key or access token (unrecognized login or wrong password)"}
+    at fetchShopifyOrders (src/app/api/shopify/sync-orders/route.ts:324:13)
+    at async POST (src/app/api/shopify/sync-orders/route.ts:387:27)
+  322 |       }
+  323 |       
+> 324 |       throw new Error(`Shopify API error: ${response.status} ${response.statusText} - ${errorText}`);
+      |             ^
+  325 |     }
+  326 |
+  327 |     const data = await response.json();
+ POST /api/shopify/sync-orders 500 in 453ms
+ POST /api/shopify/sync-incremental 500 in 743ms

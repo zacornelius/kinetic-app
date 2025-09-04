@@ -98,7 +98,7 @@ export default function AdminDashboard() {
   async function syncNewOrders() {
     setIsSyncing(true);
     setSyncMessage("");
-    setSyncProgress("Starting incremental sync...");
+    setSyncProgress("Starting incremental sync and data explorer update...");
     
     try {
       const response = await fetch("/api/shopify/sync-incremental", {
