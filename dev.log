@@ -1,0 +1,34 @@
+
+> web@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.5.2 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://172.31.31.34:3000
+
+ ✓ Starting...
+ ✓ Ready in 1000ms
+ ○ Compiling / ...
+ ✓ Compiled / in 4s
+ ⨯ ./src/app/layout.tsx:4:1
+Module not found: Can't resolve './register-sw'
+[0m [90m 2 |[39m [36mimport[39m { [33mGeist[39m[33m,[39m [33mGeist_Mono[39m } [36mfrom[39m [32m"next/font/google"[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m [32m"./globals.css"[39m[33m;[39m
+[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { registerServiceWorker } [36mfrom[39m [32m"./register-sw"[39m[33m;[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 5 |[39m
+ [90m 6 |[39m [36mconst[39m geistSans [33m=[39m [33mGeist[39m({
+ [90m 7 |[39m   variable[33m:[39m [32m"--font-geist-sans"[39m[33m,[39m[0m
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1779ms
+ GET / 500 in 5951ms
+ ✓ Compiled in 97ms
+ ✓ Compiled in 186ms
+ ✓ Compiled / in 14ms
+ GET / 200 in 462ms
