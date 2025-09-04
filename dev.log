@@ -542,3 +542,5 @@ Error fetching customer orders: SqliteError: no such table: orders
  ✓ Compiled in 210ms
  ✓ Compiled in 184ms
  ✓ Compiled in 331ms
+ ✓ Compiled in 185ms
+ ✓ Compiled in 188ms

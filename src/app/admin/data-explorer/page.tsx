@@ -666,64 +666,10 @@ export default function DataExplorer() {
                 <div className="text-2xl font-bold text-orange-600">
                   {lineItems.filter(item => item.title === 'Build a Pallet').length}
                 </div>
-                <div className="text-xs text-gray-500">
-                  {(() => {
-                    const buildPalletItems = lineItems.filter(item => item.title === 'Build a Pallet');
-                    const totalUnits = buildPalletItems.reduce((sum, item) => sum + item.quantity, 0);
-                    return `${totalUnits} total units`;
-                  })()}
-                </div>
               </div>
             </div>
           </div>
           
-          {/* Custom Pallet Orders */}
-          {(() => {
-            const buildPalletItems = lineItems.filter(item => item.title === 'Build a Pallet');
-            const palletOrders = {};
-            
-            buildPalletItems.forEach(item => {
-              if (!palletOrders[item.orderNumber]) {
-                palletOrders[item.orderNumber] = [];
-              }
-              palletOrders[item.orderNumber].push(item);
-            });
-            
-            const orderNumbers = Object.keys(palletOrders);
-            
-            if (orderNumbers.length > 0) {
-              return (
-                <div className="bg-blue-50 p-4 border-b">
-                  <h4 className="text-md font-semibold mb-3 text-blue-900">Custom Pallet Orders</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {orderNumbers.map(orderNumber => {
-                      const orderItems = palletOrders[orderNumber];
-                      const totalUnits = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-                      const customerName = orderItems[0]?.customerName || 'Unknown';
-                      
-                      return (
-                        <div key={orderNumber} className="bg-white p-3 rounded border border-blue-200">
-                          <div className="font-medium text-blue-900">Order #{orderNumber}</div>
-                          <div className="text-sm text-gray-600 mb-2">{customerName}</div>
-                          <div className="text-xs text-gray-500">
-                            {orderItems.length} SKUs • {totalUnits} total units
-                          </div>
-                          <div className="mt-2 space-y-1">
-                            {orderItems.map((item, idx) => (
-                              <div key={idx} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                SKU-{item.variantId}: {item.quantity} units
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })()}
           
           <div className="overflow-x-auto">
             <table className="w-full">
