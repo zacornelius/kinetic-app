@@ -366,3 +366,389 @@ Shopify sync error: Error: Shopify API error: 401 Unauthorized - {"errors":"[API
   327 |     const data = await response.json();
  POST /api/shopify/sync-orders 500 in 453ms
  POST /api/shopify/sync-incremental 500 in 743ms
+ GET /admin/data-explorer 200 in 107ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 273ms
+ GET /api/inquiries 200 in 300ms
+ GET /api/orders 200 in 266ms
+ GET /api/users 200 in 236ms
+ GET /api/customers 200 in 246ms
+ GET /api/shopify/orders 200 in 254ms
+ GET /api/shopify/customers 200 in 267ms
+ GET /api/line-items 200 in 243ms
+ GET /admin/data-explorer 200 in 84ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 282ms
+ GET /api/inquiries 200 in 285ms
+ GET /api/orders 200 in 298ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 241ms
+ GET /api/shopify/orders 200 in 357ms
+ GET /api/shopify/customers 200 in 246ms
+ GET /api/line-items 200 in 240ms
+ GET /admin/data-explorer 200 in 89ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 244ms
+ GET /api/inquiries 200 in 246ms
+ GET /api/orders 200 in 339ms
+ GET /api/users 200 in 234ms
+ GET /api/customers 200 in 242ms
+ GET /api/shopify/orders 200 in 242ms
+ GET /api/shopify/customers 200 in 236ms
+ GET /api/line-items 200 in 244ms
+ GET /api/inquiries 200 in 239ms
+ GET /api/orders 200 in 339ms
+ GET /api/users 200 in 239ms
+ GET /api/customers 200 in 246ms
+ GET /api/shopify/orders 200 in 241ms
+ GET /api/shopify/customers 200 in 262ms
+ GET /api/line-items 200 in 246ms
+ GET /admin 200 in 347ms
+ GET /api/users 200 in 244ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031656616133
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f38635fe51330-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=3d7dd932-8a07-475e-a9aa-36209753983c-1757007084; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:31:24 GMT',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=2%2FrhRR2U1JNdAIiKvdPEB2HSyQ3niq%2FCbk4xFYY292o6Dpuw9aS8wsyAcCLNXBmfCSqvMjtlRBCZtoPbdmOqdnH0yessanqe844wsqO9xcK8OxDPWCWBcY%2B4WnbFGVLqLi3PKDlll%2B4%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=3d7dd932-8a07-475e-a9aa-36209753983c-1757007084"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=75, _y;desc="38e921a1-abff-41f6-9d16-e45cfadb1e88", _s;desc="ed0150d5-8865-4ad0-b8ed-e2ad38641fd5", cfRequestDuration;dur=143.000126',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': '3d7dd932-8a07-475e-a9aa-36209753983c-1757007084',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 0 orders. Total so far: 0
+Progress: Fetched 0 orders from 1 pages
+ POST /api/shopify/sync-orders 200 in 401ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 678 Shopify orders to sync
+Synced 678 Shopify orders to all_orders
+Found 0 QuickBooks orders to sync
+Synced 0 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 678
+Total shopify_orders: 678
+Total quickbooks_orders: 0
+ POST /api/sync/unified 200 in 329ms
+ POST /api/shopify/sync-incremental 200 in 984ms
+ GET /admin/data-explorer 200 in 98ms
+ GET /api/inquiries 200 in 240ms
+ GET /api/orders 200 in 253ms
+ GET /api/users 200 in 235ms
+ GET /api/customers 200 in 241ms
+ GET /api/shopify/orders 200 in 247ms
+ GET /api/shopify/customers 200 in 240ms
+ GET /api/line-items 200 in 249ms
+ GET /api/inquiries 200 in 247ms
+ GET /api/orders 200 in 323ms
+ GET /api/users 200 in 239ms
+ GET /api/customers 200 in 245ms
+ GET /api/shopify/orders 200 in 246ms
+ GET /api/shopify/customers 200 in 245ms
+ GET /api/line-items 200 in 246ms
+ GET /api/orders 200 in 350ms
+ GET /api/shopify/orders 200 in 242ms
+ GET /api/shopify/orders 200 in 242ms
+ GET /api/orders 200 in 247ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031656616133
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f39b11ed4ae97-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=6e0f262f-7cba-46f8-b5a2-b5748a901c62-1757007137; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:32:17 GMT',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=7rUFrRLRH%2F2b%2BJUYpuQnIPubyprxzFX6Mxadyogwudb5ZmgB5K4CrZ7rhhqbg2z5DqHkZp%2BSMlrQKDGxAqggv%2BNWemuAgE9Nlioiraol6ObIx5IpXLHRhmFC%2BrDeHgHCdUMD7ugk74c%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=6e0f262f-7cba-46f8-b5a2-b5748a901c62-1757007137"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=75, _y;desc="450e0c8e-fac5-40d1-b08a-d5837e02ebad", _s;desc="b29854ac-d4d7-4fd1-8f18-a2d24a363c59", cfRequestDuration;dur=132.999897',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': '6e0f262f-7cba-46f8-b5a2-b5748a901c62-1757007137',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 0 orders. Total so far: 0
+Progress: Fetched 0 orders from 1 pages
+ POST /api/shopify/sync-orders 200 in 408ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 678 Shopify orders to sync
+Synced 678 Shopify orders to all_orders
+Found 0 QuickBooks orders to sync
+Synced 0 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 678
+Total shopify_orders: 678
+Total quickbooks_orders: 0
+ POST /api/sync/unified 200 in 352ms
+ POST /api/shopify/sync-incremental 200 in 1010ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /admin/data-explorer 200 in 89ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
+ GET /api/inquiries 200 in 258ms
+ GET /api/orders 200 in 296ms
+ GET /api/users 200 in 239ms
+ GET /api/customers 200 in 242ms
+ GET /api/shopify/orders 200 in 382ms
+ GET /api/shopify/customers 200 in 244ms
+ GET /api/line-items 200 in 237ms
+ GET /admin/data-explorer 200 in 87ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 271ms
+ GET /api/inquiries 200 in 273ms
+ GET /api/orders 200 in 305ms
+ GET /api/users 200 in 357ms
+ GET /api/customers 200 in 248ms
+ GET /api/shopify/orders 200 in 242ms
+ GET /api/shopify/customers 200 in 245ms
+ GET /api/line-items 200 in 262ms
+ GET /api/orders 200 in 278ms
+ GET /api/shopify/orders 200 in 247ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=1&since_id=1678
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f3b4fcf461330-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=cd43df3a-106d-4a0b-a927-aa80524ae224-1757007203; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:33:23 GMT',
+  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=1&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjUzMjk4ODMzNjU1NzMsImxhc3RfdmFsdWUiOiI1MzI5ODgzMzY1NTczIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous", <https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=1&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjUzMjk4ODMzNjU1NzMsImxhc3RfdmFsdWUiOiI1MzI5ODgzMzY1NTczIiwiZGlyZWN0aW9uIjoibmV4dCJ9>; rel="next"',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=xQ5gweIAIevIP42MZZcSsvTyToSPiVP%2B8toKAVE5DMnze%2Bs8u1wS6OnCwL%2F%2Fwwkp34eVHjJM0rzggMCLg0GN4d8dFb9KW3opaUmy78LnunbMbXTYuziIdGEMB78GKypFanXzP6UiU5w%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=cd43df3a-106d-4a0b-a927-aa80524ae224-1757007203"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=91, _y;desc="e13cb183-cdad-47fa-a258-dae9b0fe90dd", _s;desc="1ca33b7b-6fbb-433b-8b66-776a5f589c47", cfRequestDuration;dur=148.999929',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': 'cd43df3a-106d-4a0b-a927-aa80524ae224-1757007203',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 1 orders. Total so far: 1
+Progress: Fetched 1 orders from 1 pages
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=1&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjUzMjk4ODMzNjU1NzMsImxhc3RfdmFsdWUiOiI1MzI5ODgzMzY1NTczIiwiZGlyZWN0aW9uIjoicHJldiJ9
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f3b516a531330-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=6284bdd3-c873-4f0a-a9d3-12f2167af254-1757007204; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:33:24 GMT',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=GzCS0g43EFPVqILe8Z71Oo9b9PXYbkoCAONxiTyBe6cIfbVhJXo3zSvBBB1X%2B6GIznY2RVps1IORFEPKR3hQ1gjszlWa8atn8p39DnvUM2TqY%2FOm2qm7GELAsQMh1iH%2FQtME6KLKvLE%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=6284bdd3-c873-4f0a-a9d3-12f2167af254-1757007204"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=65, _y;desc="e3fad422-7c92-4c01-88ce-fb0822b1832c", _s;desc="dfc060d5-b14b-4580-b29c-fe1afda8d6ed", cfRequestDuration;dur=126.999855',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': '6284bdd3-c873-4f0a-a9d3-12f2167af254-1757007204',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 0 orders. Total so far: 1
+Progress: Fetched 1 orders from 2 pages
+ POST /api/shopify/sync-orders 200 in 690ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 678 Shopify orders to sync
+Synced 678 Shopify orders to all_orders
+Found 0 QuickBooks orders to sync
+Synced 0 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 678
+Total shopify_orders: 678
+Total quickbooks_orders: 0
+ POST /api/sync/unified 200 in 363ms
+ GET /api/orders 200 in 252ms
+ GET /api/shopify/orders 200 in 246ms
+ GET /api/shopify/orders 200 in 309ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=1&since_id=6031656616133
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f3cc4c916cf73-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=187832a3-2d3b-46d2-8898-3aec1a39419c-1757007263; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:34:23 GMT',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=n4xMNd3EIyV316VA%2BwUF7G4RLIEWSLZfAqOeW80DmjBg%2FHpeNIcSed%2BB6MzJZHQ%2FwhvPTFBjJYHcAuGrJkXWHnQTdx2uBpqWyXNUBk8QFg0RCG3jiH3j%2B26JPFK7tjM9mwH0eTqtt7o%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=187832a3-2d3b-46d2-8898-3aec1a39419c-1757007263"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=50, _y;desc="5f162500-8148-454a-a166-3a86379dc99e", _s;desc="33d7d964-47b2-4057-b59b-5d51655bb917", cfRequestDuration;dur=101.999998',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': '187832a3-2d3b-46d2-8898-3aec1a39419c-1757007263',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 0 orders. Total so far: 0
+Progress: Fetched 0 orders from 1 pages
+ POST /api/shopify/sync-orders 200 in 379ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=1&since_id=6031487336645
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979f3ce95980addf-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=0c919fd2-24b4-4b19-a332-afd30cf176c7-1757007269; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 17:34:29 GMT',
+  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=1&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE2NTY2MTYxMzMsImxhc3RfdmFsdWUiOiI2MDMxNjU2NjE2MTMzIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=XuEj36mR25SGqoFwoOTzY%2FfG6Eeu9j0AviukBEq1ueTLjO141vXbMpW1z8cX8J1S3m9i5tb40YXLWGJDS5fsoiWM3ZGB8pP5nTCu0IYAOhTgr9xRhUn%2F8Xy9aTfm63KwAS2xw9GP4KE%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=0c919fd2-24b4-4b19-a332-afd30cf176c7-1757007269"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=85, _y;desc="c1849aa1-9e86-44bc-8107-1c50c029754c", _s;desc="08322340-a908-43da-878e-aba6cbe2f40a", cfRequestDuration;dur=149.999857',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': '0c919fd2-24b4-4b19-a332-afd30cf176c7-1757007269',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 1 orders. Total so far: 1
+Progress: Fetched 1 orders from 1 pages
+ POST /api/shopify/sync-orders 200 in 410ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 678 Shopify orders to sync
+Synced 678 Shopify orders to all_orders
+Found 0 QuickBooks orders to sync
+Synced 0 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 678
+Total shopify_orders: 678
+Total quickbooks_orders: 0
+ POST /api/sync/unified 200 in 365ms
+ GET /api/orders 200 in 249ms
+ GET /api/line-items 200 in 245ms

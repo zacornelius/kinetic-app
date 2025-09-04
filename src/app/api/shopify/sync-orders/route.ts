@@ -178,6 +178,7 @@ function mapShopifyOrderToOrder(shopifyOrder: ShopifyOrder): Order {
     status,
     shippingAddress,
     notes: shopifyOrder.note,
+    lineItems: JSON.stringify(shopifyOrder.line_items),
   };
 }
 
