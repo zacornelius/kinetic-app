@@ -890,3 +890,35 @@ QuickBooks webhook received: {
   "319049596__TxnDate": "2024-01-15"
 }
  POST /api/webhooks/quickbooks 200 in 265ms
+QuickBooks webhook received: {
+  "": "JB'S Feed & Supply Inc2325jbsfeed@gmail.comPower 30K Kinetic Dog Food 35 lb50,50(330) 893-36845075 Township Road 401Millersburg, OH  44654 USA2025-08-28",
+  "_50": "330"
+}
+ POST /api/webhooks/quickbooks 200 in 239ms
+ GET /admin/data-explorer 200 in 116ms
+ GET /api/inquiries 200 in 246ms
+ GET /api/orders 200 in 341ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 246ms
+ GET /api/shopify/orders 200 in 245ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 247ms
+ ✓ Compiled /_not-found/page in 324ms
+ GET /api/quickbooks/orders 404 in 420ms
+ GET /api/quickbooks/orders 404 in 64ms
+ GET /admin/data-explorer 200 in 251ms
+ GET /admin/data-explorer 200 in 60ms
+ ✓ Compiled /api/quickbooks/orders in 92ms
+ GET /api/quickbooks/orders 200 in 351ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 678 Shopify orders to sync
+Synced 678 Shopify orders to all_orders
+Found 3 QuickBooks orders to sync
+Synced 3 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 681
+Total shopify_orders: 678
+Total quickbooks_orders: 3
+ POST /api/sync/unified 200 in 354ms
+ GET /api/orders 200 in 258ms
