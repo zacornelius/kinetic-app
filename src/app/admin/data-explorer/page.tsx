@@ -701,9 +701,10 @@ export default function DataExplorer() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {(() => {
-                        // Handle "Build a Pallet" - quantity is units of that SKU on the pallet
+                        // Handle "Build a Pallet" - extract product name from name field
                         if (item.title === 'Build a Pallet') {
-                          return `SKU-${item.variantId} (${item.quantity} units)`;
+                          const productName = item.name?.replace('Build a Pallet - ', '') || `V-${item.variantId}`;
+                          return `${productName} (${item.quantity} units)`;
                         }
                         // Handle pre-built pallet products - extract base SKU and multiply quantity
                         else if (item.title?.includes('Pallet')) {
@@ -711,14 +712,16 @@ export default function DataExplorer() {
                             return `Active 26K (${item.quantity * 50} units)`;
                           } else if (item.title.includes('Power 30K Pallet')) {
                             return `Power 30K (${item.quantity * 50} units)`;
+                          } else if (item.title.includes('Vital 24K Pallet')) {
+                            return `Vital 24K (${item.quantity * 50} units)`;
                           } else if (item.title.includes('Pallet')) {
                             // Generic pallet handling - extract base product name
                             const baseProduct = item.title.replace(' Pallet', '');
                             return `${baseProduct} (${item.quantity * 50} units)`;
                           }
                         }
-                        // For non-pallet products, show the variant ID or SKU
-                        return item.sku || (item.variantId ? `V-${item.variantId}` : "N/A");
+                        // For non-pallet products, show the product name or SKU
+                        return item.name || item.sku || (item.variantId ? `V-${item.variantId}` : "N/A");
                       })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>

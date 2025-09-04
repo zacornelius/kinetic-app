@@ -544,3 +544,33 @@ Error fetching customer orders: SqliteError: no such table: orders
  ✓ Compiled in 331ms
  ✓ Compiled in 185ms
  ✓ Compiled in 188ms
+ GET /admin/data-explorer 200 in 245ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 313ms
+ GET /api/inquiries 200 in 309ms
+ GET /api/orders 200 in 240ms
+ GET /api/users 200 in 242ms
+ GET /api/customers 200 in 246ms
+ GET /api/shopify/orders 200 in 251ms
+ GET /api/shopify/customers 200 in 241ms
+ GET /api/line-items 200 in 245ms
+ GET /api/line-items 200 in 243ms
+ GET /api/line-items 200 in 244ms
+ GET /admin/data-explorer 200 in 103ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 252ms
+ GET /api/inquiries 200 in 251ms
+ GET /api/orders 200 in 268ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 245ms
+ GET /api/shopify/orders 200 in 248ms
+ GET /api/shopify/customers 200 in 244ms
+ GET /api/line-items 200 in 238ms
+ ✓ Compiled in 184ms
+ GET /admin/data-explorer 200 in 265ms
+ GET /api/inquiries 200 in 263ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 265ms
+ GET /api/orders 200 in 301ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 253ms
+ GET /api/shopify/customers 200 in 240ms
+ GET /api/line-items 200 in 248ms
