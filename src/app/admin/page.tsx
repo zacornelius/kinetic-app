@@ -259,24 +259,9 @@ export default function AdminDashboard() {
             >
               {isSyncing ? "Syncing..." : "Sync Recent Orders (250 limit)"}
             </button>
-            <button
-              onClick={async () => {
-                setIsSyncing(true);
-                try {
-                  const response = await fetch('/api/sync/unified', { method: 'POST' });
-                  const data = await response.json();
-                  setSyncMessage(`✅ ${data.message || 'Unified sync completed'}`);
-                } catch (error) {
-                  setSyncMessage(`❌ Error: ${error.message}`);
-                } finally {
-                  setIsSyncing(false);
-                }
-              }}
-              disabled={isSyncing}
-              className="w-full px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
-            >
-              {isSyncing ? "Syncing..." : "Sync to Unified Tables"}
-            </button>
+            <div className="w-full px-4 py-2 bg-gray-100 text-gray-600 rounded text-center">
+              Unified sync not needed - data already synced
+            </div>
           </div>
           
           {syncMessage && (

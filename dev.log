@@ -55,3 +55,50 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  ✓ Compiled in 186ms
  ✓ Compiled in 158ms
  GET /admin/data-explorer 200 in 444ms
+ GET /admin/data-explorer 200 in 79ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 284ms
+ GET /api/inquiries 200 in 295ms
+ GET /api/orders 200 in 301ms
+ GET /api/users 200 in 306ms
+ ✓ Compiled /api/customers in 91ms
+ GET /api/customers 200 in 333ms
+ ✓ Compiled /api/shopify/orders in 105ms
+ GET /api/shopify/orders 200 in 348ms
+ ✓ Compiled /api/shopify/customers in 117ms
+ GET /api/shopify/customers 200 in 357ms
+ GET /api/inquiries 200 in 250ms
+ GET /api/orders 200 in 333ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 243ms
+ GET /api/shopify/orders 200 in 245ms
+ GET /api/shopify/customers 200 in 241ms
+ GET /admin 200 in 95ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
+ GET /api/users 200 in 253ms
+ ✓ Compiled /api/shopify/sync-all-orders in 115ms
+Starting FULL sync of ALL orders from Shopify...
+Starting to fetch ALL orders from Shopify using since_id method...
+Shop: f184d9-2
+Access token: shpat_f934...
+Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
+Current total orders: 0
+Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
+Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
+Current total orders: 250
+Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
+Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
+Current total orders: 500
+Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
+Page 3: Got fewer orders than limit (177 < 250), stopping sync
+Finished fetching ALL orders. Total: 677 orders from 3 pages
+Processing 677 orders...
+Inserting data into database...
+Sync completed successfully!
+ POST /api/shopify/sync-all-orders 200 in 4104ms
+ POST /api/sync/unified 404 in 124ms
+ GET /admin 200 in 86ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
+ GET /api/users 200 in 252ms
+ POST /api/sync/unified 404 in 75ms
+ ✓ Compiled in 154ms
+ GET /admin 200 in 311ms
