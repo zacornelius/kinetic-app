@@ -771,3 +771,33 @@ Total quickbooks_orders: 0
  GET /admin/data-explorer 200 in 84ms
  GET /api/shopify/customers 200 in 241ms
  GET /api/line-items 200 in 244ms
+ GET /admin/data-explorer 200 in 106ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 251ms
+ GET /api/inquiries 200 in 246ms
+ GET /api/orders 200 in 288ms
+ GET /api/users 200 in 236ms
+ GET /api/customers 200 in 249ms
+ GET /api/shopify/orders 200 in 245ms
+ GET /api/shopify/customers 200 in 249ms
+ GET /api/line-items 200 in 243ms
+ GET /admin/data-explorer 200 in 86ms
+ GET /api/inquiries 200 in 284ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 287ms
+ GET /api/orders 200 in 303ms
+ GET /api/users 200 in 246ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 242ms
+ GET /api/shopify/customers 200 in 241ms
+ GET /api/line-items 200 in 240ms
+ GET /admin/data-explorer 200 in 106ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 273ms
+ GET /api/inquiries 200 in 272ms
+ GET /api/orders 200 in 291ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 266ms
+ GET /api/shopify/orders 200 in 249ms
+ GET /api/shopify/customers 200 in 243ms
+ GET /api/line-items 200 in 243ms
+ GET /api/line-items 200 in 268ms
+ GET /api/line-items 200 in 255ms
+ GET /api/line-items 200 in 285ms

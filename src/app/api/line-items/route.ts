@@ -22,13 +22,20 @@ export async function GET() {
       try {
         const lineItems = JSON.parse(order.lineItems);
         lineItems.forEach((item, index) => {
+          // Calculate total price: (price * quantity) - total_discount
+          const price = parseFloat(item.price || 0);
+          const quantity = parseInt(item.quantity || 0);
+          const totalDiscount = parseFloat(item.total_discount || 0);
+          const totalPrice = (price * quantity) - totalDiscount;
+          
           allLineItems.push({
             id: `${order.id}-${index}`,
             orderId: order.id,
             orderNumber: order.orderNumber,
             customerEmail: order.customerEmail,
             customerName: order.customerName,
-            ...item
+            ...item,
+            totalPrice: totalPrice
           });
         });
       } catch (e) {
