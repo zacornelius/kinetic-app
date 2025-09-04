@@ -574,3 +574,148 @@ Error fetching customer orders: SqliteError: no such table: orders
  GET /api/shopify/orders 200 in 253ms
  GET /api/shopify/customers 200 in 240ms
  GET /api/line-items 200 in 248ms
+ GET /admin 200 in 101ms
+ GET /api/users 200 in 250ms
+ ✓ Compiled /api/shopify/sync-incremental in 159ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031487336645
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979eff76ef8c3a24-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=b49e4ae5-2b13-4ab7-8d9d-5a6d5e0fbafd-1757004752; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 16:52:32 GMT',
+  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE2NTY2MTYxMzMsImxhc3RfdmFsdWUiOiI2MDMxNjU2NjE2MTMzIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=Ws21YvCasr7LmiziU2nU4cqtxspBvLuGEZGlJesnCSI96VaQZcvSbU8nRupR1RpqEcp%2BnEHzRnyFmvlufcFoMu%2FM3BTnwuvxDQQYC0F%2Bgn4qSErGb%2FzYrj1W4hyEj8BcHjON%2F%2B1ZXTE%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=b49e4ae5-2b13-4ab7-8d9d-5a6d5e0fbafd-1757004752"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=307, _y;desc="1a0b2f26-eb98-469e-943a-e09cbde45291", _s;desc="753a83d7-04e9-4332-958b-844c457e0d0e", cfRequestDuration;dur=380.000114',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': 'b49e4ae5-2b13-4ab7-8d9d-5a6d5e0fbafd-1757004752',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 1 orders. Total so far: 1
+Progress: Fetched 1 orders from 1 pages
+Shopify sync error: SqliteError: no such table: orderLineItems
+    at <unknown> (src/app/api/shopify/sync-orders/route.ts:459:31)
+    at POST (src/app/api/shopify/sync-orders/route.ts:480:45)
+  457 |
+  458 |       // Insert order line items
+> 459 |       const lineItemStmt = db.prepare(`
+      |                               ^
+  460 |         INSERT OR REPLACE INTO orderLineItems (
+  461 |           id, orderId, productId, shopifyVariantId, sku, title, quantity, price, totalPrice, vendor
+  462 |         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) {
+  code: 'SQLITE_ERROR'
+}
+ POST /api/shopify/sync-orders 500 in 803ms
+ POST /api/shopify/sync-incremental 500 in 1239ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031487336645
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '979eff8dec753a24-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=f10f130e-304f-46d1-abb3-1167d4267fd7-1757004756; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Thu, 04 Sep 2025 16:52:36 GMT',
+  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE2NTY2MTYxMzMsImxhc3RfdmFsdWUiOiI2MDMxNjU2NjE2MTMzIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=o4ctaVEQIPAlqPKXnrpuDtD0XIaihRctH7m4lmgpe18LKk0hha0V%2B9iWqYwSrTOwpRUZer7cqOdw9e0BIQTLwpTUrHLfaG3dasWr%2FqRatQzB4VhOcacgau3KLr1McgfboRzFw5inibA%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=f10f130e-304f-46d1-abb3-1167d4267fd7-1757004756"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=68, _y;desc="5a74a415-5c6f-4fdd-9af8-df23ea680de6", _s;desc="bd8623e0-1df4-4b19-9943-4f1c81c39f5f", cfRequestDuration;dur=121.000051',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': 'f10f130e-304f-46d1-abb3-1167d4267fd7-1757004756',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 1 orders. Total so far: 1
+Progress: Fetched 1 orders from 1 pages
+Shopify sync error: SqliteError: no such table: orderLineItems
+    at <unknown> (src/app/api/shopify/sync-orders/route.ts:459:31)
+    at POST (src/app/api/shopify/sync-orders/route.ts:480:45)
+  457 |
+  458 |       // Insert order line items
+> 459 |       const lineItemStmt = db.prepare(`
+      |                               ^
+  460 |         INSERT OR REPLACE INTO orderLineItems (
+  461 |           id, orderId, productId, shopifyVariantId, sku, title, quantity, price, totalPrice, vendor
+  462 |         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) {
+  code: 'SQLITE_ERROR'
+}
+ POST /api/shopify/sync-orders 500 in 498ms
+ POST /api/shopify/sync-incremental 500 in 742ms
+ GET /admin/data-explorer 200 in 83ms
+ GET /api/inquiries 200 in 234ms
+ GET /api/orders 200 in 277ms
+ GET /api/users 200 in 237ms
+ GET /api/customers 200 in 241ms
+ GET /api/shopify/orders 200 in 239ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 249ms
+ GET /admin/data-explorer 200 in 86ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 247ms
+ GET /api/inquiries 200 in 251ms
+ GET /api/orders 200 in 241ms
+ GET /api/users 200 in 234ms
+ GET /api/customers 200 in 251ms
+ GET /api/shopify/orders 200 in 240ms
+ GET /api/shopify/customers 200 in 248ms
+ GET /api/line-items 200 in 246ms
+ GET /admin/data-explorer 200 in 102ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 256ms
+ GET /api/inquiries 200 in 254ms
+ GET /api/orders 200 in 344ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 242ms
+ GET /api/shopify/orders 200 in 239ms
+ GET /api/shopify/customers 200 in 244ms
+ GET /api/line-items 200 in 241ms
+ ✓ Compiled in 193ms
+ ✓ Compiled in 193ms

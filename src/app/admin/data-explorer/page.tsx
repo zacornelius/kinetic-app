@@ -677,10 +677,9 @@ export default function DataExplorer() {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU/Variant</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective SKU</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective Qty</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
@@ -697,35 +696,43 @@ export default function DataExplorer() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {item.sku || (item.variantId ? `V-${item.variantId}` : "N/A")}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
                       {(() => {
                         // Handle "Build a Pallet" - extract product name from name field
                         if (item.title === 'Build a Pallet') {
-                          const productName = item.name?.replace('Build a Pallet - ', '') || `V-${item.variantId}`;
-                          return `${productName} (${item.quantity} units)`;
+                          return item.name?.replace('Build a Pallet - ', '') || `V-${item.variantId}`;
                         }
-                        // Handle pre-built pallet products - extract base SKU and multiply quantity
+                        // Handle pre-built pallet products - extract base SKU
                         else if (item.title?.includes('Pallet')) {
                           if (item.title.includes('Active 26K Pallet')) {
-                            return `Active 26K (${item.quantity * 50} units)`;
+                            return 'Active 26K';
                           } else if (item.title.includes('Power 30K Pallet')) {
-                            return `Power 30K (${item.quantity * 50} units)`;
+                            return 'Power 30K';
                           } else if (item.title.includes('Vital 24K Pallet')) {
-                            return `Vital 24K (${item.quantity * 50} units)`;
+                            return 'Vital 24K';
                           } else if (item.title.includes('Pallet')) {
                             // Generic pallet handling - extract base product name
-                            const baseProduct = item.title.replace(' Pallet', '');
-                            return `${baseProduct} (${item.quantity * 50} units)`;
+                            return item.title.replace(' Pallet', '');
                           }
                         }
                         // For non-pallet products, show the product name or SKU
                         return item.name || item.sku || (item.variantId ? `V-${item.variantId}` : "N/A");
                       })()}
                     </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {(() => {
+                        // Handle "Build a Pallet" - quantity is units of that SKU on the pallet
+                        if (item.title === 'Build a Pallet') {
+                          return item.quantity;
+                        }
+                        // Handle pre-built pallet products - multiply quantity by 50
+                        else if (item.title?.includes('Pallet')) {
+                          return item.quantity * 50;
+                        }
+                        // For non-pallet products, show regular quantity
+                        return item.quantity;
+                      })()}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">${item.price.toFixed(2)}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">${item.totalPrice.toFixed(2)}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.vendor || "N/A"}</td>
@@ -914,3 +921,4 @@ export default function DataExplorer() {
     </div>
   );
 }
+
