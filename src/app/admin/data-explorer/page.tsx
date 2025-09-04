@@ -784,8 +784,8 @@ export default function DataExplorer() {
                       })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">${item.price.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">${item.totalPrice.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">${parseFloat(item.price || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">${parseFloat(item.totalPrice || 0).toFixed(2)}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.vendor || "N/A"}</td>
                   </tr>
                 ))}

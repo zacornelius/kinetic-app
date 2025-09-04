@@ -752,3 +752,22 @@ Total quickbooks_orders: 0
  POST /api/sync/unified 200 in 365ms
  GET /api/orders 200 in 249ms
  GET /api/line-items 200 in 245ms
+ GET /api/inquiries 200 in 240ms
+ GET /api/orders 200 in 423ms
+ GET /api/users 200 in 245ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 246ms
+ GET /api/shopify/customers 200 in 248ms
+ GET /api/line-items 200 in 246ms
+ ✓ Compiled in 118ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /admin/data-explorer 200 in 274ms
+ GET /api/inquiries 200 in 257ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 257ms
+ GET /api/orders 200 in 308ms
+ GET /api/users 200 in 235ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 249ms
+ GET /admin/data-explorer 200 in 84ms
+ GET /api/shopify/customers 200 in 241ms
+ GET /api/line-items 200 in 244ms
