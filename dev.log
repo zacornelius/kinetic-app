@@ -867,3 +867,26 @@ QuickBooks webhook received: {
   "totalAmount": 100
 }
  POST /api/webhooks/quickbooks 200 in 240ms
+ POST /api/webhooks/quickbooks 401 in 244ms
+QuickBooks webhook received: {
+  "": "JB'S Feed & Supply Inc2325jbsfeed@gmail.comPower 30K Kinetic Dog Food 35 lb50,50(330) 893-36845075 Township Road 401Millersburg, OH  44654 USA2025-08-28",
+  "_50": "330"
+}
+ POST /api/webhooks/quickbooks 400 in 241ms
+QuickBooks webhook received: {
+  "319049596__Customer__DisplayName": "Test Customer",
+  "319049596__TotalAmt": 1500,
+  "319049596__BillEmail__Address": "test@example.com",
+  "319049596__Lines": [
+    {
+      "Description": "Test Product",
+      "SalesItemLineDetail__Qty": 2,
+      "SalesItemLineDetail__UnitPrice": 750
+    }
+  ],
+  "319049596__Customer__PrimaryPhone__FreeFormNumber": "555-1234",
+  "319049596__BillAddr__Line2": "123 Main St",
+  "319049596__BillAddr__Line3": "Suite 100",
+  "319049596__TxnDate": "2024-01-15"
+}
+ POST /api/webhooks/quickbooks 200 in 265ms

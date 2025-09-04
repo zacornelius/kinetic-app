@@ -21,25 +21,42 @@ export async function POST(request: Request) {
     // Log the incoming webhook for debugging
     console.log('QuickBooks webhook received:', JSON.stringify(body, null, 2));
     
-    // Extract invoice data from Zapier payload
-    const {
-      id,
-      docNumber,
-      customerName,
-      customerEmail,
-      totalAmount,
-      currency = 'USD',
-      dueDate,
-      billingAddress,
-      shippingAddress,
-      lineItems = [],
-      notes,
-      createdAt
-    } = body;
+    // Extract invoice data from Zapier/QuickBooks payload
+    // Map QuickBooks field names to our expected format
+    // Generate ID from customer name and date if not provided
+    const id = body['319049596__Id'] || body.id || `qb_${Date.now()}`;
+    const docNumber = body['319049596__DocNumber'] || body.docNumber || `INV-${Date.now()}`;
+    const customerName = body['319049596__Customer__DisplayName'] || body.customerName;
+    const customerEmail = body['319049596__BillEmail__Address'] || body.customerEmail;
+    const totalAmount = body['319049596__TotalAmt'] || body.totalAmount;
+    const currency = body.currency || 'USD';
+    const dueDate = body['319049596__DueDate'] || body.dueDate;
+    const billingAddress = body['319049596__BillAddr__Line1'] || body.billingAddress;
+    const shippingAddress = body['319049596__ShipAddr__Line1'] || body.shippingAddress;
+    const notes = body['319049596__PrivateNote'] || body.notes;
+    const createdAt = body['319049596__TxnDate'] || body.createdAt;
+    
+    // Extract line items from QuickBooks format
+    const lineItems = [];
+    if (body['319049596__Lines'] && Array.isArray(body['319049596__Lines'])) {
+      body['319049596__Lines'].forEach((line, index) => {
+        if (line.Description) {
+          lineItems.push({
+            id: `qb_line_${id}_${index}`,
+            name: line.Description,
+            quantity: line.SalesItemLineDetail__Qty || 1,
+            price: line.SalesItemLineDetail__UnitPrice || 0,
+            total: (line.SalesItemLineDetail__Qty || 1) * (line.SalesItemLineDetail__UnitPrice || 0),
+            description: line.Description
+          });
+        }
+      });
+    }
 
     if (!id || !docNumber) {
       return NextResponse.json({ 
-        error: "Missing required fields: id and docNumber" 
+        error: "Missing required fields: id and docNumber",
+        received: Object.keys(body)
       }, { status: 400 });
     }
 
