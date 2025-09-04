@@ -538,3 +538,7 @@ Error fetching customer orders: SqliteError: no such table: orders
  GET /api/line-items 200 in 249ms
  GET /admin/data-explorer 200 in 490ms
  ✓ Compiled in 329ms
+ GET /admin/data-explorer 200 in 259ms
+ ✓ Compiled in 210ms
+ ✓ Compiled in 184ms
+ ✓ Compiled in 331ms
