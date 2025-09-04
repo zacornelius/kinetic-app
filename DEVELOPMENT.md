@@ -1,32 +1,31 @@
 # Development Workflow
 
-## 🔄 Quick Development Commands
+## 🚀 FAST Development (Hot Reloading)
 
-### For Code Updates (Use This!)
+### For Real-Time Development (RECOMMENDED!)
 ```bash
-# After making changes to src/ files:
-./dev-sync.sh
+# Start development server with hot reloading
+npm run dev
+
+# Changes to src/ files are reflected IMMEDIATELY!
+# No rebuild needed, no restart needed!
 ```
 
-### Manual Steps (if needed)
+### For Production Deployment
 ```bash
-# 1. Kill existing server
-pkill -f "next"
-
-# 2. Rebuild application
+# Only when ready to deploy
 npm run build
-
-# 3. Start server
-npm start > app.log 2>&1 &
+npm start
 ```
 
 ## 📝 Git Workflow
 
 ### Making Changes
 ```bash
-# 1. Make your changes to src/ files
-# 2. Test with dev-sync.sh
-# 3. Commit changes
+# 1. Start dev server: npm run dev
+# 2. Make changes to src/ files (changes appear instantly!)
+# 3. Test your changes in browser
+# 4. Commit when ready
 git add .
 git commit -m "Description of changes"
 git push origin main
@@ -39,11 +38,11 @@ git log --oneline -10
 
 # Rollback to previous commit
 git reset --hard HEAD~1
-./dev-sync.sh
+# Changes will appear instantly in dev mode!
 
 # Rollback to specific commit
 git reset --hard <commit-hash>
-./dev-sync.sh
+# Changes will appear instantly in dev mode!
 ```
 
 ### Emergency Rollback
@@ -51,25 +50,25 @@ git reset --hard <commit-hash>
 # If something breaks, quickly rollback
 git stash
 git pull origin main
-./dev-sync.sh
+# Changes will appear instantly in dev mode!
 ```
 
 ## 🚨 Important Notes
 
-1. **Always use `./dev-sync.sh`** after making changes to `src/` files
-2. **The server runs compiled code** from `.next/server/`, not source files
-3. **Changes to `src/` don't affect running server** until rebuild
-4. **Git tracks your source code** - use it for version control and rollbacks
+1. **Use `npm run dev` for development** - changes appear instantly!
+2. **Use `npm run build && npm start` for production** - optimized build
+3. **Git tracks your source code** - use it for version control and rollbacks
+4. **Development server runs from source files** - no rebuild needed!
 
 ## 🔍 Troubleshooting
 
 ### Server Not Updating?
 ```bash
-# Check if server is running
-ps aux | grep next
+# Check if dev server is running
+ps aux | grep "next dev"
 
-# Force restart
-pkill -f "next" && ./dev-sync.sh
+# Restart dev server
+pkill -f "next dev" && npm run dev
 ```
 
 ### Build Errors?
