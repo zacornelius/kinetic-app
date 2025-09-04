@@ -484,13 +484,32 @@ export default function DataExplorer() {
                 onChange={(e) => setSourceFilter(e.target.value as "all" | "shopify" | "quickbooks" | "manual")}
                 className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All Sources ({orders.length})</option>
-                <option value="shopify">Shopify ({orders.filter(o => o.source === 'shopify').length})</option>
-                <option value="quickbooks">QuickBooks ({orders.filter(o => o.source === 'quickbooks').length})</option>
-                <option value="manual">Manual ({orders.filter(o => o.source === 'manual').length})</option>
+                {(() => {
+                  const palletOrders = getFilteredOrders().filter(order => {
+                    return lineItems.some(item => 
+                      item.orderNumber === order.orderNumber && 
+                      (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                    );
+                  });
+                  
+                  return (
+                    <>
+                      <option value="all">All Sources ({palletOrders.length})</option>
+                      <option value="shopify">Shopify ({palletOrders.filter(o => o.source === 'shopify').length})</option>
+                      <option value="quickbooks">QuickBooks ({palletOrders.filter(o => o.source === 'quickbooks').length})</option>
+                      <option value="manual">Manual ({palletOrders.filter(o => o.source === 'manual').length})</option>
+                    </>
+                  );
+                })()}
               </select>
               <div className="text-sm text-gray-500">
-                Showing {getFilteredOrders().length} orders
+                Showing {getFilteredOrders()
+                  .filter(order => {
+                    return lineItems.some(item => 
+                      item.orderNumber === order.orderNumber && 
+                      (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                    );
+                  }).length} pallet orders
               </div>
             </div>
           </div>
