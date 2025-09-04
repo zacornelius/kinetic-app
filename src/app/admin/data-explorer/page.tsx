@@ -652,13 +652,15 @@ export default function DataExplorer() {
             <h3 className="text-lg font-semibold mb-2">SKU Tracking Summary</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="bg-white p-3 rounded border">
-                <div className="font-medium text-gray-700">Total Line Items</div>
-                <div className="text-2xl font-bold text-blue-600">{lineItems.length}</div>
+                <div className="font-medium text-gray-700">Total Pallet Items</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {lineItems.filter(item => item.title === 'Build a Pallet' || item.title?.includes('Pallet')).length}
+                </div>
               </div>
               <div className="bg-white p-3 rounded border">
-                <div className="font-medium text-gray-700">Pallet Products</div>
+                <div className="font-medium text-gray-700">Pre-built Pallets</div>
                 <div className="text-2xl font-bold text-green-600">
-                  {lineItems.filter(item => item.title?.includes('Pallet')).length}
+                  {lineItems.filter(item => item.title?.includes('Pallet') && item.title !== 'Build a Pallet').length}
                 </div>
               </div>
               <div className="bg-white p-3 rounded border">
@@ -686,7 +688,12 @@ export default function DataExplorer() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {lineItems.map((item) => (
+                {lineItems
+                  .filter(item => {
+                    // Only show pallet-related products
+                    return item.title === 'Build a Pallet' || item.title?.includes('Pallet');
+                  })
+                  .map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{item.orderNumber || "N/A"}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
