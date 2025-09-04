@@ -647,6 +647,28 @@ export default function DataExplorer() {
 
       {activeTab === "lineItems" && (
         <div className="bg-white border rounded-lg overflow-hidden">
+          {/* SKU Tracking Summary */}
+          <div className="bg-gray-50 p-4 border-b">
+            <h3 className="text-lg font-semibold mb-2">SKU Tracking Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-white p-3 rounded border">
+                <div className="font-medium text-gray-700">Total Line Items</div>
+                <div className="text-2xl font-bold text-blue-600">{lineItems.length}</div>
+              </div>
+              <div className="bg-white p-3 rounded border">
+                <div className="font-medium text-gray-700">Pallet Products</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {lineItems.filter(item => item.title?.includes('Pallet')).length}
+                </div>
+              </div>
+              <div className="bg-white p-3 rounded border">
+                <div className="font-medium text-gray-700">Build a Pallet</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {lineItems.filter(item => item.title === 'Build a Pallet').length}
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -654,6 +676,7 @@ export default function DataExplorer() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU/Variant</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective SKU</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
@@ -672,7 +695,25 @@ export default function DataExplorer() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {item.sku || (item.shopifyVariantId ? `V-${item.shopifyVariantId}` : "N/A")}
+                      {item.sku || (item.variantId ? `V-${item.variantId}` : "N/A")}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {(() => {
+                        // Handle pallet products - extract base SKU and multiply quantity
+                        if (item.title?.includes('Pallet')) {
+                          if (item.title.includes('Active 26K Pallet')) {
+                            return `Active 26K (${item.quantity * 50} units)`;
+                          } else if (item.title.includes('Power 30K Pallet')) {
+                            return `Power 30K (${item.quantity * 50} units)`;
+                          } else if (item.title.includes('Pallet')) {
+                            // Generic pallet handling - extract base product name
+                            const baseProduct = item.title.replace(' Pallet', '');
+                            return `${baseProduct} (${item.quantity * 50} units)`;
+                          }
+                        }
+                        // For non-pallet products, show the variant ID or SKU
+                        return item.sku || (item.variantId ? `V-${item.variantId}` : "N/A");
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>

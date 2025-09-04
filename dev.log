@@ -508,3 +508,33 @@ Error fetching customer orders: SqliteError: no such table: orders
  GET /api/shopify/orders 200 in 243ms
  GET /api/shopify/customers 200 in 241ms
  GET /api/line-items 200 in 240ms
+Error fetching customer orders: SqliteError: no such table: orders
+    at GET (src/app/api/customers/[email]/orders/route.ts:12:23)
+  10 |     const email = decodeURIComponent(emailParam);
+  11 |     
+> 12 |     const orders = db.prepare(`
+     |                       ^
+  13 |       SELECT 
+  14 |         o.id,
+  15 |         o.createdAt, {
+  code: 'SQLITE_ERROR'
+}
+ GET /api/customers/luttrell%40itctel.com/orders 500 in 405ms
+ GET /admin 200 in 92ms
+ GET /api/users 200 in 274ms
+ GET /admin/data-explorer 200 in 83ms
+ GET /api/inquiries 200 in 248ms
+ GET /api/orders 200 in 273ms
+ GET /api/users 200 in 241ms
+ GET /api/customers 200 in 246ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/customers 200 in 243ms
+ GET /api/line-items 200 in 240ms
+ GET /api/line-items 200 in 238ms
+ ✓ Compiled in 196ms
+ ✓ Compiled in 204ms
+ ✓ Compiled in 196ms
+ GET /api/line-items 200 in 254ms
+ GET /api/line-items 200 in 249ms
+ GET /admin/data-explorer 200 in 490ms
+ ✓ Compiled in 329ms
