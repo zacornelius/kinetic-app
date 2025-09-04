@@ -259,25 +259,25 @@ export default function DataExplorer() {
             onClick={() => setActiveTab("inquiries")}
             className={`px-4 py-2 rounded ${activeTab === "inquiries" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
           >
-            Website Inquiries ({inquiries.length})
+            Website Inquiries
           </button>
           <button
             onClick={() => setActiveTab("orders")}
             className={`px-4 py-2 rounded ${activeTab === "orders" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
           >
-            Orders ({orders.length})
+            Orders
           </button>
           <button
             onClick={() => setActiveTab("lineItems")}
             className={`px-4 py-2 rounded ${activeTab === "lineItems" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
           >
-            Line Items ({lineItems.length})
+            Line Items
           </button>
           <button
             onClick={() => setActiveTab("customers")}
             className={`px-4 py-2 rounded ${activeTab === "customers" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
           >
-            Customers ({customers.length})
+            Customers
           </button>
           <button
             onClick={() => setActiveTab("debug")}

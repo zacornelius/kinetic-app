@@ -741,3 +741,13 @@ Shopify sync error: SqliteError: no such table: orderLineItems
  GET /api/shopify/customers 200 in 251ms
  GET /api/line-items 200 in 241ms
  GET /api/line-items 200 in 243ms
+ GET /admin/data-explorer 200 in 84ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 275ms
+ GET /api/inquiries 200 in 280ms
+ GET /api/orders 200 in 249ms
+ GET /api/users 200 in 242ms
+ GET /api/customers 200 in 245ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/customers 200 in 243ms
+ GET /api/line-items 200 in 247ms
+ ✓ Compiled in 185ms
