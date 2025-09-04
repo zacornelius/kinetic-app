@@ -859,3 +859,11 @@ QuickBooks webhook received: {
   "test": "data"
 }
  POST /api/webhooks/quickbooks 400 in 245ms
+ GET /api/webhooks/quickbooks 200 in 257ms
+QuickBooks webhook received: {
+  "id": "test123",
+  "docNumber": "INV-001",
+  "customerName": "Test Customer",
+  "totalAmount": 100
+}
+ POST /api/webhooks/quickbooks 200 in 240ms

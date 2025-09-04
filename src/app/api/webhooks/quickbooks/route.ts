@@ -4,13 +4,15 @@ import db from "@/lib/database";
 // Simple webhook endpoint for Zapier to POST QuickBooks invoices
 export async function POST(request: Request) {
   try {
-    // Check for API key authentication
-    const apiKey = request.headers.get('x-api-key');
-    const expectedApiKey = process.env.WEBHOOK_API_KEY || 'kinetic-webhook-2024';
+    // Check for Basic Auth authentication
+    const authHeader = request.headers.get('authorization');
+    const expectedUsername = process.env.WEBHOOK_USERNAME || 'kinetic';
+    const expectedPassword = process.env.WEBHOOK_PASSWORD || 'webhook2024';
+    const expectedAuth = `Basic ${btoa(`${expectedUsername}:${expectedPassword}`)}`;
     
-    if (!apiKey || apiKey !== expectedApiKey) {
+    if (!authHeader || authHeader !== expectedAuth) {
       return NextResponse.json({ 
-        error: "Unauthorized - Invalid or missing API key" 
+        error: "Unauthorized - Invalid credentials" 
       }, { status: 401 });
     }
     
@@ -124,7 +126,8 @@ export async function GET() {
     status: "ok", 
     message: "QuickBooks webhook endpoint is ready",
     url: "/api/webhooks/quickbooks",
-    authentication: "API Key required in x-api-key header",
-    apiKey: process.env.WEBHOOK_API_KEY || 'kinetic-webhook-2024'
+    authentication: "Basic Auth required",
+    username: process.env.WEBHOOK_USERNAME || 'kinetic',
+    password: process.env.WEBHOOK_PASSWORD || 'webhook2024'
   });
 }
