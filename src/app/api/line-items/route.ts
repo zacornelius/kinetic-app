@@ -3,27 +3,40 @@ import db from "@/lib/database";
 
 export async function GET() {
   try {
-    const lineItems = db.prepare(`
+    // Get all orders with line items
+    const orders = db.prepare(`
       SELECT 
-        oli.id,
-        oli.orderId,
-        oli.productId,
-        oli.shopifyVariantId,
-        oli.sku,
-        oli.title,
-        oli.quantity,
-        oli.price,
-        oli.totalPrice,
-        oli.vendor,
-        o.orderNumber,
-        o.customerEmail,
-        o.customerName
-      FROM orderLineItems oli
-      LEFT JOIN orders o ON oli.orderId = o.id
-      ORDER BY o.createdAt DESC, oli.title
+        id,
+        orderNumber,
+        customerEmail,
+        customerName,
+        lineItems
+      FROM all_orders
+      WHERE lineItems IS NOT NULL AND lineItems != ''
+      ORDER BY createdAt DESC
     `).all();
-
-    return NextResponse.json(lineItems);
+    
+    // Parse line items from JSON and flatten them
+    const allLineItems = [];
+    orders.forEach(order => {
+      try {
+        const lineItems = JSON.parse(order.lineItems);
+        lineItems.forEach((item, index) => {
+          allLineItems.push({
+            id: `${order.id}-${index}`,
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customerEmail: order.customerEmail,
+            customerName: order.customerName,
+            ...item
+          });
+        });
+      } catch (e) {
+        console.error('Error parsing line items for order:', order.orderNumber, e);
+      }
+    });
+    
+    return NextResponse.json(allLineItems);
   } catch (error) {
     console.error("Error fetching line items:", error);
     return NextResponse.json(

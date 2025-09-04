@@ -117,33 +117,17 @@ export default function DataExplorer() {
       const shopifyCustomersData = await shopifyCustomersRes.json();
       console.log('Shopify customers loaded:', shopifyCustomersData.length);
       
+      const lineItemsRes = await fetch("/api/line-items");
+      const lineItemsData = await lineItemsRes.json();
+      console.log('Line items loaded:', lineItemsData.length);
+      
       setInquiries(inquiriesData);
       setOrders(ordersData);
       setUsers(usersData);
       setCustomers(customersData);
       setShopifyOrders(shopifyOrdersData);
       setShopifyCustomers(shopifyCustomersData);
-      
-      // Calculate line items from orders (since they're stored as JSON now)
-      const allLineItems = [];
-      [...ordersData, ...shopifyOrdersData].forEach(order => {
-        if (order.lineItems) {
-          try {
-            const lineItems = JSON.parse(order.lineItems);
-            lineItems.forEach(item => {
-              allLineItems.push({
-                ...item,
-                orderNumber: order.orderNumber,
-                customerEmail: order.customerEmail,
-                customerName: order.customerName
-              });
-            });
-          } catch (e) {
-            console.error('Error parsing line items for order:', order.orderNumber, e);
-          }
-        }
-      });
-      setLineItems(allLineItems);
+      setLineItems(lineItemsData);
       
       // Log the data for debugging
       console.log('=== DATA LOADED ===');
