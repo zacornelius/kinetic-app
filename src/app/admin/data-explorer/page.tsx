@@ -91,7 +91,7 @@ export default function DataExplorer() {
       const inquiriesData = await inquiriesRes.json();
       console.log('Inquiries loaded:', inquiriesData.length);
       
-      const ordersRes = await fetch("/api/all-orders");
+      const ordersRes = await fetch("/api/orders");
       const ordersData = await ordersRes.json();
       console.log('All orders loaded:', ordersData.length);
       
@@ -99,7 +99,7 @@ export default function DataExplorer() {
       const usersData = await usersRes.json();
       console.log('Users loaded:', usersData.length);
       
-      const customersRes = await fetch("/api/all-customers");
+      const customersRes = await fetch("/api/customers");
       const customersData = await customersRes.json();
       console.log('All customers loaded:', customersData.length);
       

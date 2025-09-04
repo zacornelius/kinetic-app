@@ -32,3 +32,26 @@ https://nextjs.org/docs/messages/module-not-found
  ✓ Compiled in 186ms
  ✓ Compiled / in 14ms
  GET / 200 in 462ms
+ ✓ Compiled /admin in 330ms
+ GET /admin 200 in 444ms
+ ⚠ Cross origin request detected from 3.145.159.251 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 643ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 868ms
+ GET /api/users 200 in 899ms
+ ✓ Compiled /api/shopify/sync-orders in 118ms
+ GET /api/shopify/sync-orders 200 in 364ms
+ GET /api/shopify/sync-orders 200 in 243ms
+ ✓ Compiled /admin/data-explorer in 323ms
+ GET /admin/data-explorer 200 in 429ms
+ ✓ Compiled /api/inquiries in 147ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 258ms
+ GET /api/inquiries 200 in 394ms
+ ✓ Compiled /_not-found/page in 283ms
+ GET /api/all-orders 404 in 390ms
+ ✓ Compiled /api/orders in 108ms
+ GET /api/orders 200 in 369ms
+ ✓ Compiled in 186ms
+ ✓ Compiled in 158ms
+ GET /admin/data-explorer 200 in 444ms
