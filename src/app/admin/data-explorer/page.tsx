@@ -486,6 +486,11 @@ export default function DataExplorer() {
               >
                 {(() => {
                   const palletOrders = getFilteredOrders().filter(order => {
+                    // Include QuickBooks orders regardless of pallet products
+                    if (order.source === 'quickbooks') {
+                      return true;
+                    }
+                    // For other sources, check if they have pallet products
                     return lineItems.some(item => 
                       item.orderNumber === order.orderNumber && 
                       (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
@@ -505,11 +510,16 @@ export default function DataExplorer() {
               <div className="text-sm text-gray-500">
                 Showing {getFilteredOrders()
                   .filter(order => {
+                    // Include QuickBooks orders regardless of pallet products
+                    if (order.source === 'quickbooks') {
+                      return true;
+                    }
+                    // For other sources, check if they have pallet products
                     return lineItems.some(item => 
                       item.orderNumber === order.orderNumber && 
                       (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
                     );
-                  }).length} pallet orders
+                  }).length} orders
               </div>
             </div>
           </div>
@@ -533,7 +543,11 @@ export default function DataExplorer() {
               <tbody className="divide-y divide-gray-200">
                 {getFilteredOrders()
                   .filter(order => {
-                    // Only show orders that have pallet products
+                    // Include QuickBooks orders regardless of pallet products
+                    if (order.source === 'quickbooks') {
+                      return true;
+                    }
+                    // For other sources, only show orders that have pallet products
                     return lineItems.some(item => 
                       item.orderNumber === order.orderNumber && 
                       (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))

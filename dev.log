@@ -922,3 +922,25 @@ Total shopify_orders: 678
 Total quickbooks_orders: 3
  POST /api/sync/unified 200 in 354ms
  GET /api/orders 200 in 258ms
+ GET /admin/data-explorer 200 in 194ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 274ms
+ GET /api/inquiries 200 in 293ms
+ GET /api/orders 200 in 412ms
+ GET /api/users 200 in 256ms
+ GET /api/customers 200 in 261ms
+ GET /api/shopify/orders 200 in 263ms
+ GET /api/shopify/customers 200 in 273ms
+ GET /api/line-items 200 in 260ms
+ GET /api/inquiries 200 in 246ms
+ GET /api/orders 200 in 323ms
+ GET /api/users 200 in 242ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/customers 200 in 242ms
+ GET /api/line-items 200 in 243ms
+ GET /api/orders 200 in 257ms
+ GET /api/orders 200 in 245ms
+ ✓ Compiled in 120ms
+ ✓ Compiled in 133ms
+ ✓ Compiled in 126ms
+ GET /admin/data-explorer 200 in 266ms
