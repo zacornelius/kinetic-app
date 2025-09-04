@@ -7,750 +7,92 @@
    - Network:      http://172.31.31.34:3000
 
  ✓ Starting...
- ✓ Ready in 1000ms
- ○ Compiling / ...
- ✓ Compiled / in 4s
- ⨯ ./src/app/layout.tsx:4:1
-Module not found: Can't resolve './register-sw'
-[0m [90m 2 |[39m [36mimport[39m { [33mGeist[39m[33m,[39m [33mGeist_Mono[39m } [36mfrom[39m [32m"next/font/google"[39m[33m;[39m
- [90m 3 |[39m [36mimport[39m [32m"./globals.css"[39m[33m;[39m
-[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { registerServiceWorker } [36mfrom[39m [32m"./register-sw"[39m[33m;[39m
- [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
- [90m 5 |[39m
- [90m 6 |[39m [36mconst[39m geistSans [33m=[39m [33mGeist[39m({
- [90m 7 |[39m   variable[33m:[39m [32m"--font-geist-sans"[39m[33m,[39m[0m
+ ✓ Ready in 1268ms
+ ○ Compiling /admin/data-explorer ...
+ ✓ Compiled /admin/data-explorer in 4.1s
+ ⨯ ./src/app/admin/data-explorer/page.tsx:894:8
+Parsing ecmascript source code failed
+[0m [90m 892 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 893 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 894 |[39m       )}
+ [90m     |[39m        [31m[1m^[22m[39m
+ [90m 895 |[39m
+ [90m 896 |[39m       {[90m/* Customer Orders Modal */[39m}
+ [90m 897 |[39m       {selectedCustomer [33m&&[39m ([0m
 
-
-
-https://nextjs.org/docs/messages/module-not-found
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
 
 
  ○ Compiling /_error ...
- ✓ Compiled /_error in 1779ms
- GET / 500 in 5951ms
- ✓ Compiled in 97ms
- ✓ Compiled in 186ms
- ✓ Compiled / in 14ms
- GET / 200 in 462ms
- ✓ Compiled /admin in 330ms
- GET /admin 200 in 444ms
- ⚠ Cross origin request detected from 3.145.159.251 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
-Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- ○ Compiling /favicon.ico ...
- ✓ Compiled /favicon.ico in 643ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 868ms
- GET /api/users 200 in 899ms
- ✓ Compiled /api/shopify/sync-orders in 118ms
- GET /api/shopify/sync-orders 200 in 364ms
- GET /api/shopify/sync-orders 200 in 243ms
- ✓ Compiled /admin/data-explorer in 323ms
- GET /admin/data-explorer 200 in 429ms
- ✓ Compiled /api/inquiries in 147ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 258ms
- GET /api/inquiries 200 in 394ms
- ✓ Compiled /_not-found/page in 283ms
- GET /api/all-orders 404 in 390ms
- ✓ Compiled /api/orders in 108ms
- GET /api/orders 200 in 369ms
- ✓ Compiled in 186ms
- ✓ Compiled in 158ms
- GET /admin/data-explorer 200 in 444ms
- GET /admin/data-explorer 200 in 79ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 284ms
- GET /api/inquiries 200 in 295ms
- GET /api/orders 200 in 301ms
- GET /api/users 200 in 306ms
- ✓ Compiled /api/customers in 91ms
- GET /api/customers 200 in 333ms
- ✓ Compiled /api/shopify/orders in 105ms
- GET /api/shopify/orders 200 in 348ms
- ✓ Compiled /api/shopify/customers in 117ms
- GET /api/shopify/customers 200 in 357ms
- GET /api/inquiries 200 in 250ms
- GET /api/orders 200 in 333ms
- GET /api/users 200 in 238ms
- GET /api/customers 200 in 243ms
- GET /api/shopify/orders 200 in 245ms
- GET /api/shopify/customers 200 in 241ms
- GET /admin 200 in 95ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
- GET /api/users 200 in 253ms
- ✓ Compiled /api/shopify/sync-all-orders in 115ms
-Starting FULL sync of ALL orders from Shopify...
-Starting to fetch ALL orders from Shopify using since_id method...
-Shop: f184d9-2
-Access token: shpat_f934...
-Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
-Current total orders: 0
-Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
-Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
-Current total orders: 250
-Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
-Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
-Current total orders: 500
-Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
-Page 3: Got fewer orders than limit (177 < 250), stopping sync
-Finished fetching ALL orders. Total: 677 orders from 3 pages
-Processing 677 orders...
-Inserting data into database...
-Sync completed successfully!
- POST /api/shopify/sync-all-orders 200 in 4104ms
- POST /api/sync/unified 404 in 124ms
- GET /admin 200 in 86ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
- GET /api/users 200 in 252ms
- POST /api/sync/unified 404 in 75ms
- ✓ Compiled in 154ms
- GET /admin 200 in 311ms
- GET /admin/data-explorer 200 in 95ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
- GET /api/inquiries 200 in 253ms
- GET /api/orders 200 in 310ms
- GET /api/users 200 in 235ms
- GET /api/customers 200 in 240ms
- GET /api/shopify/orders 200 in 245ms
- GET /api/shopify/customers 200 in 247ms
- GET /admin 200 in 144ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 263ms
- GET /api/users 200 in 261ms
-Starting FULL sync of ALL orders from Shopify...
-Starting to fetch ALL orders from Shopify using since_id method...
-Shop: f184d9-2
-Access token: shpat_f934...
-Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
-Current total orders: 0
-Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
-Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
-Current total orders: 250
-Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
-Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
-Current total orders: 500
-Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
-Page 3: Got fewer orders than limit (177 < 250), stopping sync
-Finished fetching ALL orders. Total: 677 orders from 3 pages
-Processing 677 orders...
-Inserting data into database...
-Sync completed successfully!
- POST /api/shopify/sync-all-orders 200 in 1749ms
- GET /admin/data-explorer 200 in 100ms
- GET /api/inquiries 200 in 242ms
- GET /api/orders 200 in 329ms
- GET /api/users 200 in 241ms
- GET /api/customers 200 in 254ms
- GET /api/shopify/orders 200 in 240ms
- GET /api/shopify/customers 200 in 246ms
- GET /api/shopify/sync-orders 200 in 253ms
- GET /api/shopify/sync-orders 200 in 241ms
- GET /api/shopify/sync-orders 200 in 244ms
-Shopify full sync error: SyntaxError: Unexpected end of JSON input
-    at JSON.parse (<anonymous>)
-    at async POST (src/app/api/shopify/sync-all-orders/route.ts:363:35)
-  361 | export async function POST(request: Request) {
-  362 |   try {
-> 363 |     const { shop, accessToken } = await request.json();
-      |                                   ^
-  364 |
-  365 |     if (!shop || !accessToken) {
-  366 |       return NextResponse.json(
- POST /api/shopify/sync-all-orders 500 in 472ms
-Starting FULL sync of ALL orders from Shopify...
-Starting to fetch ALL orders from Shopify using since_id method...
-Shop: f184d9-2
-Access token: shpat_f934...
-Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
-Current total orders: 0
-Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
-Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
-Current total orders: 250
-Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
-Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
-Current total orders: 500
-Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
-Page 3: Got fewer orders than limit (177 < 250), stopping sync
-Finished fetching ALL orders. Total: 677 orders from 3 pages
-Processing 677 orders...
-Inserting data into database...
-Sync completed successfully!
- POST /api/shopify/sync-all-orders 200 in 1723ms
- GET /api/shopify/sync-orders 200 in 247ms
- GET /api/shopify/sync-orders 200 in 238ms
- GET /api/shopify/sync-orders 200 in 238ms
- GET /admin/data-explorer 200 in 126ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 248ms
- GET /api/inquiries 200 in 251ms
- GET /api/orders 200 in 321ms
- GET /api/users 200 in 238ms
- GET /api/customers 200 in 254ms
- GET /api/shopify/orders 200 in 244ms
- GET /api/shopify/customers 200 in 250ms
- GET /api/orders 200 in 242ms
- GET /admin/data-explorer 200 in 98ms
- GET /api/inquiries 200 in 248ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 250ms
- GET /api/orders 200 in 356ms
- GET /api/users 200 in 241ms
- GET /api/customers 200 in 243ms
- GET /api/shopify/orders 200 in 255ms
- GET /api/shopify/customers 200 in 242ms
- GET /api/orders 200 in 254ms
- GET /api/orders 200 in 243ms
- GET /api/orders 200 in 267ms
- GET /api/orders 200 in 251ms
- GET /api/shopify/sync-orders 200 in 240ms
- GET /api/shopify/orders 200 in 244ms
- GET /api/shopify/orders 200 in 251ms
- GET /admin/data-explorer 200 in 93ms
- GET /api/inquiries 200 in 277ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 277ms
- GET /api/orders 200 in 271ms
- GET /api/users 200 in 240ms
- GET /api/customers 200 in 249ms
- GET /api/shopify/orders 200 in 253ms
- GET /api/shopify/customers 200 in 242ms
- GET /admin/data-explorer 200 in 89ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 253ms
- GET /api/inquiries 200 in 251ms
- GET /api/orders 200 in 291ms
- GET /api/users 200 in 247ms
- GET /api/customers 200 in 242ms
- GET /api/shopify/orders 200 in 243ms
- GET /api/shopify/customers 200 in 253ms
- GET /api/quickbooks/orders 404 in 74ms
- GET /api/quickbooks/orders 404 in 72ms
- GET /admin/data-explorer 200 in 82ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 274ms
- GET /api/inquiries 200 in 277ms
- GET /api/orders 200 in 335ms
- GET /api/users 200 in 238ms
- GET /api/customers 200 in 243ms
- GET /api/shopify/orders 200 in 243ms
- GET /api/shopify/customers 200 in 245ms
- GET /api/orders 200 in 241ms
- GET /admin 200 in 96ms
- GET /api/users 200 in 248ms
- GET /api/shopify/orders 200 in 241ms
- GET /api/orders 200 in 261ms
- GET /admin 200 in 90ms
- GET /api/users 200 in 250ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 252ms
- GET /admin 200 in 116ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 259ms
- GET /api/users 200 in 254ms
- GET /api/orders 200 in 248ms
-Starting FULL sync of ALL orders from Shopify...
-Starting to fetch ALL orders from Shopify using since_id method...
-Shop: f184d9-2
-Access token: shpat_f934...
-Page 1: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=0
-Current total orders: 0
-Page 1: Fetched 250 orders. Total so far: 250. Next sinceId: 5427060965573
-Page 2: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5427060965573
-Current total orders: 250
-Page 2: Fetched 250 orders. Total so far: 500. Next sinceId: 5610287628485
-Page 3: Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&status=any&since_id=5610287628485
-Current total orders: 500
-Page 3: Fetched 177 orders. Total so far: 677. Next sinceId: 6031487336645
-Page 3: Got fewer orders than limit (177 < 250), stopping sync
-Finished fetching ALL orders. Total: 677 orders from 3 pages
-Processing 677 orders...
-Inserting data into database...
-Sync completed successfully!
- POST /api/shopify/sync-all-orders 200 in 2213ms
- GET /admin 200 in 239ms
- GET /admin 200 in 240ms
- GET /admin 200 in 153ms
- GET /admin 200 in 168ms
- ✓ Compiled /api/sync/unified in 89ms
-Starting unified sync - populating all_orders from source tables...
-Cleared existing all_orders data
-Found 677 Shopify orders to sync
-Synced 677 Shopify orders to all_orders
-Found 0 QuickBooks orders to sync
-Synced 0 QuickBooks orders to all_orders
-Unified sync completed successfully!
-Total all_orders: 677
-Total shopify_orders: 677
-Total quickbooks_orders: 0
- POST /api/sync/unified 200 in 479ms
- GET /api/orders 200 in 264ms
- GET /api/orders 200 in 238ms
- GET /admin 200 in 263ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 292ms
- GET /api/users 200 in 311ms
- GET /admin/data-explorer 200 in 125ms
- GET /api/inquiries 200 in 258ms
- GET /api/orders 200 in 283ms
- GET /api/users 200 in 242ms
- GET /api/customers 200 in 284ms
- GET /api/shopify/orders 200 in 264ms
- GET /api/shopify/customers 200 in 255ms
- ✓ Compiled in 119ms
- GET /admin/data-explorer 200 in 229ms
- GET /api/inquiries 200 in 259ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 261ms
- GET /api/orders 200 in 270ms
- GET /api/users 200 in 237ms
- GET /api/customers 200 in 239ms
- GET /api/shopify/orders 200 in 237ms
- GET /api/shopify/customers 200 in 248ms
- ✓ Compiled in 161ms
- GET /api/inquiries 200 in 239ms
- GET /api/orders 200 in 316ms
- GET /api/users 200 in 239ms
- GET /api/customers 200 in 249ms
- GET /api/shopify/orders 200 in 238ms
- GET /api/shopify/customers 200 in 240ms
- ✓ Compiled in 169ms
- ✓ Compiled in 155ms
- ⨯ ./src/app/admin/data-explorer/page.tsx:661:8
+ ✓ Compiled /_error in 1479ms
+ GET /admin/data-explorer 500 in 5852ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:894:8
 Parsing ecmascript source code failed
-[0m [90m 659 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 660 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 661 |[39m       )}
+[0m [90m 892 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 893 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 894 |[39m       )}
  [90m     |[39m        [31m[1m^[22m[39m
- [90m 662 |[39m
- [90m 663 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
- [90m 664 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
+ [90m 895 |[39m
+ [90m 896 |[39m       {[90m/* Customer Orders Modal */[39m}
+ [90m 897 |[39m       {selectedCustomer [33m&&[39m ([0m
 
 Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
 
-Import traces:
-  Client Component Browser:
-    ./src/app/admin/data-explorer/page.tsx [Client Component Browser]
-    ./src/app/admin/data-explorer/page.tsx [Server Component]
 
-  Client Component SSR:
-    ./src/app/admin/data-explorer/page.tsx [Client Component SSR]
-    ./src/app/admin/data-explorer/page.tsx [Server Component]
-
-
- GET /admin/data-explorer 500 in 99ms
- GET /favicon.ico 500 in 47ms
- ⨯ ./src/app/admin/data-explorer/page.tsx:661:8
+ GET /admin/data-explorer 500 in 51ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:894:8
 Parsing ecmascript source code failed
-[0m [90m 659 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 660 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 661 |[39m       )}
+[0m [90m 892 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 893 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 894 |[39m       )}
  [90m     |[39m        [31m[1m^[22m[39m
- [90m 662 |[39m
- [90m 663 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
- [90m 664 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
+ [90m 895 |[39m
+ [90m 896 |[39m       {[90m/* Customer Orders Modal */[39m}
+ [90m 897 |[39m       {selectedCustomer [33m&&[39m ([0m
 
 Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
 
-Import traces:
-  Client Component Browser:
-    ./src/app/admin/data-explorer/page.tsx [Client Component Browser]
-    ./src/app/admin/data-explorer/page.tsx [Server Component]
 
-  Client Component SSR:
-    ./src/app/admin/data-explorer/page.tsx [Client Component SSR]
-    ./src/app/admin/data-explorer/page.tsx [Server Component]
-
-
- GET /admin/data-explorer 500 in 246ms
- GET /favicon.ico 500 in 39ms
- GET /admin 200 in 98ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 86ms
- GET /api/users 500 in 121ms
- GET /admin 200 in 90ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 93ms
- GET /api/users 500 in 118ms
- GET /admin 200 in 93ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 69ms
- GET /api/users 500 in 107ms
- GET /admin 200 in 91ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 63ms
- GET /api/users 500 in 97ms
- GET /admin 200 in 90ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 78ms
- GET /api/users 500 in 110ms
- GET /admin 200 in 76ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 66ms
- GET /api/users 500 in 116ms
- GET /admin 200 in 77ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 84ms
- GET /api/users 500 in 114ms
- GET /admin 200 in 83ms
- GET /favicon.ico?favicon.0b3bf435.ico 500 in 55ms
- GET /api/users 500 in 97ms
- ✓ Compiled in 156ms
- ⨯ ./src/app/admin/data-explorer/page.tsx:661:8
+ GET /admin/data-explorer 500 in 46ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:696:8
 Parsing ecmascript source code failed
-[0m [90m 659 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
- [90m 660 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 661 |[39m       )}
+[0m [90m 694 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 695 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 696 |[39m       )}
  [90m     |[39m        [31m[1m^[22m[39m
- [90m 662 |[39m
- [90m 663 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
- [90m 664 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
+ [90m 697 |[39m
+ [90m 698 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
+ [90m 699 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
 
 Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
 
-Import traces:
-  Client Component Browser:
-    ./src/app/admin/data-explorer/page.tsx [Client Component Browser]
-    ./src/app/admin/data-explorer/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./src/app/admin/data-explorer/page.tsx [Client Component SSR]
-    ./src/app/admin/data-explorer/page.tsx [Server Component]
 
 
- GET /admin/data-explorer 500 in 81ms
- ✓ Compiled in 143ms
- GET /admin 200 in 149ms
- GET /admin 200 in 146ms
- ✓ Compiled /admin/data-explorer in 19ms
- GET /admin/data-explorer 200 in 410ms
- GET /admin 200 in 83ms
- GET /admin 200 in 131ms
- GET /api/users 200 in 311ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 316ms
- GET /admin/data-explorer 200 in 107ms
- GET /api/inquiries 200 in 240ms
- GET /api/orders 200 in 295ms
- GET /api/users 200 in 239ms
- GET /api/customers 200 in 338ms
- GET /api/shopify/orders 200 in 252ms
- GET /api/shopify/customers 200 in 242ms
- GET /admin/data-explorer 200 in 95ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 250ms
- GET /api/inquiries 200 in 248ms
- GET /api/orders 200 in 298ms
- GET /api/users 200 in 235ms
- GET /api/customers 200 in 249ms
- GET /api/shopify/orders 200 in 244ms
- GET /api/shopify/customers 200 in 258ms
- ✓ Compiled /api/line-items in 168ms
-Error fetching line items: SqliteError: no such table: orderLineItems
-    at GET (src/app/api/line-items/route.ts:6:26)
-  4 | export async function GET() {
-  5 |   try {
-> 6 |     const lineItems = db.prepare(`
-    |                          ^
-  7 |       SELECT 
-  8 |         oli.id,
-  9 |         oli.orderId, {
-  code: 'SQLITE_ERROR'
-}
- GET /api/line-items 500 in 485ms
- GET /api/customers 200 in 263ms
- GET /admin/data-explorer 200 in 111ms
- GET /admin/data-explorer 200 in 86ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 256ms
- GET /api/inquiries 200 in 253ms
- GET /api/orders 200 in 293ms
- GET /api/users 200 in 253ms
- GET /api/customers 200 in 248ms
- GET /api/shopify/orders 200 in 244ms
- GET /api/shopify/customers 200 in 244ms
- ✓ Compiled /api/customers/[email]/orders in 161ms
-Error fetching customer orders: SqliteError: no such table: orders
-    at GET (src/app/api/customers/[email]/orders/route.ts:12:23)
-  10 |     const email = decodeURIComponent(emailParam);
-  11 |     
-> 12 |     const orders = db.prepare(`
-     |                       ^
-  13 |       SELECT 
-  14 |         o.id,
-  15 |         o.createdAt, {
-  code: 'SQLITE_ERROR'
-}
- GET /api/customers/jerod%40doylesfarmkennels.com/orders 500 in 1380ms
- GET /api/line-items 200 in 280ms
- GET /admin/data-explorer 200 in 97ms
- ✓ Compiled in 198ms
- ⚠ Fast Refresh had to perform a full reload due to a runtime error.
- GET /admin/data-explorer 200 in 239ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 253ms
- GET /api/inquiries 200 in 251ms
- GET /api/orders 200 in 290ms
- GET /api/users 200 in 240ms
- GET /api/customers 200 in 240ms
- GET /api/shopify/orders 200 in 239ms
- GET /api/shopify/customers 200 in 244ms
- GET /api/line-items 200 in 252ms
- GET /admin/data-explorer 200 in 80ms
- GET /admin/data-explorer 200 in 106ms
- GET /api/inquiries 200 in 259ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 263ms
- GET /api/orders 200 in 333ms
- GET /api/users 200 in 236ms
- GET /api/customers 200 in 245ms
- GET /api/shopify/orders 200 in 245ms
- GET /api/shopify/customers 200 in 242ms
- GET /api/line-items 200 in 245ms
- GET /admin/data-explorer 200 in 83ms
- GET /api/inquiries 200 in 257ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 261ms
- GET /api/orders 200 in 298ms
- GET /api/users 200 in 237ms
- GET /api/customers 200 in 245ms
- GET /api/shopify/orders 200 in 242ms
- GET /api/shopify/customers 200 in 238ms
- GET /api/line-items 200 in 249ms
- GET /api/inquiries 200 in 241ms
- GET /api/orders 200 in 244ms
- GET /api/users 200 in 238ms
- GET /api/customers 200 in 239ms
- GET /api/shopify/orders 200 in 249ms
- GET /api/shopify/customers 200 in 241ms
- GET /api/line-items 200 in 254ms
- ✓ Compiled in 182ms
- GET /admin/data-explorer 200 in 258ms
- GET /admin/data-explorer 200 in 84ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 263ms
- GET /api/inquiries 200 in 260ms
- GET /api/orders 200 in 313ms
- GET /api/users 200 in 247ms
- GET /api/customers 200 in 240ms
- GET /api/shopify/orders 200 in 243ms
- GET /api/shopify/customers 200 in 241ms
- GET /api/line-items 200 in 240ms
-Error fetching customer orders: SqliteError: no such table: orders
-    at GET (src/app/api/customers/[email]/orders/route.ts:12:23)
-  10 |     const email = decodeURIComponent(emailParam);
-  11 |     
-> 12 |     const orders = db.prepare(`
-     |                       ^
-  13 |       SELECT 
-  14 |         o.id,
-  15 |         o.createdAt, {
-  code: 'SQLITE_ERROR'
-}
- GET /api/customers/luttrell%40itctel.com/orders 500 in 405ms
- GET /admin 200 in 92ms
- GET /api/users 200 in 274ms
- GET /admin/data-explorer 200 in 83ms
- GET /api/inquiries 200 in 248ms
- GET /api/orders 200 in 273ms
- GET /api/users 200 in 241ms
- GET /api/customers 200 in 246ms
- GET /api/shopify/orders 200 in 244ms
- GET /api/shopify/customers 200 in 243ms
- GET /api/line-items 200 in 240ms
- GET /api/line-items 200 in 238ms
- ✓ Compiled in 196ms
- ✓ Compiled in 204ms
- ✓ Compiled in 196ms
- GET /api/line-items 200 in 254ms
- GET /api/line-items 200 in 249ms
- GET /admin/data-explorer 200 in 490ms
- ✓ Compiled in 329ms
- GET /admin/data-explorer 200 in 259ms
- ✓ Compiled in 210ms
- ✓ Compiled in 184ms
- ✓ Compiled in 331ms
- ✓ Compiled in 185ms
- ✓ Compiled in 188ms
- GET /admin/data-explorer 200 in 245ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 313ms
- GET /api/inquiries 200 in 309ms
- GET /api/orders 200 in 240ms
- GET /api/users 200 in 242ms
- GET /api/customers 200 in 246ms
- GET /api/shopify/orders 200 in 251ms
- GET /api/shopify/customers 200 in 241ms
- GET /api/line-items 200 in 245ms
- GET /api/line-items 200 in 243ms
- GET /api/line-items 200 in 244ms
- GET /admin/data-explorer 200 in 103ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 252ms
- GET /api/inquiries 200 in 251ms
- GET /api/orders 200 in 268ms
- GET /api/users 200 in 240ms
- GET /api/customers 200 in 245ms
- GET /api/shopify/orders 200 in 248ms
- GET /api/shopify/customers 200 in 244ms
- GET /api/line-items 200 in 238ms
- ✓ Compiled in 184ms
- GET /admin/data-explorer 200 in 265ms
- GET /api/inquiries 200 in 263ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 265ms
- GET /api/orders 200 in 301ms
- GET /api/users 200 in 238ms
- GET /api/customers 200 in 244ms
- GET /api/shopify/orders 200 in 253ms
- GET /api/shopify/customers 200 in 240ms
- GET /api/line-items 200 in 248ms
- GET /admin 200 in 101ms
- GET /api/users 200 in 250ms
- ✓ Compiled /api/shopify/sync-incremental in 159ms
-Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031487336645
-Shop: f184d9-2
-Access token: shpat_f934...
-Response status: 200
-Response headers: {
-  'alt-svc': 'h3=":443"; ma=86400',
-  'cf-cache-status': 'DYNAMIC',
-  'cf-ray': '979eff76ef8c3a24-CMH',
-  connection: 'keep-alive',
-  'content-encoding': 'gzip',
-  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=b49e4ae5-2b13-4ab7-8d9d-5a6d5e0fbafd-1757004752; report-to shopify-csp",
-  'content-type': 'application/json; charset=utf-8',
-  date: 'Thu, 04 Sep 2025 16:52:32 GMT',
-  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE2NTY2MTYxMzMsImxhc3RfdmFsdWUiOiI2MDMxNjU2NjE2MTMzIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
-  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
-  'referrer-policy': 'origin-when-cross-origin',
-  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=Ws21YvCasr7LmiziU2nU4cqtxspBvLuGEZGlJesnCSI96VaQZcvSbU8nRupR1RpqEcp%2BnEHzRnyFmvlufcFoMu%2FM3BTnwuvxDQQYC0F%2Bgn4qSErGb%2FzYrj1W4hyEj8BcHjON%2F%2B1ZXTE%3D"}],"group":"cf-nel","max_age":604800}',
-  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=b49e4ae5-2b13-4ab7-8d9d-5a6d5e0fbafd-1757004752"',
-  server: 'cloudflare',
-  'server-timing': 'processing;dur=307, _y;desc="1a0b2f26-eb98-469e-943a-e09cbde45291", _s;desc="753a83d7-04e9-4332-958b-844c457e0d0e", cfRequestDuration;dur=380.000114',
-  'strict-transport-security': 'max-age=7889238',
-  'transfer-encoding': 'chunked',
-  vary: 'Accept-Encoding',
-  'x-content-type-options': 'nosniff',
-  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
-  'x-download-options': 'noopen',
-  'x-frame-options': 'DENY',
-  'x-permitted-cross-domain-policies': 'none',
-  'x-request-id': 'b49e4ae5-2b13-4ab7-8d9d-5a6d5e0fbafd-1757004752',
-  'x-shardid': '196',
-  'x-shopid': '63730155717',
-  'x-shopify-api-version': '2024-04',
-  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
-  'x-shopify-shop-api-call-limit': '1/40',
-  'x-sorting-hat-podid': '196',
-  'x-sorting-hat-shopid': '63730155717',
-  'x-stats-apiclientid': '155586658305',
-  'x-stats-apipermissionid': '500490371269',
-  'x-stats-userid': '',
-  'x-xss-protection': '1; mode=block'
-}
-Fetched 1 orders. Total so far: 1
-Progress: Fetched 1 orders from 1 pages
-Shopify sync error: SqliteError: no such table: orderLineItems
-    at <unknown> (src/app/api/shopify/sync-orders/route.ts:459:31)
-    at POST (src/app/api/shopify/sync-orders/route.ts:480:45)
-  457 |
-  458 |       // Insert order line items
-> 459 |       const lineItemStmt = db.prepare(`
-      |                               ^
-  460 |         INSERT OR REPLACE INTO orderLineItems (
-  461 |           id, orderId, productId, shopifyVariantId, sku, title, quantity, price, totalPrice, vendor
-  462 |         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) {
-  code: 'SQLITE_ERROR'
-}
- POST /api/shopify/sync-orders 500 in 803ms
- POST /api/shopify/sync-incremental 500 in 1239ms
-Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031487336645
-Shop: f184d9-2
-Access token: shpat_f934...
-Response status: 200
-Response headers: {
-  'alt-svc': 'h3=":443"; ma=86400',
-  'cf-cache-status': 'DYNAMIC',
-  'cf-ray': '979eff8dec753a24-CMH',
-  connection: 'keep-alive',
-  'content-encoding': 'gzip',
-  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=f10f130e-304f-46d1-abb3-1167d4267fd7-1757004756; report-to shopify-csp",
-  'content-type': 'application/json; charset=utf-8',
-  date: 'Thu, 04 Sep 2025 16:52:36 GMT',
-  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE2NTY2MTYxMzMsImxhc3RfdmFsdWUiOiI2MDMxNjU2NjE2MTMzIiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
-  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
-  'referrer-policy': 'origin-when-cross-origin',
-  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=o4ctaVEQIPAlqPKXnrpuDtD0XIaihRctH7m4lmgpe18LKk0hha0V%2B9iWqYwSrTOwpRUZer7cqOdw9e0BIQTLwpTUrHLfaG3dasWr%2FqRatQzB4VhOcacgau3KLr1McgfboRzFw5inibA%3D"}],"group":"cf-nel","max_age":604800}',
-  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=f10f130e-304f-46d1-abb3-1167d4267fd7-1757004756"',
-  server: 'cloudflare',
-  'server-timing': 'processing;dur=68, _y;desc="5a74a415-5c6f-4fdd-9af8-df23ea680de6", _s;desc="bd8623e0-1df4-4b19-9943-4f1c81c39f5f", cfRequestDuration;dur=121.000051',
-  'strict-transport-security': 'max-age=7889238',
-  'transfer-encoding': 'chunked',
-  vary: 'Accept-Encoding',
-  'x-content-type-options': 'nosniff',
-  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
-  'x-download-options': 'noopen',
-  'x-frame-options': 'DENY',
-  'x-permitted-cross-domain-policies': 'none',
-  'x-request-id': 'f10f130e-304f-46d1-abb3-1167d4267fd7-1757004756',
-  'x-shardid': '196',
-  'x-shopid': '63730155717',
-  'x-shopify-api-version': '2024-04',
-  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
-  'x-shopify-shop-api-call-limit': '1/40',
-  'x-sorting-hat-podid': '196',
-  'x-sorting-hat-shopid': '63730155717',
-  'x-stats-apiclientid': '155586658305',
-  'x-stats-apipermissionid': '500490371269',
-  'x-stats-userid': '',
-  'x-xss-protection': '1; mode=block'
-}
-Fetched 1 orders. Total so far: 1
-Progress: Fetched 1 orders from 1 pages
-Shopify sync error: SqliteError: no such table: orderLineItems
-    at <unknown> (src/app/api/shopify/sync-orders/route.ts:459:31)
-    at POST (src/app/api/shopify/sync-orders/route.ts:480:45)
-  457 |
-  458 |       // Insert order line items
-> 459 |       const lineItemStmt = db.prepare(`
-      |                               ^
-  460 |         INSERT OR REPLACE INTO orderLineItems (
-  461 |           id, orderId, productId, shopifyVariantId, sku, title, quantity, price, totalPrice, vendor
-  462 |         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) {
-  code: 'SQLITE_ERROR'
-}
- POST /api/shopify/sync-orders 500 in 498ms
- POST /api/shopify/sync-incremental 500 in 742ms
- GET /admin/data-explorer 200 in 83ms
- GET /api/inquiries 200 in 234ms
- GET /api/orders 200 in 277ms
- GET /api/users 200 in 237ms
- GET /api/customers 200 in 241ms
- GET /api/shopify/orders 200 in 239ms
- GET /api/shopify/customers 200 in 239ms
- GET /api/line-items 200 in 249ms
- GET /admin/data-explorer 200 in 86ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 247ms
- GET /api/inquiries 200 in 251ms
- GET /api/orders 200 in 241ms
- GET /api/users 200 in 234ms
- GET /api/customers 200 in 251ms
- GET /api/shopify/orders 200 in 240ms
- GET /api/shopify/customers 200 in 248ms
- GET /api/line-items 200 in 246ms
- GET /admin/data-explorer 200 in 102ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 256ms
- GET /api/inquiries 200 in 254ms
- GET /api/orders 200 in 344ms
- GET /api/users 200 in 240ms
- GET /api/customers 200 in 242ms
- GET /api/shopify/orders 200 in 239ms
- GET /api/shopify/customers 200 in 244ms
- GET /api/line-items 200 in 241ms
- ✓ Compiled in 193ms
- ✓ Compiled in 193ms
- GET /admin/data-explorer 200 in 296ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
- GET /api/inquiries 200 in 252ms
- GET /api/orders 200 in 273ms
- GET /api/users 200 in 241ms
- GET /api/customers 200 in 243ms
- GET /api/shopify/orders 200 in 251ms
- GET /api/shopify/customers 200 in 237ms
- GET /api/line-items 200 in 248ms
- ✓ Compiled in 198ms
- ✓ Compiled in 185ms
- GET /api/line-items 200 in 385ms
- GET /admin/data-explorer 200 in 280ms
- GET /api/inquiries 200 in 449ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 451ms
- GET /api/orders 200 in 332ms
- GET /api/users 200 in 240ms
- GET /api/customers 200 in 254ms
- GET /api/shopify/orders 200 in 243ms
- GET /api/shopify/customers 200 in 251ms
- GET /api/line-items 200 in 241ms
- GET /api/line-items 200 in 243ms
- GET /admin/data-explorer 200 in 84ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 275ms
- GET /api/inquiries 200 in 280ms
- GET /api/orders 200 in 249ms
- GET /api/users 200 in 242ms
- GET /api/customers 200 in 245ms
- GET /api/shopify/orders 200 in 244ms
- GET /api/shopify/customers 200 in 243ms
- GET /api/line-items 200 in 247ms
- ✓ Compiled in 185ms
- ✓ Compiled in 183ms
- ✓ Compiled in 188ms
- GET /api/line-items 200 in 251ms
+./src/app/admin/data-explorer/page.tsx:893:8
+Parsing ecmascript source code failed
+[0m [90m 891 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 892 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 893 |[39m       )}
+ [90m     |[39m        [31m[1m^[22m[39m
+ [90m 894 |[39m
+ [90m 895 |[39m       {[90m/* Customer Orders Modal */[39m}
+ [90m 896 |[39m       {selectedCustomer [33m&&[39m ([0m
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+
+ GET /admin/data-explorer 500 in 98ms
+ ⨯ ./src/app/admin/data-explorer/page.tsx:696:8
+Parsing ecmascript source code failed
+[0m [90m 694 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 695 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 696 |[39m       )}
+ [90m     |[39m        [31m[1m^[22m[39m
+ [90m 697 |[39m
+ [90m 698 |[39m       {activeTab [33m===[39m [32m"lineItems"[39m [33m&&[39m (
+ [90m 699 |[39m         [33m<[39m[33mdiv[39m className[33m=[39m[32m"bg-white border rounded-lg overflow-hidden"[39m[33m>[39m[0m
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+
+ GET /admin/data-explorer 500 in 40ms

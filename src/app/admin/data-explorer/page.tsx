@@ -262,6 +262,12 @@ export default function DataExplorer() {
             Website Inquiries
           </button>
           <button
+            onClick={() => setActiveTab("customers")}
+            className={`px-4 py-2 rounded ${activeTab === "customers" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          >
+            Customers
+          </button>
+          <button
             onClick={() => setActiveTab("orders")}
             className={`px-4 py-2 rounded ${activeTab === "orders" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
           >
@@ -272,12 +278,6 @@ export default function DataExplorer() {
             className={`px-4 py-2 rounded ${activeTab === "lineItems" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
           >
             Line Items
-          </button>
-          <button
-            onClick={() => setActiveTab("customers")}
-            className={`px-4 py-2 rounded ${activeTab === "customers" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          >
-            Customers
           </button>
           <button
             onClick={() => setActiveTab("debug")}
@@ -432,6 +432,49 @@ export default function DataExplorer() {
 
       {activeTab === "orders" && (
         <div className="space-y-4">
+          {/* Pallet Orders Summary */}
+          <div className="bg-white border rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-3">Pallet Orders Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-blue-50 p-3 rounded border">
+                <div className="font-medium text-blue-700">Total Pallet Orders</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {getFilteredOrders()
+                    .filter(order => {
+                      return lineItems.some(item => 
+                        item.orderNumber === order.orderNumber && 
+                        (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                      );
+                    }).length}
+                </div>
+              </div>
+              <div className="bg-green-50 p-3 rounded border">
+                <div className="font-medium text-green-700">Pre-built Pallet Orders</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {getFilteredOrders()
+                    .filter(order => {
+                      return lineItems.some(item => 
+                        item.orderNumber === order.orderNumber && 
+                        item.title?.includes('Pallet') && item.title !== 'Build a Pallet'
+                      );
+                    }).length}
+                </div>
+              </div>
+              <div className="bg-orange-50 p-3 rounded border">
+                <div className="font-medium text-orange-700">Build a Pallet Orders</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {getFilteredOrders()
+                    .filter(order => {
+                      return lineItems.some(item => 
+                        item.orderNumber === order.orderNumber && 
+                        item.title === 'Build a Pallet'
+                      );
+                    }).length}
+                </div>
+              </div>
+            </div>
+          </div>
+          
           {/* Source Filter */}
           <div className="bg-white border rounded-lg p-4">
             <div className="flex items-center space-x-4">
@@ -650,7 +693,6 @@ export default function DataExplorer() {
             </table>
           </div>
         </div>
-        </div>
       )}
 
       {activeTab === "lineItems" && (
@@ -760,8 +802,40 @@ export default function DataExplorer() {
       )}
 
       {activeTab === "customers" && (
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="space-y-4">
+          {/* Pallet Customers Summary */}
+          <div className="bg-white border rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-3">Pallet Customers Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="bg-blue-50 p-3 rounded border">
+                <div className="font-medium text-blue-700">Total Pallet Customers</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {customers
+                    .filter(customer => {
+                      return lineItems.some(item => 
+                        item.customerEmail === customer.email && 
+                        (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                      );
+                    }).length}
+                </div>
+              </div>
+              <div className="bg-green-50 p-3 rounded border">
+                <div className="font-medium text-green-700">Total Pallet Orders</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {getFilteredOrders()
+                    .filter(order => {
+                      return lineItems.some(item => 
+                        item.orderNumber === order.orderNumber && 
+                        (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                      );
+                    }).length}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -814,6 +888,7 @@ export default function DataExplorer() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </div>
       )}
