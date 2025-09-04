@@ -136,7 +136,7 @@ export default function DataExplorer() {
       console.log('All customers:', customersData.length);
       console.log('Shopify orders:', shopifyOrdersData.length);
       console.log('Shopify customers:', shopifyCustomersData.length);
-      console.log('Line items:', allLineItems.length);
+      console.log('Line items:', lineItemsData.length);
       console.log('==================');
     } catch (error) {
       console.error("Error loading data:", error);
