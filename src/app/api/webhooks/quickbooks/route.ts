@@ -4,6 +4,16 @@ import db from "@/lib/database";
 // Simple webhook endpoint for Zapier to POST QuickBooks invoices
 export async function POST(request: Request) {
   try {
+    // Check for API key authentication
+    const apiKey = request.headers.get('x-api-key');
+    const expectedApiKey = process.env.WEBHOOK_API_KEY || 'kinetic-webhook-2024';
+    
+    if (!apiKey || apiKey !== expectedApiKey) {
+      return NextResponse.json({ 
+        error: "Unauthorized - Invalid or missing API key" 
+      }, { status: 401 });
+    }
+    
     const body = await request.json();
     
     // Log the incoming webhook for debugging
@@ -113,6 +123,8 @@ export async function GET() {
   return NextResponse.json({ 
     status: "ok", 
     message: "QuickBooks webhook endpoint is ready",
-    url: "/api/webhooks/quickbooks"
+    url: "/api/webhooks/quickbooks",
+    authentication: "API Key required in x-api-key header",
+    apiKey: process.env.WEBHOOK_API_KEY || 'kinetic-webhook-2024'
   });
 }
