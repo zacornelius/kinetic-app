@@ -351,7 +351,7 @@ export default function Home() {
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-gray-900">Sales Dashboard - DEV MODE</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Sales Dashboard</h1>
             {currentUser ? (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">
