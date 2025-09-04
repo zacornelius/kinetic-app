@@ -45,3 +45,48 @@ Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
  GET /admin/data-explorer 200 in 419ms
  GET /admin/data-explorer 200 in 121ms
  GET /admin/data-explorer 200 in 111ms
+ GET /admin/data-explorer 200 in 101ms
+ ⚠ Cross origin request detected from 3.145.159.251 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 623ms
+ GET /api/inquiries 200 in 932ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 964ms
+ ✓ Compiled /api/orders in 125ms
+ GET /api/orders 200 in 492ms
+ ✓ Compiled /api/users in 126ms
+ GET /api/users 200 in 390ms
+ ✓ Compiled /api/customers in 102ms
+ GET /api/customers 200 in 353ms
+ ✓ Compiled /api/shopify/orders in 99ms
+ GET /api/shopify/orders 200 in 347ms
+ ✓ Compiled /api/shopify/customers in 105ms
+ GET /api/shopify/customers 200 in 354ms
+ ✓ Compiled /api/line-items in 96ms
+ GET /api/line-items 200 in 346ms
+ ✓ Compiled /api/customers/[email]/orders in 97ms
+Error fetching customer orders: SqliteError: no such table: orders
+    at GET (src/app/api/customers/[email]/orders/route.ts:12:23)
+  10 |     const email = decodeURIComponent(emailParam);
+  11 |     
+> 12 |     const orders = db.prepare(`
+     |                       ^
+  13 |       SELECT 
+  14 |         o.id,
+  15 |         o.createdAt, {
+  code: 'SQLITE_ERROR'
+}
+ GET /api/customers/luttrell%40itctel.com/orders 500 in 1050ms
+ ✓ Compiled /admin in 395ms
+ GET /admin 200 in 533ms
+ GET /api/users 200 in 245ms
+ GET /admin/data-explorer 200 in 165ms
+ GET /api/inquiries 200 in 245ms
+ GET /api/orders 200 in 341ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 248ms
+ GET /api/shopify/customers 200 in 241ms
+ GET /api/line-items 200 in 250ms
+ ✓ Compiled in 138ms
+ GET /admin/data-explorer 200 in 242ms

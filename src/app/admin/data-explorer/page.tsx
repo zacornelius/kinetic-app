@@ -698,32 +698,6 @@ export default function DataExplorer() {
 
       {activeTab === "lineItems" && (
         <div className="bg-white border rounded-lg overflow-hidden">
-          {/* SKU Tracking Summary */}
-          <div className="bg-gray-50 p-4 border-b">
-            <h3 className="text-lg font-semibold mb-2">SKU Tracking Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="bg-white p-3 rounded border">
-                <div className="font-medium text-gray-700">Total Pallet Items</div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {lineItems.filter(item => item.title === 'Build a Pallet' || item.title?.includes('Pallet')).length}
-                </div>
-              </div>
-              <div className="bg-white p-3 rounded border">
-                <div className="font-medium text-gray-700">Pre-built Pallets</div>
-                <div className="text-2xl font-bold text-green-600">
-                  {lineItems.filter(item => item.title?.includes('Pallet') && item.title !== 'Build a Pallet').length}
-                </div>
-              </div>
-              <div className="bg-white p-3 rounded border">
-                <div className="font-medium text-gray-700">Build a Pallet</div>
-                <div className="text-2xl font-bold text-orange-600">
-                  {lineItems.filter(item => item.title === 'Build a Pallet').length}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
