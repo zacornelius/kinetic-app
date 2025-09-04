@@ -98,19 +98,6 @@ type Order = {
   lineItems?: string; // JSON string of line items
 };
 
-type OrderLineItem = {
-  id: string;
-  orderId: string;
-  productId?: string;
-  shopifyVariantId?: string;
-  sku?: string;
-  title: string;
-  quantity: number;
-  price: number;
-  totalPrice: number;
-  vendor?: string;
-};
-
 function generateId() {
   return Math.random().toString(36).substr(2, 9);
 }
@@ -198,55 +185,10 @@ function mapShopifyOrderToOrder(shopifyOrder: ShopifyOrder): Order {
   };
 }
 
-function mapShopifyLineItemToOrderLineItem(
-  lineItem: ShopifyOrder['line_items'][0], 
-  orderId: string, 
-  productId?: string
-): OrderLineItem {
-  // Extract SKU from name field for "Build a Pallet" items
-  let extractedSku = lineItem.sku;
-  let displayTitle = lineItem.title;
-  
-  if (lineItem.title === "Build a Pallet" && lineItem.name) {
-    // Extract the product name from "Build a Pallet - Product Name"
-    const productName = lineItem.name.replace("Build a Pallet - ", "");
-    displayTitle = productName;
-    
-    // Try to extract SKU from the product name
-    if (productName.includes("Vital 24K")) {
-      extractedSku = "Vital-24K";
-    } else if (productName.includes("Active 26K")) {
-      extractedSku = "Active-26K";
-    } else if (productName.includes("Ultra 32K")) {
-      extractedSku = "Ultra-32K";
-    } else if (productName.includes("Power 30K")) {
-      extractedSku = "Power-30K";
-    } else if (productName.includes("Puppy 28K")) {
-      extractedSku = "Puppy-28K";
-    } else if (productName.includes("Build a Pallet")) {
-      extractedSku = "Build-Pallet";
-    }
-  }
-
-  return {
-    id: generateId(),
-    orderId,
-    productId,
-    shopifyVariantId: lineItem.variant_id?.toString(),
-    sku: extractedSku,
-    title: displayTitle,
-    quantity: lineItem.quantity,
-    price: parseFloat(lineItem.price),
-    totalPrice: parseFloat(lineItem.price) * lineItem.quantity - parseFloat(lineItem.total_discount),
-    vendor: lineItem.vendor,
-  };
-}
-
 async function processShopifyOrders(shopifyOrders: ShopifyOrder[]) {
   const customers: Customer[] = [];
   const products: Product[] = [];
   const orders: Order[] = [];
-  const lineItems: OrderLineItem[] = [];
   const customerMap = new Map<string, string>(); // email -> customerId
   const productMap = new Map<string, string>(); // sku -> productId
 
@@ -270,21 +212,13 @@ async function processShopifyOrders(shopifyOrders: ShopifyOrder[]) {
         products.push(product);
         productMap.set(lineItem.sku, product.id);
       }
-
-      // Create line item
-      const orderLineItem = mapShopifyLineItemToOrderLineItem(
-        lineItem, 
-        order.id, 
-        lineItem.sku ? productMap.get(lineItem.sku) : undefined
-      );
-      lineItems.push(orderLineItem);
     }
   }
 
-  return { customers, products, orders, lineItems };
+  return { customers, products, orders };
 }
 
-async function fetchAllShopifyOrders(shop: string, accessToken: string): Promise<ShopifyOrder[]> {
+async function fetchAllShopifyOrdersSimple(shop: string, accessToken: string): Promise<ShopifyOrder[]> {
   const orders: ShopifyOrder[] = [];
   let sinceId = 0;
   let hasMoreOrders = true;
@@ -369,10 +303,10 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('Starting FULL sync of ALL orders from Shopify...');
+    console.log('Starting SIMPLE sync of ALL orders from Shopify...');
 
-    // Fetch ALL orders from Shopify
-    const shopifyOrders = await fetchAllShopifyOrders(shop, accessToken);
+    // Fetch ALL orders from Shopify using simple since_id method
+    const shopifyOrders = await fetchAllShopifyOrdersSimple(shop, accessToken);
     
     console.log(`Processing ${shopifyOrders.length} orders...`);
     
@@ -390,7 +324,7 @@ export async function POST(request: Request) {
       const customerStmt = db.prepare(`
         INSERT OR IGNORE INTO shopify_customers (
           id, email, firstName, lastName, phone, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const customer of processedData.customers) {
@@ -446,8 +380,6 @@ export async function POST(request: Request) {
           order.currency, order.status, order.shippingAddress, order.notes, order.ownerEmail, order.lineItems
         );
       }
-
-      // Line items are now stored as JSON in the orders table, no separate processing needed
 
       return { insertedCount, updatedCount };
     });

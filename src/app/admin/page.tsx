@@ -199,6 +199,14 @@ export default function AdminDashboard() {
         {/* Shopify Integration */}
         <div className="bg-white border rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Shopify Integration</h2>
+          <div className="mb-4 p-3 bg-blue-50 rounded-md">
+            <h3 className="font-medium text-blue-900 mb-2 text-sm">Sync Strategy:</h3>
+            <ul className="text-xs text-blue-800 space-y-1">
+              <li>• <strong>One-Time Full Sync:</strong> Get all 677 historical orders (run once)</li>
+              <li>• <strong>Incremental Sync:</strong> Get only new orders since last sync (run regularly)</li>
+              <li>• <strong>Recent Orders:</strong> Get last 250 orders (for testing)</li>
+            </ul>
+          </div>
           <div className="space-y-3">
             <button
               onClick={async () => {
@@ -235,21 +243,21 @@ export default function AdminDashboard() {
               disabled={isSyncing}
               className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
             >
-              {isSyncing ? "Syncing ALL..." : "Sync ALL Orders (No Limit)"}
-            </button>
-            <button
-              onClick={syncShopifyOrders}
-              disabled={isSyncing}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-            >
-              {isSyncing ? "Syncing..." : "Full Sync All Orders (Limited)"}
+              {isSyncing ? "Syncing ALL..." : "One-Time Full Sync (All 677 Orders)"}
             </button>
             <button
               onClick={syncNewOrders}
               disabled={isSyncing}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {isSyncing ? "Syncing..." : "Sync New Orders Only"}
+              {isSyncing ? "Syncing..." : "Sync New Orders Only (Incremental)"}
+            </button>
+            <button
+              onClick={syncShopifyOrders}
+              disabled={isSyncing}
+              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              {isSyncing ? "Syncing..." : "Sync Recent Orders (250 limit)"}
             </button>
             <button
               onClick={async () => {

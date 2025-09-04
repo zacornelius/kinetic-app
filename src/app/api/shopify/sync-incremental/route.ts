@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     // Get the last synced order ID
-    const lastOrder = db.prepare('SELECT shopifyOrderId FROM orders WHERE shopifyOrderId IS NOT NULL ORDER BY createdAt DESC LIMIT 1').get() as { shopifyOrderId: string } | undefined;
+    const lastOrder = db.prepare('SELECT shopifyOrderId FROM shopify_orders WHERE shopifyOrderId IS NOT NULL ORDER BY createdAt DESC LIMIT 1').get() as { shopifyOrderId: string } | undefined;
     
     if (!lastOrder) {
       return NextResponse.json({

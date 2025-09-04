@@ -435,8 +435,8 @@ export async function POST(request: Request) {
       const orderStmt = db.prepare(`
         INSERT OR REPLACE INTO shopify_orders (
           id, createdAt, orderNumber, shopifyOrderId, customerEmail, customerName, 
-          totalAmount, currency, status, shippingAddress, notes, ownerEmail
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          totalAmount, currency, status, shippingAddress, notes, ownerEmail, lineItems
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const order of processedData.orders) {
@@ -451,7 +451,7 @@ export async function POST(request: Request) {
         orderStmt.run(
           order.id, order.createdAt, order.orderNumber, order.shopifyOrderId,
           order.customerEmail, order.customerName, order.totalAmount, 
-          order.currency, order.status, order.shippingAddress, order.notes, order.ownerEmail
+          order.currency, order.status, order.shippingAddress, order.notes, order.ownerEmail, order.lineItems
         );
       }
 
@@ -464,7 +464,7 @@ export async function POST(request: Request) {
 
       for (const lineItem of processedData.lineItems) {
         // Only insert if the order exists (foreign key constraint)
-        const orderExists = db.prepare('SELECT id FROM orders WHERE id = ?').get(lineItem.orderId);
+        const orderExists = db.prepare('SELECT id FROM shopify_orders WHERE id = ?').get(lineItem.orderId);
         if (orderExists) {
           lineItemStmt.run(
             lineItem.id, lineItem.orderId, lineItem.productId, lineItem.shopifyVariantId,
@@ -504,10 +504,10 @@ export async function POST(request: Request) {
 // GET endpoint to check sync status
 export async function GET() {
   try {
-    const totalOrders = db.prepare('SELECT COUNT(*) as count FROM orders').get() as { count: number };
+    const totalOrders = db.prepare('SELECT COUNT(*) as count FROM shopify_orders').get() as { count: number };
     const recentOrders = db.prepare(`
       SELECT orderNumber, customerEmail, totalAmount, status, createdAt 
-      FROM orders 
+      FROM shopify_orders 
       ORDER BY createdAt DESC 
       LIMIT 10
     `).all();
