@@ -40,16 +40,39 @@ export async function POST(request: Request) {
     
     const body = await request.json();
     console.log('QuickBooks CSV webhook received');
+    console.log('Received fields:', Object.keys(body));
+    console.log('Body content:', JSON.stringify(body, null, 2));
     
     // Extract data - support both CSV and JSON formats
-    const customerCSV = body.customerCSV || body.customer_csv || body.customerData || body.customer_data;
-    const lineItemsCSV = body.lineItemsCSV || body.line_items_csv || body.lineItemsData || body.line_items_data;
+    const customerCSV = body.customerCSV || body.customer_csv || body.customerData || body.customer_data || 
+                       body['Zac customer contact list'] || body['Kinetic Nutrition Group LLC_Zac Customer Contact List.csv'];
+    const lineItemsCSV = body.lineItemsCSV || body.line_items_csv || body.lineItemsData || body.line_items_data || 
+                        body['zac line items'] || body['Kinetic Nutrition Group LLC_Zac Line items.csv'];
     
     // Also support direct JSON arrays
-    const customerJSON = body.customers || body.customerList || body.customer_data_array;
-    const lineItemsJSON = body.lineItems || body.lineItemsList || body.line_items_data_array;
+    const customerJSON = body.customers || body.customerList || body.customer_data_array || body.customerData;
+    const lineItemsJSON = body.lineItems || body.lineItemsList || body.line_items_data_array || body.lineItemsData;
     
+    // If no specific fields found, try to find any field that looks like data
+    let fallbackData = null;
     if (!customerCSV && !lineItemsCSV && !customerJSON && !lineItemsJSON) {
+      // Look for any field that might contain data
+      for (const [key, value] of Object.entries(body)) {
+        if (typeof value === 'string' && value.length > 100) {
+          // This looks like CSV data
+          fallbackData = value;
+          console.log(`Found potential CSV data in field: ${key}`);
+          break;
+        } else if (Array.isArray(value) && value.length > 0) {
+          // This looks like JSON array data
+          fallbackData = value;
+          console.log(`Found potential JSON data in field: ${key}`);
+          break;
+        }
+      }
+    }
+
+    if (!customerCSV && !lineItemsCSV && !customerJSON && !lineItemsJSON && !fallbackData) {
       return NextResponse.json({ 
         error: "Missing data. Please provide either CSV data (customerCSV/lineItemsCSV) or JSON data (customers/lineItems).",
         receivedFields: Object.keys(body),
@@ -68,12 +91,24 @@ export async function POST(request: Request) {
       customerData = parseCSV(customerCSV);
     } else if (customerJSON && Array.isArray(customerJSON)) {
       customerData = customerJSON;
+    } else if (fallbackData && typeof fallbackData === 'string') {
+      // Try to parse fallback data as CSV
+      customerData = parseCSV(fallbackData);
+    } else if (fallbackData && Array.isArray(fallbackData)) {
+      // Try to use fallback data as JSON
+      customerData = fallbackData;
     }
     
     if (lineItemsCSV) {
       lineItemsData = parseCSV(lineItemsCSV);
     } else if (lineItemsJSON && Array.isArray(lineItemsJSON)) {
       lineItemsData = lineItemsJSON;
+    } else if (fallbackData && typeof fallbackData === 'string' && customerData.length === 0) {
+      // If we used fallback for customers, try again for line items
+      lineItemsData = parseCSV(fallbackData);
+    } else if (fallbackData && Array.isArray(fallbackData) && customerData.length === 0) {
+      // If we used fallback for customers, try again for line items
+      lineItemsData = fallbackData;
     }
 
     console.log(`Parsed ${customerData.length} customer rows and ${lineItemsData.length} line item rows`);
