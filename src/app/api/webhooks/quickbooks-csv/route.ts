@@ -6,12 +6,22 @@ function parseCSV(csvText: string) {
   const lines = csvText.split('\n').filter(line => line.trim());
   if (lines.length < 2) return [];
   
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  // Find the actual header row (skip any title rows)
+  let headerRowIndex = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].toLowerCase();
+    if (line.includes('product/service') || line.includes('transaction date') || line.includes('customer full name')) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+  
+  const headers = lines[headerRowIndex].split(',').map(h => h.trim().replace(/"/g, ''));
   const rows = [];
   
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = headerRowIndex + 1; i < lines.length; i++) {
     const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-    if (values.length === headers.length && values[0]) {
+    if (values.length >= headers.length && values[0]) {
       const row: any = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -55,17 +65,42 @@ export async function POST(request: Request) {
     
     // If no specific fields found, try to find any field that looks like data
     let fallbackData = null;
+    let fallbackDataType = null;
     if (!customerCSV && !lineItemsCSV && !customerJSON && !lineItemsJSON) {
       // Look for any field that might contain data
       for (const [key, value] of Object.entries(body)) {
         if (typeof value === 'string' && value.length > 100) {
-          // This looks like CSV data
+          // This looks like CSV data - try to determine if it's customer or line items
+          const firstLine = value.split('\n')[0].toLowerCase();
+          console.log(`CSV header line: ${firstLine}`);
+          
+          if (firstLine.includes('product/service') || firstLine.includes('transaction date') || firstLine.includes('num') || firstLine.includes('quantity') || firstLine.includes('sales price')) {
+            fallbackDataType = 'lineItems';
+            console.log(`Found potential line items CSV data in field: ${key}`);
+          } else if (firstLine.includes('customer full name') || firstLine.includes('email') || firstLine.includes('full name') || firstLine.includes('phone')) {
+            fallbackDataType = 'customers';
+            console.log(`Found potential customer CSV data in field: ${key}`);
+          } else {
+            // Look for more specific patterns in the data
+            const lines = value.split('\n');
+            const hasProductService = lines.some(line => line.toLowerCase().includes('product/service'));
+            const hasTransactionDate = lines.some(line => line.toLowerCase().includes('transaction date'));
+            const hasQuantity = lines.some(line => line.toLowerCase().includes('quantity'));
+            
+            if (hasProductService || hasTransactionDate || hasQuantity) {
+              fallbackDataType = 'lineItems';
+              console.log(`Found line items CSV data in field: ${key} (detected by content analysis)`);
+            } else {
+              fallbackDataType = 'customers';
+              console.log(`Found potential CSV data in field: ${key} (defaulting to customers)`);
+            }
+          }
           fallbackData = value;
-          console.log(`Found potential CSV data in field: ${key}`);
           break;
         } else if (Array.isArray(value) && value.length > 0) {
           // This looks like JSON array data
           fallbackData = value;
+          fallbackDataType = 'customers'; // Default to customers for JSON
           console.log(`Found potential JSON data in field: ${key}`);
           break;
         }
@@ -91,24 +126,24 @@ export async function POST(request: Request) {
       customerData = parseCSV(customerCSV);
     } else if (customerJSON && Array.isArray(customerJSON)) {
       customerData = customerJSON;
-    } else if (fallbackData && typeof fallbackData === 'string') {
-      // Try to parse fallback data as CSV
-      customerData = parseCSV(fallbackData);
-    } else if (fallbackData && Array.isArray(fallbackData)) {
-      // Try to use fallback data as JSON
-      customerData = fallbackData;
+    } else if (fallbackData && fallbackDataType === 'customers') {
+      if (typeof fallbackData === 'string') {
+        customerData = parseCSV(fallbackData);
+      } else if (Array.isArray(fallbackData)) {
+        customerData = fallbackData;
+      }
     }
     
     if (lineItemsCSV) {
       lineItemsData = parseCSV(lineItemsCSV);
     } else if (lineItemsJSON && Array.isArray(lineItemsJSON)) {
       lineItemsData = lineItemsJSON;
-    } else if (fallbackData && typeof fallbackData === 'string' && customerData.length === 0) {
-      // If we used fallback for customers, try again for line items
-      lineItemsData = parseCSV(fallbackData);
-    } else if (fallbackData && Array.isArray(fallbackData) && customerData.length === 0) {
-      // If we used fallback for customers, try again for line items
-      lineItemsData = fallbackData;
+    } else if (fallbackData && fallbackDataType === 'lineItems') {
+      if (typeof fallbackData === 'string') {
+        lineItemsData = parseCSV(fallbackData);
+      } else if (Array.isArray(fallbackData)) {
+        lineItemsData = fallbackData;
+      }
     }
 
     console.log(`Parsed ${customerData.length} customer rows and ${lineItemsData.length} line item rows`);
