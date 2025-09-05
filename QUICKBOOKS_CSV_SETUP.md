@@ -44,17 +44,52 @@ Email Trigger (with Line Items CSV attachment)
 - **Method:** POST
 - **Content Type:** application/json
 
-**Zap 1 Data (Customer Contact List):**
+**Zap 1 Data (Customer Contact List) - CSV Format:**
 ```json
 {
   "customerCSV": "{{action1.content}}"
 }
 ```
 
-**Zap 2 Data (Line Items):**
+**Zap 1 Data (Customer Contact List) - JSON Format:**
+```json
+{
+  "customers": [
+    {
+      "Customer full name": "Test Customer",
+      "Email": "test@example.com",
+      "Full name": "Test User",
+      "Bill address": "123 Test St",
+      "Ship address": "123 Test St",
+      "Phone": "555-1234"
+    }
+  ]
+}
+```
+
+**Zap 2 Data (Line Items) - CSV Format:**
 ```json
 {
   "lineItemsCSV": "{{action1.content}}"
+}
+```
+
+**Zap 2 Data (Line Items) - JSON Format:**
+```json
+{
+  "lineItems": [
+    {
+      "Product/Service": "Test Product",
+      "Transaction date": "01/31/2025",
+      "Transaction type": "Invoice",
+      "Num": "TEST-001",
+      "Customer full name": "Test Customer",
+      "Memo/Description": "Test order",
+      "Quantity": "1.00",
+      "Sales price": "100.00",
+      "Amount": "100.00"
+    }
+  ]
 }
 ```
 

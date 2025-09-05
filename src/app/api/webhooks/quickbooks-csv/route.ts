@@ -41,20 +41,40 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log('QuickBooks CSV webhook received');
     
-    // Extract CSV data - support both customer and line items
+    // Extract data - support both CSV and JSON formats
     const customerCSV = body.customerCSV || body.customer_csv || body.customerData || body.customer_data;
     const lineItemsCSV = body.lineItemsCSV || body.line_items_csv || body.lineItemsData || body.line_items_data;
     
-    if (!customerCSV && !lineItemsCSV) {
+    // Also support direct JSON arrays
+    const customerJSON = body.customers || body.customerList || body.customer_data_array;
+    const lineItemsJSON = body.lineItems || body.lineItemsList || body.line_items_data_array;
+    
+    if (!customerCSV && !lineItemsCSV && !customerJSON && !lineItemsJSON) {
       return NextResponse.json({ 
-        error: "Missing CSV data. Please provide either customerCSV or lineItemsCSV.",
-        receivedFields: Object.keys(body)
+        error: "Missing data. Please provide either CSV data (customerCSV/lineItemsCSV) or JSON data (customers/lineItems).",
+        receivedFields: Object.keys(body),
+        supportedFormats: {
+          csv: ['customerCSV', 'lineItemsCSV'],
+          json: ['customers', 'lineItems']
+        }
       }, { status: 400 });
     }
 
-    // Parse CSV data
-    const customerData = customerCSV ? parseCSV(customerCSV) : [];
-    const lineItemsData = lineItemsCSV ? parseCSV(lineItemsCSV) : [];
+    // Parse data - handle both CSV and JSON formats
+    let customerData = [];
+    let lineItemsData = [];
+    
+    if (customerCSV) {
+      customerData = parseCSV(customerCSV);
+    } else if (customerJSON && Array.isArray(customerJSON)) {
+      customerData = customerJSON;
+    }
+    
+    if (lineItemsCSV) {
+      lineItemsData = parseCSV(lineItemsCSV);
+    } else if (lineItemsJSON && Array.isArray(lineItemsJSON)) {
+      lineItemsData = lineItemsJSON;
+    }
 
     console.log(`Parsed ${customerData.length} customer rows and ${lineItemsData.length} line item rows`);
 
