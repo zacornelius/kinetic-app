@@ -1378,3 +1378,81 @@ Total shopify_orders: 683
 Total quickbooks_orders: 6
  POST /api/sync/unified 200 in 350ms
  POST /api/webhooks/quickbooks-csv 200 in 618ms
+ GET /admin 200 in 221ms
+ GET /admin 200 in 85ms
+ GET /api/users 200 in 259ms
+ GET /admin/data-explorer 200 in 99ms
+ GET /api/inquiries 200 in 266ms
+ GET /api/orders 200 in 319ms
+ GET /api/users 200 in 245ms
+ GET /api/customers 200 in 257ms
+ GET /api/shopify/orders 200 in 261ms
+ GET /api/shopify/customers 200 in 256ms
+ GET /api/line-items 200 in 255ms
+ GET /api/orders 200 in 247ms
+ GET /api/orders 200 in 244ms
+ GET /api/orders 200 in 242ms
+ GET /api/orders 200 in 242ms
+ DELETE /api/quickbooks/orders 405 in 254ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 1 QuickBooks orders to sync
+Synced 1 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 684
+Total shopify_orders: 683
+Total quickbooks_orders: 1
+ POST /api/sync/unified 200 in 353ms
+ GET /api/orders 200 in 249ms
+ GET /admin/data-explorer 200 in 105ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 280ms
+ GET /api/inquiries 200 in 274ms
+ GET /api/orders 200 in 327ms
+ GET /api/users 200 in 349ms
+ GET /api/customers 200 in 245ms
+ GET /api/shopify/orders 200 in 256ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 242ms
+ GET /api/orders 200 in 264ms
+ GET /api/customers 200 in 251ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 1 QuickBooks orders to sync
+Synced 1 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Unified sync error: SqliteError: no such column: companyName
+    at POST (src/app/api/sync/unified/route.ts:126:33)
+  124 |     
+  125 |     // Sync Shopify customers
+> 126 |     const shopifyCustomers = db.prepare(`
+      |                                 ^
+  127 |       SELECT id, email, firstName, lastName, phone, companyName, 
+  128 |              billingAddress, shippingAddress, createdAt, updatedAt
+  129 |       FROM shopify_customers {
+  code: 'SQLITE_ERROR'
+}
+ POST /api/sync/unified 500 in 453ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 1 QuickBooks orders to sync
+Synced 1 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Synced 472 Shopify customers to all_customers
+Synced 2 QuickBooks customers to all_customers
+Unified sync completed successfully!
+Total all_orders: 684
+Total shopify_orders: 683
+Total quickbooks_orders: 1
+Total all_customers: 474
+Total shopify_customers: 472
+Total quickbooks_customers: 2
+ POST /api/sync/unified 200 in 416ms
+ GET /api/orders 200 in 249ms
+ GET /api/customers 200 in 247ms
+ GET /api/line-items 200 in 312ms

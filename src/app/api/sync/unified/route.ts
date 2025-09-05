@@ -116,23 +116,82 @@ export async function POST() {
     
     console.log(`Synced ${quickbooksOrders.length} QuickBooks orders to all_orders`);
     
+    // Sync customers to all_customers
+    console.log("Syncing customers to all_customers...");
+    
+    // Clear existing all_customers
+    db.prepare("DELETE FROM all_customers").run();
+    
+    // Sync Shopify customers
+    const shopifyCustomers = db.prepare(`
+      SELECT id, email, firstName, lastName, phone, createdAt, updatedAt
+      FROM shopify_customers
+    `).all();
+    
+    const insertAllCustomer = db.prepare(`
+      INSERT INTO all_customers (
+        id, email, firstName, lastName, phone, companyName,
+        billingAddress, shippingAddress, createdAt, updatedAt, source, sourceId
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    for (const customer of shopifyCustomers) {
+      insertAllCustomer.run(
+        customer.id, customer.email, customer.firstName, customer.lastName,
+        customer.phone, '', // companyName not available in shopify_customers
+        null, // billingAddress not available in shopify_customers
+        null, // shippingAddress not available in shopify_customers
+        customer.createdAt, customer.updatedAt,
+        'shopify', customer.id
+      );
+    }
+    
+    console.log(`Synced ${shopifyCustomers.length} Shopify customers to all_customers`);
+    
+    // Sync QuickBooks customers
+    const quickbooksCustomers = db.prepare(`
+      SELECT id, email, firstName, lastName, phone, companyName,
+             billingAddress, shippingAddress, createdAt, updatedAt, quickbooksId
+      FROM quickbooks_customers
+    `).all();
+    
+    for (const customer of quickbooksCustomers) {
+      insertAllCustomer.run(
+        customer.id, customer.email, customer.firstName, customer.lastName,
+        customer.phone, customer.companyName, customer.billingAddress,
+        customer.shippingAddress, customer.createdAt, customer.updatedAt,
+        'quickbooks', customer.quickbooksId
+      );
+    }
+    
+    console.log(`Synced ${quickbooksCustomers.length} QuickBooks customers to all_customers`);
+    
     // Get final counts
     const totalAllOrders = db.prepare("SELECT COUNT(*) as count FROM all_orders").get() as { count: number };
     const totalShopifyOrders = db.prepare("SELECT COUNT(*) as count FROM shopify_orders").get() as { count: number };
     const totalQuickBooksOrders = db.prepare("SELECT COUNT(*) as count FROM quickbooks_orders").get() as { count: number };
+    const totalAllCustomers = db.prepare("SELECT COUNT(*) as count FROM all_customers").get() as { count: number };
+    const totalShopifyCustomers = db.prepare("SELECT COUNT(*) as count FROM shopify_customers").get() as { count: number };
+    const totalQuickBooksCustomers = db.prepare("SELECT COUNT(*) as count FROM quickbooks_customers").get() as { count: number };
     
     console.log("Unified sync completed successfully!");
     console.log(`Total all_orders: ${totalAllOrders.count}`);
     console.log(`Total shopify_orders: ${totalShopifyOrders.count}`);
     console.log(`Total quickbooks_orders: ${totalQuickBooksOrders.count}`);
+    console.log(`Total all_customers: ${totalAllCustomers.count}`);
+    console.log(`Total shopify_customers: ${totalShopifyCustomers.count}`);
+    console.log(`Total quickbooks_customers: ${totalQuickBooksCustomers.count}`);
     
     return NextResponse.json({
       success: true,
-      message: `Successfully synced ${syncedCount} orders to unified table`,
+      message: `Successfully synced ${syncedCount} orders and ${shopifyCustomers.length + quickbooksCustomers.length} customers to unified tables`,
       stats: {
         allOrders: totalAllOrders.count,
         shopifyOrders: totalShopifyOrders.count,
-        quickbooksOrders: totalQuickBooksOrders.count
+        quickbooksOrders: totalQuickBooksOrders.count,
+        allCustomers: totalAllCustomers.count,
+        shopifyCustomers: totalShopifyCustomers.count,
+        quickbooksCustomers: totalQuickBooksCustomers.count
       }
     });
     

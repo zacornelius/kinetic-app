@@ -98,6 +98,24 @@ export async function POST(request: Request) {
         // Get line items from lookup map
         const lineItems = lineItemsMap.get(key) || [];
         
+        // Helper function to parse date
+        const parseDate = (dateStr) => {
+          if (!dateStr) return new Date().toISOString();
+          
+          // Handle MM/DD/YYYY format
+          if (dateStr.includes('/')) {
+            const [month, day, year] = dateStr.split('/');
+            return new Date(year, month - 1, day).toISOString();
+          }
+          
+          // Handle YYYY-MM-DD format
+          if (dateStr.includes('-')) {
+            return new Date(dateStr).toISOString();
+          }
+          
+          return new Date().toISOString();
+        };
+
         // Map report data to our format
         const orderData = {
           id: `qb_csv_${invoiceNum}`,
@@ -107,8 +125,8 @@ export async function POST(request: Request) {
           totalAmount: parseFloat((row.Amount || '0').replace(/,/g, '')),
           currency: 'USD',
           status: 'paid', // CSV reports are typically for paid transactions
-          createdAt: row.Date || new Date().toISOString(),
-          dueDate: row['Due date'] || null,
+          createdAt: parseDate(row.Date),
+          dueDate: row['Due date'] ? parseDate(row['Due date']) : null,
           billingAddress: customerInfo.billAddress || row['Delivery address'] || null,
           shippingAddress: customerInfo.shipAddress || row['Delivery address'] || null,
           notes: row['Memo/Description'] || '',

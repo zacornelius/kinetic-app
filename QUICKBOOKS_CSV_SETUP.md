@@ -28,44 +28,87 @@ This webhook receives daily CSV reports from QuickBooks via Zapier and processes
 - **Method:** POST
 - **Content Type:** application/json
 
-### 3. Payload Format
+### 3. Payload Format (Three-File Structure)
 ```json
 {
-  "csvData": [
+  "reportData": [
     {
-      "Transaction_ID": "QB-001",
-      "Customer_Name": "John Doe",
-      "Customer_Email": "john@example.com",
-      "Total": "1500.00",
-      "Transaction_Date": "2024-01-15",
-      "Billing_Address": "123 Main St, City, State, 12345",
-      "Shipping_Address": "123 Main St, City, State, 12345",
-      "Due_Date": "2024-02-15",
-      "Memo": "Invoice notes",
-      "Line_Items": "[{\"name\":\"Product 1\",\"quantity\":2,\"price\":750}]"
+      "Date": "01/15/2024",
+      "Transaction type": "Invoice",
+      "Num": "426",
+      "Name": "City of Miami-Finance Gen Accounting",
+      "Department full name": "",
+      "Memo/Description": "",
+      "Due date": "11/16/2024",
+      "Amount": "2,914.15",
+      "Open balance": "0.00",
+      "Delivery address": "29234@miami-police.org"
     }
   ],
-  "reportDate": "2024-01-16",
+  "customerData": [
+    {
+      "Customer full name": "City of Miami-Finance Gen Accounting",
+      "Phone numbers": "305-123-4567",
+      "Email": "29234@miami-police.org",
+      "Full name": "Miami Police Department",
+      "Bill address": "123 Police Plaza, Miami, FL 33101",
+      "Ship address": "123 Police Plaza, Miami, FL 33101"
+    }
+  ],
+  "lineItemsData": [
+    {
+      "Product/Service": "Active 26K Pallet",
+      "Transaction date": "01/15/2024",
+      "Transaction type": "Invoice",
+      "Num": "426",
+      "Customer full name": "City of Miami-Finance Gen Accounting",
+      "Memo/Description": "Police K9 food order",
+      "Quantity": "1.00",
+      "Sales price": "2914.15",
+      "Amount": "2914.15",
+      "Balance": "2914.15"
+    }
+  ],
+  "reportDate": "2024-01-15",
   "totalRows": 1
 }
 ```
 
-## CSV Column Mapping
+## CSV Column Mapping (Three-File Structure)
 
 The webhook maps these CSV columns to our database format:
 
+### Report Data (Zac Report.csv)
 | **CSV Column** | **Database Field** | **Description** |
 |----------------|-------------------|-----------------|
-| `Transaction_ID` | `orderNumber` | Unique transaction identifier |
-| `Customer_Name` | `customerName` | Customer full name |
-| `Customer_Email` | `customerEmail` | Customer email address |
-| `Total` | `totalAmount` | Transaction total amount |
-| `Transaction_Date` | `createdAt` | Transaction date |
-| `Billing_Address` | `billingAddress` | Customer billing address |
-| `Shipping_Address` | `shippingAddress` | Customer shipping address |
-| `Due_Date` | `dueDate` | Payment due date |
-| `Memo` | `notes` | Transaction notes |
-| `Line_Items` | `lineItems` | JSON string of line items |
+| `Num` | `orderNumber` | Invoice number |
+| `Name` | `customerName` | Customer name |
+| `Date` | `createdAt` | Transaction date |
+| `Amount` | `totalAmount` | Transaction total |
+| `Due date` | `dueDate` | Payment due date |
+| `Memo/Description` | `notes` | Transaction notes |
+| `Delivery address` | `shippingAddress` | Delivery address |
+
+### Customer Data (Zac Customer Contact List.csv)
+| **CSV Column** | **Database Field** | **Description** |
+|----------------|-------------------|-----------------|
+| `Customer full name` | `customerName` | Customer full name |
+| `Email` | `customerEmail` | Customer email |
+| `Phone numbers` | `phone` | Customer phone |
+| `Full name` | `firstName/lastName` | Parsed name |
+| `Bill address` | `billingAddress` | Billing address |
+| `Ship address` | `shippingAddress` | Shipping address |
+
+### Line Items Data (Zac Line items.csv)
+| **CSV Column** | **Database Field** | **Description** |
+|----------------|-------------------|-----------------|
+| `Num` | `orderNumber` | Links to invoice |
+| `Customer full name` | `customerName` | Links to customer |
+| `Product/Service` | `product` | Product name |
+| `Quantity` | `quantity` | Item quantity |
+| `Sales price` | `price` | Unit price |
+| `Amount` | `amount` | Line total |
+| `Memo/Description` | `description` | Item description |
 
 ## Features
 
