@@ -251,8 +251,10 @@ export async function POST(request: Request) {
         
         // Calculate total amount from all line items
         const totalAmount = lineItems.reduce((sum, item) => {
-          const amount = parseFloat((item['Amount'] || '0').replace(/,/g, ''));
-          return sum + amount;
+          const quantity = parseFloat(item['Quantity'] || '0');
+          const price = parseFloat((item['Sales price'] || '0').replace(/,/g, ''));
+          const calculatedAmount = quantity * price;
+          return sum + calculatedAmount;
         }, 0);
         
         // Find customer email from customer data
@@ -265,13 +267,19 @@ export async function POST(request: Request) {
         }
         
         // Create line items array
-        const processedLineItems = lineItems.map(item => ({
-          product: item['Product/Service'] || '',
-          quantity: parseFloat(item['Quantity'] || '0'),
-          price: parseFloat((item['Sales price'] || '0').replace(/,/g, '')),
-          amount: parseFloat((item['Amount'] || '0').replace(/,/g, '')),
-          description: item['Memo/Description'] || ''
-        }));
+        const processedLineItems = lineItems.map(item => {
+          const quantity = parseFloat(item['Quantity'] || '0');
+          const price = parseFloat((item['Sales price'] || '0').replace(/,/g, ''));
+          const calculatedAmount = quantity * price;
+          
+          return {
+            product: item['Product/Service'] || '',
+            quantity: quantity,
+            price: price,
+            amount: calculatedAmount, // Calculate amount as quantity × price
+            description: item['Memo/Description'] || ''
+          };
+        });
         
         // Create order data
         const orderData = {
