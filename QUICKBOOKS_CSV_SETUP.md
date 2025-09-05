@@ -13,48 +13,57 @@ This webhook receives daily CSV reports from QuickBooks via Zapier and processes
 
 **Method:** POST
 
-## Zapier Configuration
+## Zapier Configuration (Two Separate Zaps)
 
 ### 1. Email Service Setup
 - Set up Zapier to receive daily CSV reports from QuickBooks
-- **Important:** Use "Get File Content" actions, not "Get File" actions
-- Send raw CSV content to webhook endpoint
+- Create **two separate Zaps** for better reliability
+- Each Zap handles one CSV file
 
-### 2. Zap Structure
+### 2. Zap Structures
+
+**Zap 1: Customer Contact List**
 ```
-Email Trigger (with CSV attachments)
+Email Trigger (with Customer CSV attachment)
 ├── Action 1: Get File Content (Customer CSV)
-├── Action 2: Get File Content (Line Items CSV)  
-└── Action 3: Webhook (send file content)
+└── Action 2: Webhook (send customer data)
+```
+
+**Zap 2: Line Items**
+```
+Email Trigger (with Line Items CSV attachment)
+├── Action 1: Get File Content (Line Items CSV)
+└── Action 2: Webhook (send line items data)
 ```
 
 ### 3. Webhook Configuration
 
-**Option A: Send CSV URLs (Recommended)**
+**Both Zaps use the same webhook URL:**
 - **URL:** `http://3.145.159.251:3000/api/webhooks/quickbooks-csv`
 - **Authentication:** Basic Auth (kinetic:webhook2024)
 - **Method:** POST
 - **Content Type:** application/json
-- **Data:**
-  ```json
-  {
-    "customerURL": "{{action1.file_url}}",
-    "lineItemsURL": "{{action2.file_url}}"
-  }
-  ```
 
-**Option B: Send Raw CSV Content**
-- **URL:** `http://3.145.159.251:3000/api/webhooks/quickbooks-csv`
-- **Authentication:** Basic Auth (kinetic:webhook2024)
-- **Method:** POST
-- **Content Type:** application/json
-- **Data:**
-  ```json
-  {
-    "customerCSV": "{{action1.content}}",
-    "lineItemsCSV": "{{action2.content}}"
-  }
-  ```
+**Zap 1 Data (Customer Contact List):**
+```json
+{
+  "customerCSV": "{{action1.content}}"
+}
+```
+
+**Zap 2 Data (Line Items):**
+```json
+{
+  "lineItemsCSV": "{{action1.content}}"
+}
+```
+
+### 4. Benefits of Separate Zaps
+- ✅ **More reliable** - if one fails, the other still works
+- ✅ **Easier debugging** - separate logs for each data type
+- ✅ **Flexible timing** - can arrive at different times
+- ✅ **Simpler setup** - no complex merging in Zapier
+- ✅ **Better error handling** - specific error messages per data type
 
 ### 3. Payload Format (Raw CSV Format)
 ```json

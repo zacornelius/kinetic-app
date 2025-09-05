@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     console.log('QuickBooks CSV webhook received with raw CSV data');
     
     // Extract CSV data from Zapier payload
-    // Support both URLs and raw content
+    // Support both URLs and raw content, and handle separate Zaps
     const customerURL = body.customerURL || body.customer_url || body.customerCSVUrl;
     const lineItemsURL = body.lineItemsURL || body.line_items_url || body.lineItemsCSVUrl;
     
@@ -89,17 +89,18 @@ export async function POST(request: Request) {
     console.log('Customer CSV found:', !!finalCustomerCSV);
     console.log('Line Items CSV found:', !!finalLineItemsCSV);
 
-    if (!finalLineItemsCSV) {
+    // Handle separate Zaps - at least one CSV must be provided
+    if (!finalCustomerCSV && !finalLineItemsCSV) {
       return NextResponse.json({ 
-        error: "Missing line items CSV data. Please provide either lineItemsCSV content or lineItemsURL. Available fields: " + Object.keys(body).join(', '),
+        error: "Missing CSV data. Please provide either customer or line items CSV data.",
         receivedFields: Object.keys(body),
         supportedFields: ['customerCSV', 'lineItemsCSV', 'customerURL', 'lineItemsURL']
       }, { status: 400 });
     }
 
-    // Parse CSV data
+    // Parse CSV data (handle partial data from separate Zaps)
     const customerData = finalCustomerCSV ? parseCSV(finalCustomerCSV) : [];
-    const lineItemsData = parseCSV(finalLineItemsCSV);
+    const lineItemsData = finalLineItemsCSV ? parseCSV(finalLineItemsCSV) : [];
 
     console.log(`Parsed ${customerData.length} customer rows and ${lineItemsData.length} line item rows`);
 
@@ -145,11 +146,70 @@ export async function POST(request: Request) {
       return new Date().toISOString();
     };
 
-    // Process line items data (which now contains all transaction data)
+    // Process data from separate Zaps
     let processedOrders = 0;
     let processedCustomers = 0;
 
-    for (const row of lineItemsData) {
+    // Process customer data if provided
+    if (customerData.length > 0) {
+      console.log(`Processing ${customerData.length} customer records`);
+      
+      for (const customer of customerData) {
+        const customerName = customer['Customer full name'] || '';
+        const email = customer['Email'] || '';
+        
+        if (customerName && email) {
+          // Check if customer already exists
+          const existingCustomer = db.prepare(`
+            SELECT id FROM quickbooks_customers WHERE email = ?
+          `).get(email);
+
+          if (existingCustomer) {
+            // Update existing customer
+            db.prepare(`
+              UPDATE quickbooks_customers SET
+                firstName = ?, lastName = ?, phone = ?, 
+                billingAddress = ?, shippingAddress = ?, updatedAt = ?
+              WHERE email = ?
+            `).run(
+              customer['Full name']?.split(' ')[0] || '',
+              customer['Full name']?.split(' ').slice(1).join(' ') || '',
+              customer['Phone'] || '',
+              customer['Bill address'] || '',
+              customer['Ship address'] || '',
+              new Date().toISOString(),
+              email
+            );
+          } else {
+            // Insert new customer
+            const customerId = `qb_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            db.prepare(`
+              INSERT INTO quickbooks_customers (
+                id, quickbooksId, email, firstName, lastName, phone,
+                companyName, billingAddress, shippingAddress, createdAt, updatedAt
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              customerId, customerName, email,
+              customer['Full name']?.split(' ')[0] || '',
+              customer['Full name']?.split(' ').slice(1).join(' ') || '',
+              customer['Phone'] || '',
+              '', // companyName
+              customer['Bill address'] || '',
+              customer['Ship address'] || '',
+              new Date().toISOString(),
+              new Date().toISOString()
+            );
+            processedCustomers++;
+          }
+        }
+      }
+    }
+
+    // Process line items data if provided
+    if (lineItemsData.length > 0) {
+      console.log(`Processing ${lineItemsData.length} line item records`);
+      
+      for (const row of lineItemsData) {
       const invoiceNum = row['Num'] || '';
       const customerName = row['Customer full name'] || '';
       const productName = row['Product/Service'] || '';
@@ -280,14 +340,20 @@ export async function POST(request: Request) {
       console.error('Error calling unified sync:', syncError);
     }
 
+    // Determine what type of data was processed
+    const dataType = customerData.length > 0 && lineItemsData.length > 0 ? 'both' : 
+                     customerData.length > 0 ? 'customers' : 'line items';
+    
     return NextResponse.json({
       success: true,
-      message: `Successfully processed ${processedOrders} orders and ${processedCustomers} customers from QuickBooks CSV data`,
+      message: `Successfully processed QuickBooks ${dataType} data. ${processedOrders} orders and ${processedCustomers} customers processed.`,
       stats: {
+        dataType: dataType,
         ordersProcessed: processedOrders,
         customersProcessed: processedCustomers,
         totalLineItems: lineItemsData.length,
-        totalCustomers: customerMap.size
+        totalCustomers: customerData.length,
+        customerMapSize: customerMap.size
       }
     });
 

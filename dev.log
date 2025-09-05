@@ -2019,3 +2019,30 @@ Unified sync completed: {
   }
 }
  POST /api/webhooks/quickbooks-csv 200 in 745ms
+QuickBooks CSV webhook received with raw CSV data
+Available fields in payload: [ '' ]
+Customer CSV found: false
+Line Items CSV found: false
+ POST /api/webhooks/quickbooks-csv 400 in 244ms
+QuickBooks CSV webhook received with raw CSV data
+Available fields in payload: [ 'output' ]
+Customer CSV found: false
+Line Items CSV found: false
+ POST /api/webhooks/quickbooks-csv 400 in 242ms
+ ⨯ Error: Failed to load chunk server/chunks/[root-of-the-server]__f1d503db._.js from runtime for chunk server/app/api/webhooks/quickbooks-csv/route.js
+    at Object.<anonymous> (.next/server/app/api/webhooks/quickbooks-csv/route.js:3:3) {
+  page: '/api/webhooks/quickbooks-csv',
+  [cause]: SyntaxError: Unexpected token '<'
+      at <unknown> (.next/server/chunks/[root-of-the-server]__f1d503db._.js:657)
+      at Object.<anonymous> (.next/server/app/api/webhooks/quickbooks-csv/route.js:3:3)
+}
+ POST /api/webhooks/quickbooks-csv 500 in 588ms
+ ⨯ Error: Failed to load chunk server/chunks/[root-of-the-server]__f1d503db._.js from runtime for chunk server/app/api/webhooks/quickbooks-csv/route.js
+    at Object.<anonymous> (.next/server/app/api/webhooks/quickbooks-csv/route.js:3:3) {
+  page: '/api/webhooks/quickbooks-csv',
+  [cause]: SyntaxError: Unexpected token '<'
+      at <unknown> (.next/server/chunks/[root-of-the-server]__f1d503db._.js:657)
+      at Object.<anonymous> (.next/server/app/api/webhooks/quickbooks-csv/route.js:3:3)
+}
+ POST /api/webhooks/quickbooks-csv 500 in 314ms
+[?25h
