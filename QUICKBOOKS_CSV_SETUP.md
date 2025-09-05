@@ -17,16 +17,31 @@ This webhook receives daily CSV reports from QuickBooks via Zapier and processes
 
 ### 1. Email Service Setup
 - Set up Zapier to receive daily CSV reports from QuickBooks
-- Parse the CSV data into JSON format
-- Send to webhook endpoint
+- **Important:** Use "Get File Content" actions, not "Get File" actions
+- Send raw CSV content to webhook endpoint
 
-### 2. Webhook Configuration
+### 2. Zap Structure
+```
+Email Trigger (with CSV attachments)
+├── Action 1: Get File Content (Customer CSV)
+├── Action 2: Get File Content (Line Items CSV)  
+└── Action 3: Webhook (send file content)
+```
+
+### 3. Webhook Configuration
 - **URL:** `http://3.145.159.251:3000/api/webhooks/quickbooks-csv`
 - **Authentication:** Basic Auth
 - **Username:** `kinetic`
 - **Password:** `webhook2024`
 - **Method:** POST
 - **Content Type:** application/json
+- **Data:**
+  ```json
+  {
+    "customerCSV": "{{action1.file_content}}",
+    "lineItemsCSV": "{{action2.file_content}}"
+  }
+  ```
 
 ### 3. Payload Format (Raw CSV Format)
 ```json

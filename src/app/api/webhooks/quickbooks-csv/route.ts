@@ -43,8 +43,27 @@ export async function POST(request: Request) {
     // Log the incoming webhook for debugging
     console.log('QuickBooks CSV webhook received with raw CSV data');
     
-    // Extract CSV data from Zapier payload (raw CSV format)
-    // Try multiple possible field names that Zapier might use, including actual CSV filenames
+    // Extract CSV data from Zapier payload
+    // Zapier sends file pointers, not raw content
+    const filePointers = body.raw__file_pointers || body.file_pointers || body.attachment;
+    
+    console.log('File pointers received:', filePointers);
+    
+    // For now, return an error with instructions since we need the actual file content
+    if (filePointers) {
+      return NextResponse.json({ 
+        error: "File pointers received instead of CSV content. Please configure Zapier to send file content, not file pointers.",
+        instructions: {
+          step1: "In Zapier, use 'Get File Content' action instead of 'Get File'",
+          step2: "Map the file content to field names like 'customerCSV' and 'lineItemsCSV'",
+          step3: "Send the actual CSV text content, not file references"
+        },
+        receivedFields: Object.keys(body).filter(key => !key.startsWith('raw__')),
+        filePointers: filePointers
+      }, { status: 400 });
+    }
+    
+    // Fallback: try to find CSV content in other fields
     const customerCSV = body.customerCSV || body.customer_csv || body.customerData || body.customer_data || 
                        body['Zac customer contact list'] || body['zac customer contact list'] || 
                        body['Kinetic Nutrition Group LLC_Zac Customer Contact List.csv'] ||
