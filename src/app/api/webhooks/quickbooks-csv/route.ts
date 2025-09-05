@@ -44,16 +44,24 @@ export async function POST(request: Request) {
     console.log('QuickBooks CSV webhook received with raw CSV data');
     
     // Extract CSV data from Zapier payload (raw CSV format)
-    const {
-      customerCSV, // Raw CSV text for customer data
-      lineItemsCSV, // Raw CSV text for line items data
-      reportDate, // Date of the report
-      totalRows
-    } = body;
+    // Try multiple possible field names that Zapier might use, including actual CSV filenames
+    const customerCSV = body.customerCSV || body.customer_csv || body.customerData || body.customer_data || 
+                       body['Zac customer contact list'] || body['zac customer contact list'] || 
+                       body['Kinetic Nutrition Group LLC_Zac Customer Contact List.csv'] ||
+                       body['Kinetic Nutrition Group LLC_Zac Customer Contact List'];
+    const lineItemsCSV = body.lineItemsCSV || body.line_items_csv || body.lineItemsData || body.line_items_data || 
+                        body.lineItems || body.line_items || body['zac line items'] || body['Zac line items'] ||
+                        body['Kinetic Nutrition Group LLC_Zac Line items.csv'] ||
+                        body['Kinetic Nutrition Group LLC_Zac Line items'];
+    
+    console.log('Available fields in payload:', Object.keys(body));
+    console.log('Customer CSV found:', !!customerCSV);
+    console.log('Line Items CSV found:', !!lineItemsCSV);
 
     if (!lineItemsCSV) {
       return NextResponse.json({ 
-        error: "Missing lineItemsCSV data" 
+        error: "Missing line items CSV data. Available fields: " + Object.keys(body).join(', '),
+        receivedFields: Object.keys(body)
       }, { status: 400 });
     }
 

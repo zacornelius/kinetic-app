@@ -1599,3 +1599,189 @@ Unified sync completed: {
 }
  POST /api/webhooks/quickbooks-csv 200 in 668ms
  GET /api/orders 200 in 250ms
+QuickBooks CSV webhook error: SyntaxError: Unexpected token 'h', "https://za"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/webhooks/quickbooks-csv/route.ts:41:18)
+  39 |     }
+  40 |     
+> 41 |     const body = await request.json();
+     |                  ^
+  42 |     
+  43 |     // Log the incoming webhook for debugging
+  44 |     console.log('QuickBooks CSV webhook received with raw CSV data');
+ POST /api/webhooks/quickbooks-csv 500 in 329ms
+QuickBooks CSV webhook error: SyntaxError: Unexpected token 'h', "https://za"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/webhooks/quickbooks-csv/route.ts:41:18)
+  39 |     }
+  40 |     
+> 41 |     const body = await request.json();
+     |                  ^
+  42 |     
+  43 |     // Log the incoming webhook for debugging
+  44 |     console.log('QuickBooks CSV webhook received with raw CSV data');
+ POST /api/webhooks/quickbooks-csv 500 in 309ms
+QuickBooks CSV webhook error: SyntaxError: Unexpected token 'Z', "Zac Line items.csv" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/webhooks/quickbooks-csv/route.ts:41:18)
+  39 |     }
+  40 |     
+> 41 |     const body = await request.json();
+     |                  ^
+  42 |     
+  43 |     // Log the incoming webhook for debugging
+  44 |     console.log('QuickBooks CSV webhook received with raw CSV data');
+ POST /api/webhooks/quickbooks-csv 500 in 390ms
+QuickBooks CSV webhook received with raw CSV data
+ POST /api/webhooks/quickbooks-csv 400 in 246ms
+QuickBooks CSV webhook received with raw CSV data
+ POST /api/webhooks/quickbooks-csv 400 in 239ms
+QuickBooks CSV webhook received with raw CSV data
+Available fields in payload: [ 'customer_csv', 'line_items_csv' ]
+Customer CSV found: true
+Line Items CSV found: true
+Parsed 1 customer rows and 1 line item rows
+Processing 1 line item rows, 1 customer rows from QuickBooks report
+Created customer lookup map with 1 customers
+Processed 1 new orders and 0 new customers
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 4 QuickBooks orders to sync
+Synced 4 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Synced 472 Shopify customers to all_customers
+Synced 2 QuickBooks customers to all_customers
+Unified sync completed successfully!
+Total all_orders: 687
+Total shopify_orders: 683
+Total quickbooks_orders: 4
+Total all_customers: 474
+Total shopify_customers: 472
+Total quickbooks_customers: 2
+ POST /api/sync/unified 200 in 494ms
+Unified sync completed: {
+  success: true,
+  message: 'Successfully synced 687 orders and 474 customers to unified tables',
+  stats: {
+    allOrders: 687,
+    shopifyOrders: 683,
+    quickbooksOrders: 4,
+    allCustomers: 474,
+    shopifyCustomers: 472,
+    quickbooksCustomers: 2
+  }
+}
+ POST /api/webhooks/quickbooks-csv 200 in 785ms
+QuickBooks CSV webhook received with raw CSV data
+Available fields in payload: [ 'Zac customer contact list', 'zac line items' ]
+Customer CSV found: true
+Line Items CSV found: true
+Parsed 1 customer rows and 1 line item rows
+Processing 1 line item rows, 1 customer rows from QuickBooks report
+Created customer lookup map with 1 customers
+Processed 1 new orders and 0 new customers
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 5 QuickBooks orders to sync
+Synced 5 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Synced 472 Shopify customers to all_customers
+Synced 2 QuickBooks customers to all_customers
+Unified sync completed successfully!
+Total all_orders: 688
+Total shopify_orders: 683
+Total quickbooks_orders: 5
+Total all_customers: 474
+Total shopify_customers: 472
+Total quickbooks_customers: 2
+ POST /api/sync/unified 200 in 445ms
+Unified sync completed: {
+  success: true,
+  message: 'Successfully synced 688 orders and 474 customers to unified tables',
+  stats: {
+    allOrders: 688,
+    shopifyOrders: 683,
+    quickbooksOrders: 5,
+    allCustomers: 474,
+    shopifyCustomers: 472,
+    quickbooksCustomers: 2
+  }
+}
+ POST /api/webhooks/quickbooks-csv 200 in 739ms
+QuickBooks CSV webhook received with raw CSV data
+Available fields in payload: [
+  'raw__Accept_Language',
+  'raw__Arc_Authentication_Results',
+  'raw__Arc_Message_Signature',
+  'raw__Arc_Seal',
+  'raw__Authentication_Results',
+  'raw__Content_Language',
+  'raw__Content_Type',
+  'raw__Date',
+  'raw__Dkim_Signature',
+  'raw__From',
+  'raw__In_Reply_To',
+  'raw__Message_Id',
+  'raw__Mime_Version',
+  'raw__Received',
+  'raw__References',
+  'raw__Subject',
+  'raw__Thread_Index',
+  'raw__Thread_Topic',
+  'raw__To',
+  'raw__X_Envelope_From',
+  'raw__X_Forefront_Antispam_Report',
+  'raw__X_Mailgun_Dkim_Check_Result',
+  'raw__X_Mailgun_Incoming',
+  'raw__X_Mailgun_Sflag',
+  'raw__X_Mailgun_Spam_Points',
+  'raw__X_Mailgun_Spam_Rules',
+  'raw__X_Mailgun_Spf',
+  'raw__X_Mailgun_Sscore',
+  'raw__X_Microsoft_Antispam',
+  'raw__X_Microsoft_Antispam_Message_Info',
+  'raw__X_Ms_Exchange_Antispam_Messagedata_0',
+  'raw__X_Ms_Exchange_Antispam_Messagedata_Chunkcount',
+  'raw__X_Ms_Exchange_Antispam_Relay',
+  'raw__X_Ms_Exchange_Crosstenant_Authas',
+  'raw__X_Ms_Exchange_Crosstenant_Authsource',
+  'raw__X_Ms_Exchange_Crosstenant_Fromentityheader',
+  'raw__X_Ms_Exchange_Crosstenant_Id',
+  'raw__X_Ms_Exchange_Crosstenant_Mailboxtype',
+  'raw__X_Ms_Exchange_Crosstenant_Network_Message_Id',
+  'raw__X_Ms_Exchange_Crosstenant_Originalarrivaltime',
+  'raw__X_Ms_Exchange_Crosstenant_Userprincipalname',
+  'raw__X_Ms_Exchange_Senderadcheck',
+  'raw__X_Ms_Exchange_Transport_Crosstenantheadersstamped',
+  'raw__X_Ms_Has_Attach',
+  'raw__X_Ms_Office365_Filtering_Correlation_Id',
+  'raw__X_Ms_Publictraffictype',
+  'raw__X_Ms_Reactions',
+  'raw__X_Ms_Tnef_Correlator',
+  'raw__X_Ms_Traffictypediagnostic',
+  'raw__X_Originatororg',
+  'sender',
+  'raw__recipients',
+  'from',
+  'subject',
+  'body_html',
+  'body_plain',
+  'raw__content_id_map',
+  'raw__message_headers',
+  'stripped_html',
+  'stripped_text',
+  'stripped_signature',
+  'raw__To_name',
+  'raw__To_email',
+  'from_name',
+  'from_email',
+  'attachment',
+  'raw__file_pointers'
+]
+Customer CSV found: false
+Line Items CSV found: false
+ POST /api/webhooks/quickbooks-csv 400 in 249ms
