@@ -931,6 +931,7 @@ export default function DataExplorer() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shipping Address</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Products</th>
                   </tr>
                 </thead>
@@ -945,6 +946,20 @@ export default function DataExplorer() {
                         ${order.totalAmount?.toFixed(2) || '0.00'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">{order.status}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="max-w-xs">
+                          {order.shippingAddress ? (
+                            <div className="text-xs" title={order.shippingAddress}>
+                              {order.shippingAddress.length > 50 
+                                ? `${order.shippingAddress.substring(0, 50)}...` 
+                                : order.shippingAddress
+                              }
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">No address</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
                         <div className="max-w-xs truncate" title={order.lineItems}>
                           {order.lineItems || 'N/A'}
