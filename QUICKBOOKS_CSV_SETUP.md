@@ -28,92 +28,72 @@ This webhook receives daily CSV reports from QuickBooks via Zapier and processes
 - **Method:** POST
 - **Content Type:** application/json
 
-### 3. Payload Format (Three-File Structure)
+### 3. Payload Format (Simplified 2-File Structure)
 ```json
 {
-  "reportData": [
-    {
-      "Date": "01/15/2024",
-      "Transaction type": "Invoice",
-      "Num": "426",
-      "Name": "City of Miami-Finance Gen Accounting",
-      "Department full name": "",
-      "Memo/Description": "",
-      "Due date": "11/16/2024",
-      "Amount": "2,914.15",
-      "Open balance": "0.00",
-      "Delivery address": "29234@miami-police.org"
-    }
-  ],
   "customerData": [
     {
       "Customer full name": "City of Miami-Finance Gen Accounting",
-      "Phone numbers": "305-123-4567",
       "Email": "29234@miami-police.org",
       "Full name": "Miami Police Department",
       "Bill address": "123 Police Plaza, Miami, FL 33101",
-      "Ship address": "123 Police Plaza, Miami, FL 33101"
+      "Ship address": "123 Police Plaza, Miami, FL 33101",
+      "Phone": "305-123-4567"
     }
   ],
   "lineItemsData": [
     {
-      "Product/Service": "Active 26K Pallet",
-      "Transaction date": "01/15/2024",
+      "Product/Service": "Pallet 15-24K",
+      "Transaction date": "01/31/2025",
       "Transaction type": "Invoice",
-      "Num": "426",
-      "Customer full name": "City of Miami-Finance Gen Accounting",
-      "Memo/Description": "Police K9 food order",
-      "Quantity": "1.00",
-      "Sales price": "2914.15",
-      "Amount": "2914.15",
-      "Balance": "2914.15"
+      "Num": "509",
+      "Customer full name": "7th Special Forces Group K9 Unit",
+      "Memo/Description": "Vital 24K Kinetic Dog Food 35 lb",
+      "Quantity": "45.00",
+      "Sales price": "58.64",
+      "Amount": "2,638.80"
     }
   ],
-  "reportDate": "2024-01-15",
+  "reportDate": "2025-01-31",
   "totalRows": 1
 }
 ```
 
-## CSV Column Mapping (Three-File Structure)
+## CSV Column Mapping (Simplified 2-File Structure)
 
 The webhook maps these CSV columns to our database format:
 
-### Report Data (Zac Report.csv)
-| **CSV Column** | **Database Field** | **Description** |
-|----------------|-------------------|-----------------|
-| `Num` | `orderNumber` | Invoice number |
-| `Name` | `customerName` | Customer name |
-| `Date` | `createdAt` | Transaction date |
-| `Amount` | `totalAmount` | Transaction total |
-| `Due date` | `dueDate` | Payment due date |
-| `Memo/Description` | `notes` | Transaction notes |
-| `Delivery address` | `shippingAddress` | Delivery address |
-
-### Customer Data (Zac Customer Contact List.csv)
+### Customer Data (Kinetic Nutrition Group LLC_Zac Customer Contact List.csv)
 | **CSV Column** | **Database Field** | **Description** |
 |----------------|-------------------|-----------------|
 | `Customer full name` | `customerName` | Customer full name |
 | `Email` | `customerEmail` | Customer email |
-| `Phone numbers` | `phone` | Customer phone |
-| `Full name` | `firstName/lastName` | Parsed name |
+| `Full name` | `firstName/lastName` | Parsed contact person name |
 | `Bill address` | `billingAddress` | Billing address |
 | `Ship address` | `shippingAddress` | Shipping address |
+| `Phone` | `phone` | Customer phone |
 
-### Line Items Data (Zac Line items.csv)
+### Line Items Data (Kinetic Nutrition Group LLC_Zac Line items.csv)
 | **CSV Column** | **Database Field** | **Description** |
 |----------------|-------------------|-----------------|
-| `Num` | `orderNumber` | Links to invoice |
+| `Num` | `orderNumber` | Invoice number |
 | `Customer full name` | `customerName` | Links to customer |
 | `Product/Service` | `product` | Product name |
 | `Quantity` | `quantity` | Item quantity |
 | `Sales price` | `price` | Unit price |
 | `Amount` | `amount` | Line total |
+| `Transaction date` | `createdAt` | Order date |
 | `Memo/Description` | `description` | Item description |
 
 ## Features
 
+### ✅ Simplified Processing
+- **2-File Format:** Only customer data and line items needed
+- **Pre-filtered Data:** Only relevant transactions included
+- **Streamlined Mapping:** Direct column mapping without complex merging
+
 ### ✅ Deduplication
-- **New Orders:** Inserted if `Transaction_ID` doesn't exist
+- **New Orders:** Inserted if invoice number doesn't exist
 - **Existing Orders:** Updated with latest data
 - **Customers:** Updated if email exists, created if new
 
@@ -133,19 +113,12 @@ The webhook maps these CSV columns to our database format:
 ```json
 {
   "success": true,
-  "message": "QuickBooks CSV processed successfully. 2 rows processed.",
+  "message": "Successfully processed 5 orders and 3 customers from QuickBooks CSV data",
   "stats": {
-    "totalRows": 2,
-    "processedRows": 2,
-    "newOrders": 1,
-    "updatedOrders": 1,
-    "newCustomers": 1,
-    "updatedCustomers": 1,
-    "unified": {
-      "allOrders": 688,
-      "shopifyOrders": 683,
-      "quickbooksOrders": 5
-    }
+    "ordersProcessed": 5,
+    "customersProcessed": 3,
+    "totalLineItems": 5,
+    "totalCustomers": 3
   }
 }
 ```
@@ -158,17 +131,29 @@ curl -X POST http://3.145.159.251:3000/api/webhooks/quickbooks-csv \
   -H "Content-Type: application/json" \
   -u "kinetic:webhook2024" \
   -d '{
-    "csvData": [
+    "customerData": [
       {
-        "Transaction_ID": "QB-TEST-001",
-        "Customer_Name": "Test Customer",
-        "Customer_Email": "test@example.com",
-        "Total": "1000.00",
-        "Transaction_Date": "2024-01-15"
+        "Customer full name": "Test Customer",
+        "Email": "test@example.com",
+        "Full name": "Test User",
+        "Bill address": "123 Test St",
+        "Ship address": "123 Test St",
+        "Phone": "555-1234"
       }
     ],
-    "reportDate": "2024-01-15",
-    "totalRows": 1
+    "lineItemsData": [
+      {
+        "Product/Service": "Test Product",
+        "Transaction date": "01/31/2025",
+        "Transaction type": "Invoice",
+        "Num": "TEST-001",
+        "Customer full name": "Test Customer",
+        "Memo/Description": "Test order",
+        "Quantity": "1.00",
+        "Sales price": "100.00",
+        "Amount": "100.00"
+      }
+    ]
   }'
 ```
 
@@ -182,11 +167,11 @@ curl -u "kinetic:webhook2024" http://3.145.159.251:3000/api/webhooks/quickbooks-
 After processing, QuickBooks data will appear in:
 - **Orders Tab:** Filter by "QuickBooks" source
 - **Customers Tab:** QuickBooks customers
-- **Line Items Tab:** If line items are provided in CSV
+- **Line Items Tab:** Product line items from transactions
 
 ## Next Steps
 
-1. **Configure Zapier** with your actual CSV column names
+1. **Configure Zapier** with the simplified 2-file format
 2. **Test with real data** from QuickBooks
 3. **Adjust column mapping** if needed
 4. **Set up daily automation** in Zapier

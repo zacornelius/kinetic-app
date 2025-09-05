@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/database";
 
-// Webhook endpoint for QuickBooks CSV data from Zapier
+// Webhook endpoint for QuickBooks CSV data from Zapier (simplified 2-file format)
 export async function POST(request: Request) {
   try {
     // Check for Basic Auth authentication
@@ -21,36 +21,35 @@ export async function POST(request: Request) {
     // Log the incoming webhook for debugging
     console.log('QuickBooks CSV webhook received:', JSON.stringify(body, null, 2));
     
-    // Extract CSV data from Zapier payload
+    // Extract CSV data from Zapier payload (simplified 2-file format)
     const {
-      reportData, // Main transaction data (Zac Report.csv)
-      customerData, // Customer contact data (Zac Customer Contact List.csv)
-      lineItemsData, // Line items data (Zac Line items.csv)
+      customerData, // Customer contact data (Kinetic Nutrition Group LLC_Zac Customer Contact List.csv)
+      lineItemsData, // Line items data (Kinetic Nutrition Group LLC_Zac Line items.csv)
       reportDate, // Date of the report
       totalRows
     } = body;
 
-    if (!reportData || !Array.isArray(reportData)) {
+    if (!lineItemsData || !Array.isArray(lineItemsData)) {
       return NextResponse.json({ 
-        error: "Missing or invalid reportData array" 
+        error: "Missing or invalid lineItemsData array" 
       }, { status: 400 });
     }
 
-    console.log(`Processing ${reportData.length} report rows, ${customerData?.length || 0} customer rows, ${lineItemsData?.length || 0} line item rows from QuickBooks report`);
+    console.log(`Processing ${lineItemsData.length} line item rows, ${customerData?.length || 0} customer rows from QuickBooks report`);
 
-    // Create lookup maps for efficient merging
+    // Create lookup map for customer data
     const customerMap = new Map();
-    const lineItemsMap = new Map();
 
     // Process customer data first to create lookup map
     if (customerData && Array.isArray(customerData)) {
       for (const customer of customerData) {
-        const customerName = customer['Customer full name'] || customer['Customer full name'] || '';
+        const customerName = customer['Customer full name'] || '';
         if (customerName) {
           customerMap.set(customerName, {
-            email: customer.Email || '',
-            phone: customer['Phone numbers'] || '',
-            fullName: customer['Full name'] || customerName,
+            email: customer['Email'] || '',
+            firstName: customer['Full name']?.split(' ')[0] || '',
+            lastName: customer['Full name']?.split(' ').slice(1).join(' ') || '',
+            phone: customer['Phone'] || '',
             billAddress: customer['Bill address'] || '',
             shipAddress: customer['Ship address'] || ''
           });
@@ -58,254 +57,180 @@ export async function POST(request: Request) {
       }
     }
 
-    // Process line items data to create lookup map
-    if (lineItemsData && Array.isArray(lineItemsData)) {
-      for (const lineItem of lineItemsData) {
-        const invoiceNum = lineItem.Num || '';
-        const customerName = lineItem['Customer full name'] || '';
-        const key = `${invoiceNum}_${customerName}`;
-        
-        if (!lineItemsMap.has(key)) {
-          lineItemsMap.set(key, []);
-        }
-        
-        lineItemsMap.get(key).push({
-          product: lineItem['Product/Service'] || '',
-          quantity: parseFloat(lineItem.Quantity || 0),
-          price: parseFloat(lineItem['Sales price'] || 0),
-          amount: parseFloat(lineItem.Amount || 0),
-          description: lineItem['Memo/Description'] || ''
-        });
+    console.log(`Created customer lookup map with ${customerMap.size} customers`);
+
+    // Helper function to parse date
+    const parseDate = (dateStr) => {
+      if (!dateStr) return new Date().toISOString();
+      
+      // Handle MM/DD/YYYY format
+      if (dateStr.includes('/')) {
+        const [month, day, year] = dateStr.split('/');
+        return new Date(year, month - 1, day).toISOString();
       }
-    }
+      
+      // Handle YYYY-MM-DD format
+      if (dateStr.includes('-')) {
+        return new Date(dateStr).toISOString();
+      }
+      
+      return new Date().toISOString();
+    };
 
-    // Process each report row (main transaction data)
-    let processedCount = 0;
-    let newOrdersCount = 0;
-    let updatedOrdersCount = 0;
-    let newCustomersCount = 0;
-    let updatedCustomersCount = 0;
+    // Process line items data (which now contains all transaction data)
+    let processedOrders = 0;
+    let processedCustomers = 0;
 
-    for (const row of reportData) {
-      try {
-        const invoiceNum = row.Num || '';
-        const customerName = row.Name || '';
-        const key = `${invoiceNum}_${customerName}`;
-        
-        // Get customer details from lookup map
-        const customerInfo = customerMap.get(customerName) || {};
-        
-        // Get line items from lookup map
-        const lineItems = lineItemsMap.get(key) || [];
-        
-        // Helper function to parse date
-        const parseDate = (dateStr) => {
-          if (!dateStr) return new Date().toISOString();
-          
-          // Handle MM/DD/YYYY format
-          if (dateStr.includes('/')) {
-            const [month, day, year] = dateStr.split('/');
-            return new Date(year, month - 1, day).toISOString();
-          }
-          
-          // Handle YYYY-MM-DD format
-          if (dateStr.includes('-')) {
-            return new Date(dateStr).toISOString();
-          }
-          
-          return new Date().toISOString();
-        };
+    for (const row of lineItemsData) {
+      const invoiceNum = row['Num'] || '';
+      const customerName = row['Customer full name'] || '';
+      const productName = row['Product/Service'] || '';
+      const quantity = parseFloat(row['Quantity'] || '0');
+      const salesPrice = parseFloat((row['Sales price'] || '0').replace(/,/g, ''));
+      const amount = parseFloat((row['Amount'] || '0').replace(/,/g, ''));
+      const transactionDate = row['Transaction date'] || '';
+      const memo = row['Memo/Description'] || '';
 
-        // Map report data to our format
-        const orderData = {
-          id: `qb_csv_${invoiceNum}`,
-          orderNumber: invoiceNum,
-          customerName: customerName,
-          customerEmail: customerInfo.email || '',
-          totalAmount: parseFloat((row.Amount || '0').replace(/,/g, '')),
-          currency: 'USD',
-          status: 'paid', // CSV reports are typically for paid transactions
-          createdAt: parseDate(row.Date),
-          dueDate: row['Due date'] ? parseDate(row['Due date']) : null,
-          billingAddress: customerInfo.billAddress || row['Delivery address'] || null,
-          shippingAddress: customerInfo.shipAddress || row['Delivery address'] || null,
-          notes: row['Memo/Description'] || '',
-          lineItems: lineItems.length > 0 ? lineItems : null
-        };
+      if (!invoiceNum || !customerName) {
+        console.log('Skipping row with missing invoice number or customer name:', row);
+        continue;
+      }
 
-        // Check if order already exists
-        const existingOrder = db.prepare(`
-          SELECT id FROM quickbooks_orders 
-          WHERE orderNumber = ? OR quickbooksInvoiceId = ?
-        `).get(orderData.orderNumber, orderData.orderNumber);
+      // Get customer info from lookup map
+      const customerInfo = customerMap.get(customerName) || {};
 
-        if (existingOrder) {
-          // Update existing order
-          const updateOrder = db.prepare(`
-            UPDATE quickbooks_orders SET
-              customerName = ?, customerEmail = ?, totalAmount = ?, 
-              status = ?, createdAt = ?, dueDate = ?, billingAddress = ?, 
-              shippingAddress = ?, notes = ?, lineItems = ?
-            WHERE orderNumber = ?
-          `);
-          
-          updateOrder.run(
-            orderData.customerName,
-            orderData.customerEmail,
-            orderData.totalAmount,
-            orderData.status,
-            orderData.createdAt,
-            orderData.dueDate,
-            orderData.billingAddress,
-            orderData.shippingAddress,
-            orderData.notes,
-            orderData.lineItems ? JSON.stringify(orderData.lineItems) : null,
-            orderData.orderNumber
-          );
-          
-          updatedOrdersCount++;
-        } else {
-          // Insert new order
-          const insertOrder = db.prepare(`
-            INSERT INTO quickbooks_orders (
-              id, createdAt, orderNumber, quickbooksInvoiceId, customerEmail, 
-              customerName, totalAmount, currency, status, shippingAddress, 
-              billingAddress, dueDate, notes, ownerEmail, lineItems
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `);
-          
-          insertOrder.run(
-            orderData.id,
-            orderData.createdAt,
-            orderData.orderNumber,
-            orderData.orderNumber,
-            orderData.customerEmail,
-            orderData.customerName,
-            orderData.totalAmount,
-            orderData.currency,
-            orderData.status,
-            orderData.shippingAddress,
-            orderData.billingAddress,
-            orderData.dueDate,
-            orderData.notes,
-            null, // ownerEmail
-            orderData.lineItems ? JSON.stringify(orderData.lineItems) : null
-          );
-          
-          newOrdersCount++;
-        }
+      // Create order data
+      const orderData = {
+        id: `qb_csv_${invoiceNum}`,
+        orderNumber: invoiceNum,
+        customerName: customerName,
+        customerEmail: customerInfo.email || '',
+        totalAmount: amount,
+        currency: 'USD',
+        status: 'paid', // CSV reports are typically for paid transactions
+        createdAt: parseDate(transactionDate),
+        dueDate: null,
+        billingAddress: customerInfo.billAddress || null,
+        shippingAddress: customerInfo.shipAddress || null,
+        notes: memo,
+        lineItems: JSON.stringify([{
+          product: productName,
+          quantity: quantity,
+          price: salesPrice,
+          amount: amount,
+          description: memo
+        }])
+      };
 
-        // Handle customer data
-        if (orderData.customerEmail && orderData.customerName) {
-          const existingCustomer = db.prepare(`
-            SELECT id FROM quickbooks_customers 
+      // Check if order already exists
+      const existingOrder = db.prepare(`
+        SELECT id FROM quickbooks_orders 
+        WHERE orderNumber = ? OR quickbooksInvoiceId = ?
+      `).get(invoiceNum, invoiceNum);
+
+      if (existingOrder) {
+        // Update existing order
+        db.prepare(`
+          UPDATE quickbooks_orders SET
+            customerName = ?, customerEmail = ?, totalAmount = ?, 
+            billingAddress = ?, shippingAddress = ?, notes = ?, lineItems = ?
+          WHERE orderNumber = ?
+        `).run(
+          orderData.customerName, orderData.customerEmail, orderData.totalAmount,
+          orderData.billingAddress, orderData.shippingAddress, orderData.notes, orderData.lineItems,
+          invoiceNum
+        );
+      } else {
+        // Insert new order
+        db.prepare(`
+          INSERT INTO quickbooks_orders (
+            id, createdAt, orderNumber, customerEmail, customerName, totalAmount,
+            currency, status, shippingAddress, billingAddress, dueDate, notes, 
+            ownerEmail, quickbooksInvoiceId, lineItems
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          orderData.id, orderData.createdAt, orderData.orderNumber, orderData.customerEmail,
+          orderData.customerName, orderData.totalAmount, orderData.currency, orderData.status,
+          orderData.shippingAddress, orderData.billingAddress, orderData.dueDate, orderData.notes,
+          '', invoiceNum, orderData.lineItems
+        );
+        processedOrders++;
+      }
+
+      // Insert/update customer if we have customer data
+      if (customerInfo.email) {
+        const existingCustomer = db.prepare(`
+          SELECT id FROM quickbooks_customers WHERE email = ?
+        `).get(customerInfo.email);
+
+        if (existingCustomer) {
+          // Update existing customer
+          db.prepare(`
+            UPDATE quickbooks_customers SET
+              firstName = ?, lastName = ?, phone = ?, 
+              billingAddress = ?, shippingAddress = ?, updatedAt = ?
             WHERE email = ?
-          `).get(orderData.customerEmail);
-
-          if (existingCustomer) {
-            // Update existing customer
-            const updateCustomer = db.prepare(`
-              UPDATE quickbooks_customers SET
-                firstName = ?, lastName = ?, phone = ?,
-                billingAddress = ?, shippingAddress = ?, updatedAt = ?
-              WHERE email = ?
-            `);
-            
-            const nameParts = (customerInfo.fullName || orderData.customerName).split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
-            
-            updateCustomer.run(
-              firstName,
-              lastName,
-              customerInfo.phone || '',
-              orderData.billingAddress,
-              orderData.shippingAddress,
-              new Date().toISOString(),
-              orderData.customerEmail
-            );
-            
-            updatedCustomersCount++;
-          } else {
-            // Insert new customer
-            const insertCustomer = db.prepare(`
-              INSERT INTO quickbooks_customers (
-                id, quickbooksId, email, firstName, lastName, phone, 
-                companyName, billingAddress, shippingAddress, createdAt, updatedAt
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `);
-            
-            const customerId = `qb_customer_${orderData.id}`;
-            const nameParts = (customerInfo.fullName || orderData.customerName).split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
-            
-            insertCustomer.run(
-              customerId,
-              orderData.orderNumber,
-              orderData.customerEmail,
-              firstName,
-              lastName,
-              customerInfo.phone || '',
-              '', // companyName
-              orderData.billingAddress,
-              orderData.shippingAddress,
-              orderData.createdAt,
-              orderData.createdAt
-            );
-            
-            newCustomersCount++;
-          }
+          `).run(
+            customerInfo.firstName, customerInfo.lastName, customerInfo.phone,
+            customerInfo.billAddress, customerInfo.shipAddress, new Date().toISOString(),
+            customerInfo.email
+          );
+        } else {
+          // Insert new customer
+          const customerId = `qb_customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          db.prepare(`
+            INSERT INTO quickbooks_customers (
+              id, quickbooksId, email, firstName, lastName, phone,
+              companyName, billingAddress, shippingAddress, createdAt, updatedAt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            customerId, invoiceNum, customerInfo.email, customerInfo.firstName, 
+            customerInfo.lastName, customerInfo.phone, '', customerInfo.billAddress, 
+            customerInfo.shipAddress, orderData.createdAt, new Date().toISOString()
+          );
+          processedCustomers++;
         }
-
-        processedCount++;
-      } catch (rowError) {
-        console.error('Error processing report row:', rowError, 'Row data:', row);
-        // Continue processing other rows
       }
     }
+
+    console.log(`Processed ${processedOrders} new orders and ${processedCustomers} new customers`);
 
     // Sync to unified tables
-    const unifiedResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/sync/unified`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    const unifiedResult = await unifiedResponse.json();
+    try {
+      const unifiedResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/sync/unified`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (unifiedResponse.ok) {
+        const unifiedResult = await unifiedResponse.json();
+        console.log('Unified sync completed:', unifiedResult);
+      } else {
+        console.error('Unified sync failed:', await unifiedResponse.text());
+      }
+    } catch (syncError) {
+      console.error('Error calling unified sync:', syncError);
+    }
 
     return NextResponse.json({
       success: true,
-      message: `QuickBooks CSV processed successfully. ${processedCount} orders processed from 3 files.`,
+      message: `Successfully processed ${processedOrders} orders and ${processedCustomers} customers from QuickBooks CSV data`,
       stats: {
-        reportRows: reportData.length,
-        customerRows: customerData?.length || 0,
-        lineItemRows: lineItemsData?.length || 0,
-        processedOrders: processedCount,
-        newOrders: newOrdersCount,
-        updatedOrders: updatedOrdersCount,
-        newCustomers: newCustomersCount,
-        updatedCustomers: updatedCustomersCount,
-        unified: unifiedResult.stats
+        ordersProcessed: processedOrders,
+        customersProcessed: processedCustomers,
+        totalLineItems: lineItemsData.length,
+        totalCustomers: customerMap.size
       }
     });
 
   } catch (error) {
     console.error('QuickBooks CSV webhook error:', error);
-    return NextResponse.json({ 
-      error: "Failed to process CSV data",
-      details: error.message 
-    }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: "Failed to process QuickBooks CSV data", 
+        details: error.message 
+      },
+      { status: 500 }
+    );
   }
-}
-
-// Health check endpoint
-export async function GET() {
-  return NextResponse.json({ 
-    status: "ok", 
-    message: "QuickBooks CSV webhook endpoint is ready",
-    url: "/api/webhooks/quickbooks-csv",
-    authentication: "Basic Auth required",
-    username: process.env.WEBHOOK_USERNAME || 'kinetic',
-    password: process.env.WEBHOOK_PASSWORD || 'webhook2024'
-  });
 }

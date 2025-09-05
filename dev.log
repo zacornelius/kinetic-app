@@ -1492,3 +1492,62 @@ Total shopify_customers: 472
 Total quickbooks_customers: 2
  POST /api/sync/unified 200 in 939ms
  GET /api/customers 200 in 248ms
+QuickBooks CSV webhook received: {
+  "customerData": [
+    {
+      "Customer full name": "Test Customer",
+      "Email": "test@example.com",
+      "Full name": "Test User",
+      "Bill address": "123 Test St, Test City, TC 12345",
+      "Ship address": "123 Test St, Test City, TC 12345",
+      "Phone": "555-1234"
+    }
+  ],
+  "lineItemsData": [
+    {
+      "Product/Service": "Pallet 15-24K",
+      "Transaction date": "01/31/2025",
+      "Transaction type": "Invoice",
+      "Num": "TEST-001",
+      "Customer full name": "Test Customer",
+      "Memo/Description": "Test order for webhook",
+      "Quantity": "1.00",
+      "Sales price": "100.00",
+      "Amount": "100.00"
+    }
+  ]
+}
+Processing 1 line item rows, 1 customer rows from QuickBooks report
+Created customer lookup map with 1 customers
+Processed 1 new orders and 0 new customers
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 2 QuickBooks orders to sync
+Synced 2 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Synced 472 Shopify customers to all_customers
+Synced 2 QuickBooks customers to all_customers
+Unified sync completed successfully!
+Total all_orders: 685
+Total shopify_orders: 683
+Total quickbooks_orders: 2
+Total all_customers: 474
+Total shopify_customers: 472
+Total quickbooks_customers: 2
+ POST /api/sync/unified 200 in 486ms
+Unified sync completed: {
+  success: true,
+  message: 'Successfully synced 685 orders and 474 customers to unified tables',
+  stats: {
+    allOrders: 685,
+    shopifyOrders: 683,
+    quickbooksOrders: 2,
+    allCustomers: 474,
+    shopifyCustomers: 472,
+    quickbooksCustomers: 2
+  }
+}
+ POST /api/webhooks/quickbooks-csv 200 in 785ms
+ GET /api/orders 200 in 248ms
