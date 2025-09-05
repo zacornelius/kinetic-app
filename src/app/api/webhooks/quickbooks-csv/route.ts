@@ -23,46 +23,96 @@ export async function POST(request: Request) {
     
     // Extract CSV data from Zapier payload
     const {
-      csvData, // Array of CSV rows
+      reportData, // Main transaction data (Zac Report.csv)
+      customerData, // Customer contact data (Zac Customer Contact List.csv)
+      lineItemsData, // Line items data (Zac Line items.csv)
       reportDate, // Date of the report
       totalRows
     } = body;
 
-    if (!csvData || !Array.isArray(csvData)) {
+    if (!reportData || !Array.isArray(reportData)) {
       return NextResponse.json({ 
-        error: "Missing or invalid csvData array" 
+        error: "Missing or invalid reportData array" 
       }, { status: 400 });
     }
 
-    console.log(`Processing ${csvData.length} CSV rows from QuickBooks report`);
+    console.log(`Processing ${reportData.length} report rows, ${customerData?.length || 0} customer rows, ${lineItemsData?.length || 0} line item rows from QuickBooks report`);
 
-    // Process each CSV row
+    // Create lookup maps for efficient merging
+    const customerMap = new Map();
+    const lineItemsMap = new Map();
+
+    // Process customer data first to create lookup map
+    if (customerData && Array.isArray(customerData)) {
+      for (const customer of customerData) {
+        const customerName = customer['Customer full name'] || customer['Customer full name'] || '';
+        if (customerName) {
+          customerMap.set(customerName, {
+            email: customer.Email || '',
+            phone: customer['Phone numbers'] || '',
+            fullName: customer['Full name'] || customerName,
+            billAddress: customer['Bill address'] || '',
+            shipAddress: customer['Ship address'] || ''
+          });
+        }
+      }
+    }
+
+    // Process line items data to create lookup map
+    if (lineItemsData && Array.isArray(lineItemsData)) {
+      for (const lineItem of lineItemsData) {
+        const invoiceNum = lineItem.Num || '';
+        const customerName = lineItem['Customer full name'] || '';
+        const key = `${invoiceNum}_${customerName}`;
+        
+        if (!lineItemsMap.has(key)) {
+          lineItemsMap.set(key, []);
+        }
+        
+        lineItemsMap.get(key).push({
+          product: lineItem['Product/Service'] || '',
+          quantity: parseFloat(lineItem.Quantity || 0),
+          price: parseFloat(lineItem['Sales price'] || 0),
+          amount: parseFloat(lineItem.Amount || 0),
+          description: lineItem['Memo/Description'] || ''
+        });
+      }
+    }
+
+    // Process each report row (main transaction data)
     let processedCount = 0;
     let newOrdersCount = 0;
     let updatedOrdersCount = 0;
     let newCustomersCount = 0;
     let updatedCustomersCount = 0;
 
-    for (const row of csvData) {
+    for (const row of reportData) {
       try {
-        // Map CSV columns to our format (adjust column names based on your CSV structure)
+        const invoiceNum = row.Num || '';
+        const customerName = row.Name || '';
+        const key = `${invoiceNum}_${customerName}`;
+        
+        // Get customer details from lookup map
+        const customerInfo = customerMap.get(customerName) || {};
+        
+        // Get line items from lookup map
+        const lineItems = lineItemsMap.get(key) || [];
+        
+        // Map report data to our format
         const orderData = {
-          // Order fields
-          id: `qb_csv_${row.Transaction_ID || row['Transaction ID'] || Date.now()}`,
-          orderNumber: row.Transaction_ID || row['Transaction ID'] || `QB-${Date.now()}`,
-          customerName: row.Customer_Name || row['Customer Name'] || '',
-          customerEmail: row.Customer_Email || row['Customer Email'] || '',
-          totalAmount: parseFloat(row.Total || row.Amount || 0),
+          id: `qb_csv_${invoiceNum}`,
+          orderNumber: invoiceNum,
+          customerName: customerName,
+          customerEmail: customerInfo.email || '',
+          totalAmount: parseFloat((row.Amount || '0').replace(/,/g, '')),
           currency: 'USD',
           status: 'paid', // CSV reports are typically for paid transactions
-          createdAt: row.Transaction_Date || row['Transaction Date'] || new Date().toISOString(),
-          dueDate: row.Due_Date || row['Due Date'] || null,
-          billingAddress: row.Billing_Address || row['Billing Address'] || null,
-          shippingAddress: row.Shipping_Address || row['Shipping Address'] || null,
-          notes: row.Memo || row.Notes || '',
-          
-          // Line items (if available in CSV)
-          lineItems: row.Line_Items ? JSON.parse(row.Line_Items) : null
+          createdAt: row.Date || new Date().toISOString(),
+          dueDate: row['Due date'] || null,
+          billingAddress: customerInfo.billAddress || row['Delivery address'] || null,
+          shippingAddress: customerInfo.shipAddress || row['Delivery address'] || null,
+          notes: row['Memo/Description'] || '',
+          lineItems: lineItems.length > 0 ? lineItems : null
         };
 
         // Check if order already exists
@@ -110,7 +160,7 @@ export async function POST(request: Request) {
             orderData.id,
             orderData.createdAt,
             orderData.orderNumber,
-            orderData.orderNumber, // Use orderNumber as quickbooksInvoiceId
+            orderData.orderNumber,
             orderData.customerEmail,
             orderData.customerName,
             orderData.totalAmount,
@@ -138,19 +188,19 @@ export async function POST(request: Request) {
             // Update existing customer
             const updateCustomer = db.prepare(`
               UPDATE quickbooks_customers SET
-                firstName = ?, lastName = ?, companyName = ?,
+                firstName = ?, lastName = ?, phone = ?,
                 billingAddress = ?, shippingAddress = ?, updatedAt = ?
               WHERE email = ?
             `);
             
-            const nameParts = orderData.customerName.split(' ');
+            const nameParts = (customerInfo.fullName || orderData.customerName).split(' ');
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
             
             updateCustomer.run(
               firstName,
               lastName,
-              '', // companyName not available in this format
+              customerInfo.phone || '',
               orderData.billingAddress,
               orderData.shippingAddress,
               new Date().toISOString(),
@@ -168,18 +218,18 @@ export async function POST(request: Request) {
             `);
             
             const customerId = `qb_customer_${orderData.id}`;
-            const nameParts = orderData.customerName.split(' ');
+            const nameParts = (customerInfo.fullName || orderData.customerName).split(' ');
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
             
             insertCustomer.run(
               customerId,
-              orderData.orderNumber, // Use orderNumber as quickbooksId
+              orderData.orderNumber,
               orderData.customerEmail,
               firstName,
               lastName,
-              '', // phone not available
-              '', // companyName not available
+              customerInfo.phone || '',
+              '', // companyName
               orderData.billingAddress,
               orderData.shippingAddress,
               orderData.createdAt,
@@ -192,7 +242,7 @@ export async function POST(request: Request) {
 
         processedCount++;
       } catch (rowError) {
-        console.error('Error processing CSV row:', rowError, 'Row data:', row);
+        console.error('Error processing report row:', rowError, 'Row data:', row);
         // Continue processing other rows
       }
     }
@@ -207,10 +257,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `QuickBooks CSV processed successfully. ${processedCount} rows processed.`,
+      message: `QuickBooks CSV processed successfully. ${processedCount} orders processed from 3 files.`,
       stats: {
-        totalRows: csvData.length,
-        processedRows: processedCount,
+        reportRows: reportData.length,
+        customerRows: customerData?.length || 0,
+        lineItemRows: lineItemsData?.length || 0,
+        processedOrders: processedCount,
         newOrders: newOrdersCount,
         updatedOrders: updatedOrdersCount,
         newCustomers: newCustomersCount,

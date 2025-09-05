@@ -1323,3 +1323,58 @@ Total shopify_orders: 683
 Total quickbooks_orders: 5
  POST /api/sync/unified 200 in 365ms
  POST /api/webhooks/quickbooks-csv 200 in 690ms
+QuickBooks CSV webhook received: {
+  "reportData": [
+    {
+      "Date": "01/15/2024",
+      "Transaction type": "Invoice",
+      "Num": "426",
+      "Name": "City of Miami-Finance Gen Accounting",
+      "Department full name": "",
+      "Memo/Description": "",
+      "Due date": "11/16/2024",
+      "Amount": "2,914.15",
+      "Open balance": "0.00",
+      "Delivery address": "29234@miami-police.org"
+    }
+  ],
+  "customerData": [
+    {
+      "Customer full name": "City of Miami-Finance Gen Accounting",
+      "Phone numbers": "305-123-4567",
+      "Email": "29234@miami-police.org",
+      "Full name": "Miami Police Department",
+      "Bill address": "123 Police Plaza, Miami, FL 33101",
+      "Ship address": "123 Police Plaza, Miami, FL 33101"
+    }
+  ],
+  "lineItemsData": [
+    {
+      "Product/Service": "Active 26K Pallet",
+      "Transaction date": "01/15/2024",
+      "Transaction type": "Invoice",
+      "Num": "426",
+      "Customer full name": "City of Miami-Finance Gen Accounting",
+      "Memo/Description": "Police K9 food order",
+      "Quantity": "1.00",
+      "Sales price": "2914.15",
+      "Amount": "2914.15",
+      "Balance": "2914.15"
+    }
+  ],
+  "reportDate": "2024-01-15",
+  "totalRows": 1
+}
+Processing 1 report rows, 1 customer rows, 1 line item rows from QuickBooks report
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 6 QuickBooks orders to sync
+Synced 6 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 689
+Total shopify_orders: 683
+Total quickbooks_orders: 6
+ POST /api/sync/unified 200 in 350ms
+ POST /api/webhooks/quickbooks-csv 200 in 618ms
