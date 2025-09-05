@@ -1,7 +1,29 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/database";
 
-// Webhook endpoint for QuickBooks CSV data from Zapier (simplified 2-file format)
+// Helper function to parse CSV data
+function parseCSV(csvText: string) {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  const rows = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    if (values.length === headers.length && values[0]) { // Skip empty rows
+      const row: any = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      rows.push(row);
+    }
+  }
+  
+  return rows;
+}
+
+// Webhook endpoint for QuickBooks CSV data from Zapier (raw CSV format)
 export async function POST(request: Request) {
   try {
     // Check for Basic Auth authentication
@@ -19,21 +41,27 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     // Log the incoming webhook for debugging
-    console.log('QuickBooks CSV webhook received:', JSON.stringify(body, null, 2));
+    console.log('QuickBooks CSV webhook received with raw CSV data');
     
-    // Extract CSV data from Zapier payload (simplified 2-file format)
+    // Extract CSV data from Zapier payload (raw CSV format)
     const {
-      customerData, // Customer contact data (Kinetic Nutrition Group LLC_Zac Customer Contact List.csv)
-      lineItemsData, // Line items data (Kinetic Nutrition Group LLC_Zac Line items.csv)
+      customerCSV, // Raw CSV text for customer data
+      lineItemsCSV, // Raw CSV text for line items data
       reportDate, // Date of the report
       totalRows
     } = body;
 
-    if (!lineItemsData || !Array.isArray(lineItemsData)) {
+    if (!lineItemsCSV) {
       return NextResponse.json({ 
-        error: "Missing or invalid lineItemsData array" 
+        error: "Missing lineItemsCSV data" 
       }, { status: 400 });
     }
+
+    // Parse CSV data
+    const customerData = customerCSV ? parseCSV(customerCSV) : [];
+    const lineItemsData = parseCSV(lineItemsCSV);
+
+    console.log(`Parsed ${customerData.length} customer rows and ${lineItemsData.length} line item rows`);
 
     console.log(`Processing ${lineItemsData.length} line item rows, ${customerData?.length || 0} customer rows from QuickBooks report`);
 

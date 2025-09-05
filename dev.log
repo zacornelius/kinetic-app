@@ -1551,3 +1551,51 @@ Unified sync completed: {
 }
  POST /api/webhooks/quickbooks-csv 200 in 785ms
  GET /api/orders 200 in 248ms
+ POST /api/webhooks/quickbooks-csv 401 in 251ms
+QuickBooks CSV webhook error: SyntaxError: Unexpected token 'h', "https://za"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/webhooks/quickbooks-csv/route.ts:19:18)
+  17 |     }
+  18 |     
+> 19 |     const body = await request.json();
+     |                  ^
+  20 |     
+  21 |     // Log the incoming webhook for debugging
+  22 |     console.log('QuickBooks CSV webhook received:', JSON.stringify(body, null, 2));
+ POST /api/webhooks/quickbooks-csv 500 in 360ms
+QuickBooks CSV webhook received with raw CSV data
+Parsed 1 customer rows and 1 line item rows
+Processing 1 line item rows, 1 customer rows from QuickBooks report
+Created customer lookup map with 1 customers
+Processed 1 new orders and 0 new customers
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 3 QuickBooks orders to sync
+Synced 3 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Synced 472 Shopify customers to all_customers
+Synced 2 QuickBooks customers to all_customers
+Unified sync completed successfully!
+Total all_orders: 686
+Total shopify_orders: 683
+Total quickbooks_orders: 3
+Total all_customers: 474
+Total shopify_customers: 472
+Total quickbooks_customers: 2
+ POST /api/sync/unified 200 in 383ms
+Unified sync completed: {
+  success: true,
+  message: 'Successfully synced 686 orders and 474 customers to unified tables',
+  stats: {
+    allOrders: 686,
+    shopifyOrders: 683,
+    quickbooksOrders: 3,
+    allCustomers: 474,
+    shopifyCustomers: 472,
+    quickbooksCustomers: 2
+  }
+}
+ POST /api/webhooks/quickbooks-csv 200 in 668ms
+ GET /api/orders 200 in 250ms

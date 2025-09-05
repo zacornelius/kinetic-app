@@ -28,32 +28,11 @@ This webhook receives daily CSV reports from QuickBooks via Zapier and processes
 - **Method:** POST
 - **Content Type:** application/json
 
-### 3. Payload Format (Simplified 2-File Structure)
+### 3. Payload Format (Raw CSV Format)
 ```json
 {
-  "customerData": [
-    {
-      "Customer full name": "City of Miami-Finance Gen Accounting",
-      "Email": "29234@miami-police.org",
-      "Full name": "Miami Police Department",
-      "Bill address": "123 Police Plaza, Miami, FL 33101",
-      "Ship address": "123 Police Plaza, Miami, FL 33101",
-      "Phone": "305-123-4567"
-    }
-  ],
-  "lineItemsData": [
-    {
-      "Product/Service": "Pallet 15-24K",
-      "Transaction date": "01/31/2025",
-      "Transaction type": "Invoice",
-      "Num": "509",
-      "Customer full name": "7th Special Forces Group K9 Unit",
-      "Memo/Description": "Vital 24K Kinetic Dog Food 35 lb",
-      "Quantity": "45.00",
-      "Sales price": "58.64",
-      "Amount": "2,638.80"
-    }
-  ],
+  "customerCSV": "Customer full name,Email,Full name,Bill address,Ship address,Phone\nCity of Miami-Finance Gen Accounting,29234@miami-police.org,Miami Police Department,123 Police Plaza Miami FL 33101,123 Police Plaza Miami FL 33101,305-123-4567",
+  "lineItemsCSV": "Product/Service,Transaction date,Transaction type,Num,Customer full name,Memo/Description,Quantity,Sales price,Amount\nPallet 15-24K,01/31/2025,Invoice,509,7th Special Forces Group K9 Unit,Vital 24K Kinetic Dog Food 35 lb,45.00,58.64,2638.80",
   "reportDate": "2025-01-31",
   "totalRows": 1
 }
@@ -131,29 +110,8 @@ curl -X POST http://3.145.159.251:3000/api/webhooks/quickbooks-csv \
   -H "Content-Type: application/json" \
   -u "kinetic:webhook2024" \
   -d '{
-    "customerData": [
-      {
-        "Customer full name": "Test Customer",
-        "Email": "test@example.com",
-        "Full name": "Test User",
-        "Bill address": "123 Test St",
-        "Ship address": "123 Test St",
-        "Phone": "555-1234"
-      }
-    ],
-    "lineItemsData": [
-      {
-        "Product/Service": "Test Product",
-        "Transaction date": "01/31/2025",
-        "Transaction type": "Invoice",
-        "Num": "TEST-001",
-        "Customer full name": "Test Customer",
-        "Memo/Description": "Test order",
-        "Quantity": "1.00",
-        "Sales price": "100.00",
-        "Amount": "100.00"
-      }
-    ]
+    "customerCSV": "Customer full name,Email,Full name,Bill address,Ship address,Phone\nTest Customer,test@example.com,Test User,123 Test St,123 Test St,555-1234",
+    "lineItemsCSV": "Product/Service,Transaction date,Transaction type,Num,Customer full name,Memo/Description,Quantity,Sales price,Amount\nTest Product,01/31/2025,Invoice,TEST-001,Test Customer,Test order,1.00,100.00,100.00"
   }'
 ```
 
