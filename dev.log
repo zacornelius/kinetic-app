@@ -1858,3 +1858,164 @@ Available fields in payload: [
 Customer CSV found: false
 Line Items CSV found: false
  POST /api/webhooks/quickbooks-csv 400 in 283ms
+QuickBooks CSV webhook received with raw CSV data
+File pointers received: [
+  {
+    name: 'Zac Line items.csv',
+    'content-type': 'text/csv',
+    size: 57794,
+    url: 'https://storage-us-east4.api.mailgun.net/v3/domains/zapiermail.com/messages/BAACAAV53zKcYPvji0VK2aKpewlaHkn7aA/attachments/0',
+    file: '<A File Object>'
+  }
+]
+ POST /api/webhooks/quickbooks-csv 400 in 289ms
+QuickBooks CSV webhook received with raw CSV data
+File pointers received: [
+  {
+    name: 'Zac Line items.csv',
+    'content-type': 'text/csv',
+    size: 57794,
+    url: 'https://storage-us-east4.api.mailgun.net/v3/domains/zapiermail.com/messages/BAACAAV53zKcYPvji0VK2aKpewlaHkn7aA/attachments/0',
+    file: '<A File Object>'
+  }
+]
+ POST /api/webhooks/quickbooks-csv 400 in 248ms
+QuickBooks CSV webhook received with raw CSV data
+File pointers received: [
+  {
+    name: 'Zac Line items.csv',
+    'content-type': 'text/csv',
+    size: 57794,
+    url: 'https://storage-us-east4.api.mailgun.net/v3/domains/zapiermail.com/messages/BAACAAV53zKcYPvji0VK2aKpewlaHkn7aA/attachments/0',
+    file: '<A File Object>'
+  }
+]
+ POST /api/webhooks/quickbooks-csv 400 in 244ms
+QuickBooks CSV webhook received with raw CSV data
+File pointers received: [
+  {
+    name: 'Zac Line items.csv',
+    'content-type': 'text/csv',
+    size: 57794,
+    url: 'https://storage-us-east4.api.mailgun.net/v3/domains/zapiermail.com/messages/BAACAAV53zKcYPvji0VK2aKpewlaHkn7aA/attachments/0',
+    file: '<A File Object>'
+  }
+]
+ POST /api/webhooks/quickbooks-csv 400 in 256ms
+QuickBooks CSV webhook received with raw CSV data
+File pointers received: [
+  {
+    name: 'Zac Line items.csv',
+    'content-type': 'text/csv',
+    size: 57794,
+    url: 'https://storage-us-east4.api.mailgun.net/v3/domains/zapiermail.com/messages/BAACAAV53zKcYPvji0VK2aKpewlaHkn7aA/attachments/0',
+    file: '<A File Object>'
+  }
+]
+ POST /api/webhooks/quickbooks-csv 400 in 243ms
+QuickBooks CSV webhook received with raw CSV data
+File pointers received: [
+  {
+    name: 'Zac Line items.csv',
+    'content-type': 'text/csv',
+    size: 57794,
+    url: 'https://storage-us-east4.api.mailgun.net/v3/domains/zapiermail.com/messages/BAACAAV53zKcYPvji0VK2aKpewlaHkn7aA/attachments/0',
+    file: '<A File Object>'
+  }
+]
+ POST /api/webhooks/quickbooks-csv 400 in 245ms
+QuickBooks CSV webhook error: SyntaxError: No number after minus sign in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/webhooks/quickbooks-csv/route.ts:41:18)
+  39 |     }
+  40 |     
+> 41 |     const body = await request.json();
+     |                  ^
+  42 |     
+  43 |     // Log the incoming webhook for debugging
+  44 |     console.log('QuickBooks CSV webhook received with raw CSV data');
+ POST /api/webhooks/quickbooks-csv 500 in 387ms
+QuickBooks CSV webhook error: SyntaxError: No number after minus sign in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/webhooks/quickbooks-csv/route.ts:41:18)
+  39 |     }
+  40 |     
+> 41 |     const body = await request.json();
+     |                  ^
+  42 |     
+  43 |     // Log the incoming webhook for debugging
+  44 |     console.log('QuickBooks CSV webhook received with raw CSV data');
+ POST /api/webhooks/quickbooks-csv 500 in 325ms
+QuickBooks CSV webhook error: SyntaxError: No number after minus sign in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/webhooks/quickbooks-csv/route.ts:41:18)
+  39 |     }
+  40 |     
+> 41 |     const body = await request.json();
+     |                  ^
+  42 |     
+  43 |     // Log the incoming webhook for debugging
+  44 |     console.log('QuickBooks CSV webhook received with raw CSV data');
+ POST /api/webhooks/quickbooks-csv 500 in 312ms
+QuickBooks CSV webhook received with raw CSV data
+Fetching customer CSV from URL: https://raw.githubusercontent.com/microsoft/vscode/main/package.json
+Fetching line items CSV from URL: https://raw.githubusercontent.com/microsoft/vscode/main/package.json
+Available fields in payload: [ 'customerURL', 'lineItemsURL' ]
+Customer CSV found: true
+Line Items CSV found: true
+Parsed 20 customer rows and 20 line item rows
+Processing 20 line item rows, 20 customer rows from QuickBooks report
+Created customer lookup map with 0 customers
+Skipping row with missing invoice number or customer name: { '{': 'author: {' }
+Skipping row with missing invoice number or customer name: { '{': 'name: Microsoft Corporation' }
+Skipping row with missing invoice number or customer name: { '{': 'scripts: {' }
+Skipping row with missing invoice number or customer name: {
+  '{': 'update-build-ts-version: npm install -D typescript@next && npm install -D @typescript/native-preview && (cd build && npm run compile)'
+}
+Skipping row with missing invoice number or customer name: { '{': 'dependencies: {' }
+Skipping row with missing invoice number or customer name: { '{': 'yazl: ^2.4.3' }
+Skipping row with missing invoice number or customer name: { '{': 'devDependencies: {' }
+Skipping row with missing invoice number or customer name: { '{': 'zx: ^8.7.0' }
+Skipping row with missing invoice number or customer name: { '{': 'overrides: {' }
+Skipping row with missing invoice number or customer name: { '{': 'kerberos@2.1.1: {' }
+Skipping row with missing invoice number or customer name: { '{': 'node-addon-api: 7.1.0' }
+Skipping row with missing invoice number or customer name: { '{': '}' }
+Skipping row with missing invoice number or customer name: { '{': 'repository: {' }
+Skipping row with missing invoice number or customer name: { '{': 'url: https://github.com/microsoft/vscode.git' }
+Skipping row with missing invoice number or customer name: { '{': 'bugs: {' }
+Skipping row with missing invoice number or customer name: { '{': 'url: https://github.com/microsoft/vscode/issues' }
+Skipping row with missing invoice number or customer name: { '{': 'optionalDependencies: {' }
+Skipping row with missing invoice number or customer name: { '{': 'windows-foreground-love: 0.5.0' }
+Skipping row with missing invoice number or customer name: { '{': '}' }
+Skipping row with missing invoice number or customer name: { '{': '}' }
+Processed 0 new orders and 0 new customers
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 5 QuickBooks orders to sync
+Synced 5 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Synced 472 Shopify customers to all_customers
+Synced 2 QuickBooks customers to all_customers
+Unified sync completed successfully!
+Total all_orders: 688
+Total shopify_orders: 683
+Total quickbooks_orders: 5
+Total all_customers: 474
+Total shopify_customers: 472
+Total quickbooks_customers: 2
+ POST /api/sync/unified 200 in 375ms
+Unified sync completed: {
+  success: true,
+  message: 'Successfully synced 688 orders and 474 customers to unified tables',
+  stats: {
+    allOrders: 688,
+    shopifyOrders: 683,
+    quickbooksOrders: 5,
+    allCustomers: 474,
+    shopifyCustomers: 472,
+    quickbooksCustomers: 2
+  }
+}
+ POST /api/webhooks/quickbooks-csv 200 in 745ms

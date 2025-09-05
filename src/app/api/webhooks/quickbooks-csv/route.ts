@@ -23,6 +23,20 @@ function parseCSV(csvText: string) {
   return rows;
 }
 
+// Helper function to fetch CSV from URL
+async function fetchCSVFromURL(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+    }
+    return await response.text();
+  } catch (error) {
+    console.error('Error fetching CSV from URL:', error);
+    throw error;
+  }
+}
+
 // Webhook endpoint for QuickBooks CSV data from Zapier (raw CSV format)
 export async function POST(request: Request) {
   try {
@@ -44,26 +58,10 @@ export async function POST(request: Request) {
     console.log('QuickBooks CSV webhook received with raw CSV data');
     
     // Extract CSV data from Zapier payload
-    // Zapier sends file pointers, not raw content
-    const filePointers = body.raw__file_pointers || body.file_pointers || body.attachment;
+    // Support both URLs and raw content
+    const customerURL = body.customerURL || body.customer_url || body.customerCSVUrl;
+    const lineItemsURL = body.lineItemsURL || body.line_items_url || body.lineItemsCSVUrl;
     
-    console.log('File pointers received:', filePointers);
-    
-    // For now, return an error with instructions since we need the actual file content
-    if (filePointers) {
-      return NextResponse.json({ 
-        error: "File pointers received instead of CSV content. Please configure Zapier to send file content, not file pointers.",
-        instructions: {
-          step1: "In Zapier, use 'Get File Content' action instead of 'Get File'",
-          step2: "Map the file content to field names like 'customerCSV' and 'lineItemsCSV'",
-          step3: "Send the actual CSV text content, not file references"
-        },
-        receivedFields: Object.keys(body).filter(key => !key.startsWith('raw__')),
-        filePointers: filePointers
-      }, { status: 400 });
-    }
-    
-    // Fallback: try to find CSV content in other fields
     const customerCSV = body.customerCSV || body.customer_csv || body.customerData || body.customer_data || 
                        body['Zac customer contact list'] || body['zac customer contact list'] || 
                        body['Kinetic Nutrition Group LLC_Zac Customer Contact List.csv'] ||
@@ -72,21 +70,36 @@ export async function POST(request: Request) {
                         body.lineItems || body.line_items || body['zac line items'] || body['Zac line items'] ||
                         body['Kinetic Nutrition Group LLC_Zac Line items.csv'] ||
                         body['Kinetic Nutrition Group LLC_Zac Line items'];
+
+    let finalCustomerCSV = customerCSV;
+    let finalLineItemsCSV = lineItemsCSV;
+
+    // If URLs are provided, fetch the CSV content
+    if (customerURL) {
+      console.log('Fetching customer CSV from URL:', customerURL);
+      finalCustomerCSV = await fetchCSVFromURL(customerURL);
+    }
+    
+    if (lineItemsURL) {
+      console.log('Fetching line items CSV from URL:', lineItemsURL);
+      finalLineItemsCSV = await fetchCSVFromURL(lineItemsURL);
+    }
     
     console.log('Available fields in payload:', Object.keys(body));
-    console.log('Customer CSV found:', !!customerCSV);
-    console.log('Line Items CSV found:', !!lineItemsCSV);
+    console.log('Customer CSV found:', !!finalCustomerCSV);
+    console.log('Line Items CSV found:', !!finalLineItemsCSV);
 
-    if (!lineItemsCSV) {
+    if (!finalLineItemsCSV) {
       return NextResponse.json({ 
-        error: "Missing line items CSV data. Available fields: " + Object.keys(body).join(', '),
-        receivedFields: Object.keys(body)
+        error: "Missing line items CSV data. Please provide either lineItemsCSV content or lineItemsURL. Available fields: " + Object.keys(body).join(', '),
+        receivedFields: Object.keys(body),
+        supportedFields: ['customerCSV', 'lineItemsCSV', 'customerURL', 'lineItemsURL']
       }, { status: 400 });
     }
 
     // Parse CSV data
-    const customerData = customerCSV ? parseCSV(customerCSV) : [];
-    const lineItemsData = parseCSV(lineItemsCSV);
+    const customerData = finalCustomerCSV ? parseCSV(finalCustomerCSV) : [];
+    const lineItemsData = parseCSV(finalLineItemsCSV);
 
     console.log(`Parsed ${customerData.length} customer rows and ${lineItemsData.length} line item rows`);
 

@@ -29,17 +29,30 @@ Email Trigger (with CSV attachments)
 ```
 
 ### 3. Webhook Configuration
+
+**Option A: Send CSV URLs (Recommended)**
 - **URL:** `http://3.145.159.251:3000/api/webhooks/quickbooks-csv`
-- **Authentication:** Basic Auth
-- **Username:** `kinetic`
-- **Password:** `webhook2024`
+- **Authentication:** Basic Auth (kinetic:webhook2024)
 - **Method:** POST
 - **Content Type:** application/json
 - **Data:**
   ```json
   {
-    "customerCSV": "{{action1.file_content}}",
-    "lineItemsCSV": "{{action2.file_content}}"
+    "customerURL": "{{action1.file_url}}",
+    "lineItemsURL": "{{action2.file_url}}"
+  }
+  ```
+
+**Option B: Send Raw CSV Content**
+- **URL:** `http://3.145.159.251:3000/api/webhooks/quickbooks-csv`
+- **Authentication:** Basic Auth (kinetic:webhook2024)
+- **Method:** POST
+- **Content Type:** application/json
+- **Data:**
+  ```json
+  {
+    "customerCSV": "{{action1.content}}",
+    "lineItemsCSV": "{{action2.content}}"
   }
   ```
 
