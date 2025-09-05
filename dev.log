@@ -1456,3 +1456,39 @@ Total quickbooks_customers: 2
  GET /api/orders 200 in 249ms
  GET /api/customers 200 in 247ms
  GET /api/line-items 200 in 312ms
+ GET /admin/data-explorer 200 in 94ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 252ms
+ GET /api/inquiries 200 in 246ms
+ GET /api/orders 200 in 245ms
+ GET /api/users 200 in 239ms
+ GET /api/customers 200 in 240ms
+ GET /api/shopify/orders 200 in 247ms
+ GET /api/shopify/customers 200 in 240ms
+ GET /api/line-items 200 in 256ms
+ GET /admin/data-explorer 200 in 85ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 262ms
+ GET /api/inquiries 200 in 264ms
+ GET /api/orders 200 in 316ms
+ GET /api/users 200 in 247ms
+ GET /api/customers 200 in 243ms
+ GET /api/shopify/orders 200 in 244ms
+ GET /api/shopify/customers 200 in 250ms
+ GET /api/line-items 200 in 242ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 1 QuickBooks orders to sync
+Synced 1 QuickBooks orders to all_orders
+Syncing customers to all_customers...
+Synced 472 Shopify customers to all_customers
+Synced 2 QuickBooks customers to all_customers
+Unified sync completed successfully!
+Total all_orders: 684
+Total shopify_orders: 683
+Total quickbooks_orders: 1
+Total all_customers: 474
+Total shopify_customers: 472
+Total quickbooks_customers: 2
+ POST /api/sync/unified 200 in 939ms
+ GET /api/customers 200 in 248ms

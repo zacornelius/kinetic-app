@@ -64,6 +64,9 @@ type Customer = {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  companyName?: string;
+  billingAddress?: string;
+  shippingAddress?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -115,12 +118,39 @@ function generateId() {
 }
 
 function mapShopifyOrderToCustomer(shopifyOrder: ShopifyOrder): Customer {
+  // Format billing address
+  const billingAddress = shopifyOrder.billing_address
+    ? [
+        shopifyOrder.billing_address.address1,
+        shopifyOrder.billing_address.address2,
+        shopifyOrder.billing_address.city,
+        shopifyOrder.billing_address.province,
+        shopifyOrder.billing_address.country,
+        shopifyOrder.billing_address.zip
+      ].filter(Boolean).join(', ')
+    : undefined;
+
+  // Format shipping address
+  const shippingAddress = shopifyOrder.shipping_address
+    ? [
+        shopifyOrder.shipping_address.address1,
+        shopifyOrder.shipping_address.address2,
+        shopifyOrder.shipping_address.city,
+        shopifyOrder.shipping_address.province,
+        shopifyOrder.shipping_address.country,
+        shopifyOrder.shipping_address.zip
+      ].filter(Boolean).join(', ')
+    : undefined;
+
   return {
     id: generateId(),
     email: shopifyOrder.email.toLowerCase(),
     firstName: shopifyOrder.customer?.first_name,
     lastName: shopifyOrder.customer?.last_name,
     phone: shopifyOrder.customer?.phone,
+    companyName: shopifyOrder.customer?.first_name ? undefined : shopifyOrder.customer?.first_name, // Will be empty for now
+    billingAddress,
+    shippingAddress,
     createdAt: new Date(shopifyOrder.created_at).toISOString(),
     updatedAt: new Date(shopifyOrder.updated_at).toISOString(),
   };
@@ -400,8 +430,8 @@ export async function POST(request: Request) {
       // Insert customers into shopify_customers table
       const customerStmt = db.prepare(`
         INSERT OR REPLACE INTO shopify_customers (
-          id, email, firstName, lastName, phone, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          id, email, firstName, lastName, phone, companyName, billingAddress, shippingAddress, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const customer of processedData.customers) {
@@ -409,7 +439,8 @@ export async function POST(request: Request) {
         if (!existing) {
           customerStmt.run(
             customer.id, customer.email, customer.firstName, customer.lastName,
-            customer.phone, customer.createdAt, customer.updatedAt
+            customer.phone, customer.companyName, customer.billingAddress, customer.shippingAddress,
+            customer.createdAt, customer.updatedAt
           );
         }
       }

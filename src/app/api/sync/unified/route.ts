@@ -124,7 +124,8 @@ export async function POST() {
     
     // Sync Shopify customers
     const shopifyCustomers = db.prepare(`
-      SELECT id, email, firstName, lastName, phone, createdAt, updatedAt
+      SELECT id, email, firstName, lastName, phone, companyName,
+             billingAddress, shippingAddress, createdAt, updatedAt
       FROM shopify_customers
     `).all();
     
@@ -138,9 +139,9 @@ export async function POST() {
     for (const customer of shopifyCustomers) {
       insertAllCustomer.run(
         customer.id, customer.email, customer.firstName, customer.lastName,
-        customer.phone, '', // companyName not available in shopify_customers
-        null, // billingAddress not available in shopify_customers
-        null, // shippingAddress not available in shopify_customers
+        customer.phone, customer.companyName || '',
+        customer.billingAddress || null,
+        customer.shippingAddress || null,
         customer.createdAt, customer.updatedAt,
         'shopify', customer.id
       );
