@@ -944,3 +944,382 @@ Total quickbooks_orders: 3
  ✓ Compiled in 133ms
  ✓ Compiled in 126ms
  GET /admin/data-explorer 200 in 266ms
+ GET /admin/data-explorer 200 in 85ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 263ms
+ GET /api/inquiries 200 in 258ms
+ GET /api/orders 200 in 329ms
+ GET /api/users 200 in 237ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 248ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 243ms
+ PATCH /api/orders 200 in 239ms
+ GET /api/inquiries 200 in 268ms
+ GET /api/orders 200 in 351ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 240ms
+ GET /api/shopify/orders 200 in 242ms
+ PATCH /api/orders 200 in 240ms
+ GET /api/shopify/customers 200 in 355ms
+ GET /api/line-items 200 in 241ms
+ PATCH /api/orders 200 in 239ms
+ PATCH /api/orders 200 in 239ms
+ GET /api/inquiries 200 in 239ms
+ GET /api/orders 200 in 346ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 241ms
+ GET /api/shopify/orders 200 in 242ms
+ GET /api/shopify/customers 200 in 241ms
+ GET /api/line-items 200 in 236ms
+ PATCH /api/orders 200 in 244ms
+ GET /api/inquiries 200 in 236ms
+ GET /api/orders 200 in 244ms
+ GET /api/users 200 in 233ms
+ GET /api/customers 200 in 241ms
+ GET /api/shopify/orders 200 in 251ms
+ PATCH /api/orders 200 in 238ms
+ GET /api/shopify/customers 200 in 238ms
+ GET /api/line-items 200 in 240ms
+ PATCH /api/orders 200 in 235ms
+ GET /api/inquiries 200 in 367ms
+ GET /api/orders 200 in 245ms
+ GET /api/users 200 in 237ms
+ GET /api/customers 200 in 244ms
+ GET /api/shopify/orders 200 in 239ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 253ms
+ GET /apple-touch-icon-precomposed.png 404 in 178ms
+ GET /apple-touch-icon.png 404 in 193ms
+ GET /favicon.ico 200 in 277ms
+ GET /admin/data-explorer 200 in 100ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 242ms
+ GET /admin/data-explorer 200 in 82ms
+ GET /api/inquiries 200 in 244ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 239ms
+ GET /api/orders 200 in 248ms
+ GET /api/users 200 in 239ms
+ GET /api/customers 200 in 304ms
+ GET /api/shopify/orders 200 in 384ms
+ GET /api/shopify/customers 200 in 297ms
+ GET /api/line-items 200 in 242ms
+ GET /admin/data-explorer 200 in 96ms
+ GET /api/inquiries 200 in 244ms
+ GET /api/orders 200 in 275ms
+ GET /api/users 200 in 237ms
+ GET /api/customers 200 in 241ms
+ GET /api/shopify/orders 200 in 317ms
+ GET /api/shopify/customers 200 in 289ms
+ GET /api/line-items 200 in 288ms
+ ✓ Compiled / in 290ms
+ GET / 200 in 386ms
+ GET /api/inquiries 200 in 510ms
+ GET /api/users 200 in 517ms
+ GET /api/orders 200 in 578ms
+ GET /api/inquiries?category=bulk 200 in 273ms
+ GET /api/users 200 in 271ms
+ GET /api/orders 200 in 362ms
+ GET /api/inquiries?category=issues 200 in 268ms
+ GET /api/users 200 in 265ms
+ GET /api/orders 200 in 362ms
+ GET /api/orders 200 in 267ms
+ GET /api/users 200 in 270ms
+ GET /api/inquiries?category=questions 200 in 273ms
+ GET /api/orders 200 in 270ms
+ GET /api/inquiries 200 in 272ms
+ GET /api/users 200 in 270ms
+ GET /admin/data-explorer 200 in 142ms
+ GET /api/inquiries 200 in 326ms
+ GET /api/orders 200 in 313ms
+ GET /api/users 200 in 241ms
+ GET /api/customers 200 in 305ms
+ GET /api/shopify/orders 200 in 343ms
+ GET /api/shopify/customers 200 in 242ms
+ GET /api/line-items 200 in 291ms
+ PATCH /api/orders 200 in 243ms
+ GET /api/inquiries 200 in 239ms
+ GET /api/orders 200 in 327ms
+ GET /api/users 200 in 236ms
+ GET /api/customers 200 in 255ms
+ GET /api/shopify/orders 200 in 241ms
+ GET /admin/data-explorer 200 in 97ms
+ GET /api/inquiries 200 in 243ms
+ GET /api/orders 200 in 314ms
+ GET /api/users 200 in 239ms
+ GET /api/customers 200 in 303ms
+ GET /api/shopify/orders 200 in 335ms
+ GET /api/shopify/customers 200 in 487ms
+ GET /api/line-items 200 in 241ms
+ PATCH /api/orders 200 in 254ms
+ GET /api/inquiries 200 in 250ms
+ GET /api/orders 200 in 316ms
+ GET /api/users 200 in 240ms
+ GET /api/customers 200 in 249ms
+ GET /api/shopify/orders 200 in 243ms
+ GET /api/shopify/customers 200 in 243ms
+ GET /api/line-items 200 in 246ms
+ GET / 200 in 88ms
+ GET /api/users 200 in 265ms
+ GET /api/inquiries 200 in 268ms
+ GET /api/orders 200 in 347ms
+ GET / 200 in 81ms
+ POST /ws/v1/cluster/apps/new-application 404 in 72ms
+ POST /ws/v1/cluster/apps/new-application 404 in 90ms
+ GET / 200 in 90ms
+ GET / 200 in 84ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 241ms
+ GET /favicon.ico 200 in 236ms
+ GET /wiki 404 in 78ms
+ GET / 200 in 78ms
+ GET /admin/data-explorer 200 in 91ms
+ GET /api/inquiries 200 in 244ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 244ms
+ GET /api/orders 200 in 272ms
+ GET /api/users 200 in 238ms
+ GET /api/customers 200 in 262ms
+ GET /api/shopify/orders 200 in 430ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 276ms
+ GET / 200 in 97ms
+ GET /api/users 200 in 280ms
+ GET /api/inquiries 200 in 292ms
+ GET /api/orders 200 in 301ms
+ GET /api/inquiries?category=bulk 200 in 239ms
+ GET /api/users 200 in 253ms
+ GET /api/orders 200 in 301ms
+ GET /api/inquiries?category=issues 200 in 270ms
+ GET /api/users 200 in 277ms
+ GET /api/orders 200 in 311ms
+ GET /api/orders 200 in 267ms
+ GET /api/inquiries?category=bulk 200 in 269ms
+ GET /api/users 200 in 268ms
+ GET /api/orders 200 in 270ms
+ GET /api/users 200 in 277ms
+ GET /api/inquiries?category=questions 200 in 284ms
+ GET /api/inquiries?category=bulk 200 in 264ms
+ GET /api/users 200 in 273ms
+ GET /api/orders 200 in 310ms
+ GET /api/inquiries 200 in 266ms
+ GET /api/orders 200 in 269ms
+ GET /api/users 200 in 271ms
+ GET /apple-touch-icon-precomposed.png 404 in 93ms
+ GET /apple-touch-icon.png 404 in 147ms
+ GET /favicon.ico 200 in 299ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 296ms
+ GET /apple-touch-icon-120x120-precomposed.png 404 in 77ms
+ GET /apple-touch-icon-120x120.png 404 in 73ms
+ GET /apple-touch-icon.png 404 in 68ms
+ GET /apple-touch-icon.png 404 in 65ms
+ GET / 200 in 79ms
+ GET /api/users 200 in 264ms
+ GET /api/orders 200 in 269ms
+ GET /api/inquiries 200 in 272ms
+ GET / 200 in 94ms
+ GET /api/inquiries?category=bulk 200 in 250ms
+ GET /api/users 200 in 249ms
+ GET /api/orders 200 in 457ms
+ GET /api/users 200 in 264ms
+ GET /api/inquiries?category=issues 200 in 268ms
+ GET /api/orders 200 in 619ms
+ GET /api/inquiries?category=questions 200 in 259ms
+ GET /api/users 200 in 262ms
+ GET /api/orders 200 in 473ms
+ GET /api/inquiries 200 in 260ms
+ GET /api/orders 200 in 268ms
+ GET /api/users 200 in 272ms
+ GET / 200 in 80ms
+ GET / 200 in 95ms
+ GET /admin 200 in 116ms
+ GET /api/users 200 in 244ms
+ POST /api/users 201 in 249ms
+ GET /api/users 200 in 243ms
+ GET / 200 in 82ms
+ GET /api/inquiries 200 in 291ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 293ms
+ GET /api/users 200 in 296ms
+ GET /api/orders 200 in 351ms
+ GET /api/inquiries?category=bulk 200 in 264ms
+ GET /api/users 200 in 276ms
+ GET /api/orders 200 in 337ms
+ GET /api/inquiries?category=issues 200 in 271ms
+ GET /api/users 200 in 268ms
+ GET /api/orders 200 in 366ms
+ GET /api/users 200 in 444ms
+ GET /api/inquiries?category=questions 200 in 459ms
+ GET /api/orders 200 in 518ms
+ GET /api/users 200 in 255ms
+ GET /api/inquiries 200 in 258ms
+ GET /api/orders 200 in 265ms
+ GET / 200 in 85ms
+ GET /admin 200 in 96ms
+ GET /api/users 200 in 242ms
+Making request to: https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&since_id=6031656616133
+Shop: f184d9-2
+Access token: shpat_f934...
+Response status: 200
+Response headers: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '97a6e98d1ba2cf75-CMH',
+  connection: 'keep-alive',
+  'content-encoding': 'gzip',
+  'content-security-policy': "default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval' https://* shopify-pos://*; block-all-mixed-content; child-src 'self' https://* shopify-pos://*; connect-src 'self' wss://* https://*; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src https://cdn.shopify.com https://cdn.shopifycdn.net https://checkout.pci.shopifyinc.com https://checkout.pci.shopifyinc.com/build/75a428d/card_fields.js https://api.stripe.com https://mpsnare.iesnare.com https://appcenter.intuit.com https://www.paypal.com https://js.braintreegateway.com https://c.paypal.com https://maps.googleapis.com https://www.google-analytics.com https://v.shopify.com 'self' 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests; report-uri /csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=ce7c2cf9-dee3-43a3-b9ba-580a622affb2-1757087740; report-to shopify-csp",
+  'content-type': 'application/json; charset=utf-8',
+  date: 'Fri, 05 Sep 2025 15:55:41 GMT',
+  link: '<https://f184d9-2.myshopify.com/admin/api/2023-10/orders.json?limit=250&page_info=eyJvcmRlciI6ImlkIGFzYyIsImxhc3RfaWQiOjYwMzE4OTIxMTk3NDksImxhc3RfdmFsdWUiOiI2MDMxODkyMTE5NzQ5IiwiZGlyZWN0aW9uIjoicHJldiJ9>; rel="previous"',
+  nel: '{"success_fraction":0.01,"report_to":"cf-nel","max_age":604800}',
+  'referrer-policy': 'origin-when-cross-origin',
+  'report-to': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=juFZ%2Bzw%2FxLlMZ3iclM7pIE6Hxym%2FLOTDTD%2FE%2FAFBzvsmHXGb5fe9Bp8v1J0y9HFfQfIo1qnkygw6Pindb6jJu5DvysIvisW2nMjKwGf3YbQ%2FRQAXD4zi7cmNuUvW81GkdWRIx%2FTn85Y%3D"}],"group":"cf-nel","max_age":604800}',
+  'reporting-endpoints': 'shopify-csp="/csp-report?source%5Baction%5D=index&source%5Bapp%5D=Shopify&source%5Bcontroller%5D=admin%2Forders&source%5Bsection%5D=admin_api&source%5Buuid%5D=ce7c2cf9-dee3-43a3-b9ba-580a622affb2-1757087740"',
+  server: 'cloudflare',
+  'server-timing': 'processing;dur=435, _y;desc="44ded5a2-b1da-4fd0-ba5c-22a9e4ae0521", _s;desc="8729bf0d-98a7-4139-ba47-2a62e50fb31a", cfRequestDuration;dur=503.999949',
+  'strict-transport-security': 'max-age=7889238',
+  'transfer-encoding': 'chunked',
+  vary: 'Accept-Encoding',
+  'x-content-type-options': 'nosniff',
+  'x-dc': 'gcp-us-central1,gcp-us-central1,gcp-us-central1',
+  'x-download-options': 'noopen',
+  'x-frame-options': 'DENY',
+  'x-permitted-cross-domain-policies': 'none',
+  'x-request-id': 'ce7c2cf9-dee3-43a3-b9ba-580a622affb2-1757087740',
+  'x-shardid': '196',
+  'x-shopid': '63730155717',
+  'x-shopify-api-version': '2024-04',
+  'x-shopify-api-version-warning': 'https://shopify.dev/concepts/about-apis/versioning',
+  'x-shopify-shop-api-call-limit': '1/40',
+  'x-sorting-hat-podid': '196',
+  'x-sorting-hat-shopid': '63730155717',
+  'x-stats-apiclientid': '155586658305',
+  'x-stats-apipermissionid': '500490371269',
+  'x-stats-userid': '',
+  'x-xss-protection': '1; mode=block'
+}
+Fetched 5 orders. Total so far: 5
+Progress: Fetched 5 orders from 1 pages
+ POST /api/shopify/sync-orders 200 in 816ms
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 3 QuickBooks orders to sync
+Synced 3 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 686
+Total shopify_orders: 683
+Total quickbooks_orders: 3
+ POST /api/sync/unified 200 in 352ms
+ POST /api/shopify/sync-incremental 200 in 1454ms
+ GET /admin/data-explorer 200 in 88ms
+ GET /api/inquiries 200 in 371ms
+ GET /api/orders 200 in 300ms
+ GET /api/users 200 in 237ms
+ GET /api/customers 200 in 246ms
+ GET /api/shopify/orders 200 in 241ms
+ GET /api/shopify/customers 200 in 255ms
+ GET /api/line-items 200 in 244ms
+ PATCH /api/orders 200 in 239ms
+ GET /api/inquiries 200 in 235ms
+ GET /api/orders 200 in 325ms
+ GET /api/users 200 in 244ms
+ GET /api/customers 200 in 242ms
+ GET /api/shopify/orders 200 in 264ms
+ GET /admin 200 in 109ms
+ GET /api/users 200 in 242ms
+ GET /admin/data-explorer 200 in 81ms
+ GET /api/inquiries 200 in 246ms
+ GET /api/orders 200 in 243ms
+ GET /api/users 200 in 241ms
+ GET /api/customers 200 in 239ms
+ GET /api/shopify/orders 200 in 240ms
+ GET /api/shopify/customers 200 in 248ms
+ GET /api/line-items 200 in 242ms
+ GET /api/customers/dakodahighkennels%40gmail.com/orders 200 in 287ms
+ GET /api/customers/greenriverretriever%40gmail.com/orders 200 in 265ms
+ GET /api/inquiries 200 in 242ms
+ GET /api/orders 200 in 313ms
+ GET /api/users 200 in 242ms
+ GET /api/customers 200 in 251ms
+ GET /api/shopify/orders 200 in 243ms
+ GET /api/shopify/customers 200 in 239ms
+ GET /api/line-items 200 in 433ms
+ GET /admin 200 in 87ms
+ GET /api/users 200 in 244ms
+ DELETE /api/users?id=2 200 in 256ms
+ GET /api/users 200 in 240ms
+ GET / 200 in 85ms
+ GET /api/inquiries 200 in 269ms
+ GET /api/users 200 in 270ms
+ GET /api/orders 200 in 330ms
+ GET / 200 in 83ms
+ GET /api/users 200 in 295ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 299ms
+ GET /api/inquiries 200 in 303ms
+ GET /api/orders 200 in 401ms
+ GET / 200 in 191ms
+ GET / 200 in 71ms
+ ✓ Compiled /api/webhooks/quickbooks-csv in 106ms
+ GET /api/webhooks/quickbooks-csv 200 in 363ms
+QuickBooks CSV webhook received: {
+  "csvData": [
+    {
+      "Transaction_ID": "QB-001",
+      "Customer_Name": "John Doe",
+      "Customer_Email": "john@example.com",
+      "Total": "1500.00",
+      "Transaction_Date": "2024-01-15",
+      "Billing_Address": "123 Main St, City, State, 12345",
+      "Memo": "Test invoice from CSV"
+    },
+    {
+      "Transaction_ID": "QB-002",
+      "Customer_Name": "Jane Smith",
+      "Customer_Email": "jane@example.com",
+      "Total": "2500.00",
+      "Transaction_Date": "2024-01-16",
+      "Billing_Address": "456 Oak Ave, City, State, 12345",
+      "Memo": "Another test invoice"
+    }
+  ],
+  "reportDate": "2024-01-16",
+  "totalRows": 2
+}
+Processing 2 CSV rows from QuickBooks report
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 5 QuickBooks orders to sync
+Synced 5 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 688
+Total shopify_orders: 683
+Total quickbooks_orders: 5
+ POST /api/sync/unified 200 in 381ms
+ POST /api/webhooks/quickbooks-csv 200 in 633ms
+QuickBooks CSV webhook received: {
+  "csvData": [
+    {
+      "Transaction_ID": "QB-001",
+      "Customer_Name": "John Doe Updated",
+      "Customer_Email": "john@example.com",
+      "Total": "1600.00",
+      "Transaction_Date": "2024-01-15",
+      "Billing_Address": "123 Main St, City, State, 12345",
+      "Memo": "Updated invoice from CSV"
+    }
+  ],
+  "reportDate": "2024-01-17",
+  "totalRows": 1
+}
+Processing 1 CSV rows from QuickBooks report
+Starting unified sync - populating all_orders from source tables...
+Cleared existing all_orders data
+Found 683 Shopify orders to sync
+Synced 683 Shopify orders to all_orders
+Found 5 QuickBooks orders to sync
+Synced 5 QuickBooks orders to all_orders
+Unified sync completed successfully!
+Total all_orders: 688
+Total shopify_orders: 683
+Total quickbooks_orders: 5
+ POST /api/sync/unified 200 in 365ms
+ POST /api/webhooks/quickbooks-csv 200 in 690ms
