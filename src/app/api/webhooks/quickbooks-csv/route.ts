@@ -33,6 +33,18 @@ function parseCSV(csvText: string) {
   return rows;
 }
 
+// Helper function to parse date
+const parseDate = (dateStr: string) => {
+  if (!dateStr) return new Date().toISOString();
+  
+  if (dateStr.includes('/')) {
+    const [month, day, year] = dateStr.split('/');
+    return new Date(year, month - 1, day).toISOString();
+  }
+  
+  return new Date().toISOString();
+};
+
 // Webhook endpoint for QuickBooks CSV data from Zapier
 export async function POST(request: Request) {
   try {
@@ -51,7 +63,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log('QuickBooks CSV webhook received');
     console.log('Received fields:', Object.keys(body));
-    console.log('Body content:', JSON.stringify(body, null, 2));
     
     // Extract data - support both CSV and JSON formats
     const customerCSV = body.customerCSV || body.customer_csv || body.customerData || body.customer_data || 
@@ -206,44 +217,69 @@ export async function POST(request: Request) {
       }
     }
 
-    // Process line items data if provided
+    // Process line items data if provided - GROUP BY INVOICE NUMBER
     if (lineItemsData.length > 0) {
       console.log(`Processing ${lineItemsData.length} line item records`);
+      
+      // Group line items by invoice number
+      const ordersByInvoice: { [key: string]: any[] } = {};
       
       for (const row of lineItemsData) {
         const invoiceNum = row['Num'] || '';
         const customerName = row['Customer full name'] || '';
-        const productName = row['Product/Service'] || '';
-        const quantity = parseFloat(row['Quantity'] || '0');
-        const salesPrice = parseFloat((row['Sales price'] || '0').replace(/,/g, ''));
-        const amount = parseFloat((row['Amount'] || '0').replace(/,/g, ''));
-        const transactionDate = row['Transaction date'] || '';
-        const memo = row['Memo/Description'] || '';
-
+        
         if (!invoiceNum || !customerName) {
           console.log('Skipping row with missing invoice number or customer name:', row);
           continue;
         }
-
-        // Helper function to parse date
-        const parseDate = (dateStr: string) => {
-          if (!dateStr) return new Date().toISOString();
-          
-          if (dateStr.includes('/')) {
-            const [month, day, year] = dateStr.split('/');
-            return new Date(year, month - 1, day).toISOString();
+        
+        if (!ordersByInvoice[invoiceNum]) {
+          ordersByInvoice[invoiceNum] = [];
+        }
+        
+        ordersByInvoice[invoiceNum].push(row);
+      }
+      
+      console.log(`Found ${Object.keys(ordersByInvoice).length} unique invoices`);
+      
+      // Process each invoice as a single order
+      for (const [invoiceNum, lineItems] of Object.entries(ordersByInvoice)) {
+        const firstItem = lineItems[0];
+        const customerName = firstItem['Customer full name'] || '';
+        const transactionDate = firstItem['Transaction date'] || '';
+        const memo = firstItem['Memo/Description'] || '';
+        
+        // Calculate total amount from all line items
+        const totalAmount = lineItems.reduce((sum, item) => {
+          const amount = parseFloat((item['Amount'] || '0').replace(/,/g, ''));
+          return sum + amount;
+        }, 0);
+        
+        // Find customer email from customer data
+        let customerEmail = '';
+        if (customerData.length > 0) {
+          const customer = customerData.find(c => c['Customer full name'] === customerName);
+          if (customer) {
+            customerEmail = customer['Email'] || '';
           }
-          
-          return new Date().toISOString();
-        };
-
+        }
+        
+        // Create line items array
+        const processedLineItems = lineItems.map(item => ({
+          product: item['Product/Service'] || '',
+          quantity: parseFloat(item['Quantity'] || '0'),
+          price: parseFloat((item['Sales price'] || '0').replace(/,/g, '')),
+          amount: parseFloat((item['Amount'] || '0').replace(/,/g, '')),
+          description: item['Memo/Description'] || ''
+        }));
+        
         // Create order data
         const orderData = {
           id: `qb_csv_${invoiceNum}`,
           orderNumber: invoiceNum,
           customerName: customerName,
-          customerEmail: '', // Will be filled from customer data if available
-          totalAmount: amount,
+          customerEmail: customerEmail,
+          totalAmount: totalAmount,
           currency: 'USD',
           status: 'paid',
           createdAt: parseDate(transactionDate),
@@ -251,13 +287,7 @@ export async function POST(request: Request) {
           billingAddress: null,
           shippingAddress: null,
           notes: memo,
-          lineItems: JSON.stringify([{
-            product: productName,
-            quantity: quantity,
-            price: salesPrice,
-            amount: amount,
-            description: memo
-          }])
+          lineItems: JSON.stringify(processedLineItems)
         };
 
         // Check if order already exists
@@ -270,11 +300,11 @@ export async function POST(request: Request) {
           // Update existing order
           db.prepare(`
             UPDATE quickbooks_orders SET
-              customerName = ?, totalAmount = ?, 
+              customerName = ?, customerEmail = ?, totalAmount = ?, 
               billingAddress = ?, shippingAddress = ?, notes = ?, lineItems = ?
             WHERE orderNumber = ?
           `).run(
-            orderData.customerName, orderData.totalAmount,
+            orderData.customerName, orderData.customerEmail, orderData.totalAmount,
             orderData.billingAddress, orderData.shippingAddress, orderData.notes, orderData.lineItems,
             invoiceNum
           );

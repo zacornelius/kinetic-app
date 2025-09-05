@@ -129,15 +129,14 @@ export async function POST() {
       FROM shopify_customers
     `).all();
     
-    const insertAllCustomer = db.prepare(`
-      INSERT INTO all_customers (
-        id, email, firstName, lastName, phone, companyName,
-        billingAddress, shippingAddress, createdAt, updatedAt, source, sourceId
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
     for (const customer of shopifyCustomers) {
-      insertAllCustomer.run(
+      // Use INSERT OR REPLACE to handle customers that exist in both Shopify and QuickBooks
+      db.prepare(`
+        INSERT OR REPLACE INTO all_customers (
+          id, email, firstName, lastName, phone, companyName,
+          billingAddress, shippingAddress, createdAt, updatedAt, source, sourceId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
         customer.id, customer.email, customer.firstName, customer.lastName,
         customer.phone, customer.companyName || '',
         customer.billingAddress || null,
@@ -157,7 +156,13 @@ export async function POST() {
     `).all();
     
     for (const customer of quickbooksCustomers) {
-      insertAllCustomer.run(
+      // Use INSERT OR REPLACE to handle customers that exist in both Shopify and QuickBooks
+      db.prepare(`
+        INSERT OR REPLACE INTO all_customers (
+          id, email, firstName, lastName, phone, companyName,
+          billingAddress, shippingAddress, createdAt, updatedAt, source, sourceId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
         customer.id, customer.email, customer.firstName, customer.lastName,
         customer.phone, customer.companyName, customer.billingAddress,
         customer.shippingAddress, customer.createdAt, customer.updatedAt,
