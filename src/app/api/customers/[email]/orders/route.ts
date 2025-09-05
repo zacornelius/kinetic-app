@@ -44,8 +44,11 @@ export async function GET(
               } else if (item.title?.includes('Vital 24K Pallet')) {
                 return 'Vital 24K';
               } else if (item.title === 'Build a Pallet') {
-                // For "Build a Pallet", we need to determine the actual SKU from the variant or product info
-                // This would need to be enhanced based on your specific data structure
+                // For "Build a Pallet", extract the actual product from the name field
+                // e.g., "Build a Pallet - Active 26K" -> "Active 26K"
+                if (item.name && item.name.includes('Build a Pallet - ')) {
+                  return item.name.replace('Build a Pallet - ', '');
+                }
                 return 'Custom Pallet';
               } else if (item.title?.includes('Pallet')) {
                 // Generic pallet handling - extract base product name
