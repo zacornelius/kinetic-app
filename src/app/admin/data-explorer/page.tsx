@@ -932,7 +932,7 @@ export default function DataExplorer() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shipping Address</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Products</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Products (Effective SKU & Qty)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -961,8 +961,21 @@ export default function DataExplorer() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="max-w-xs truncate" title={order.lineItems}>
-                          {order.lineItems || 'N/A'}
+                        <div className="max-w-xs">
+                          {order.processedLineItems && order.processedLineItems.length > 0 ? (
+                            <div className="space-y-1">
+                              {order.processedLineItems.map((item, index) => (
+                                <div key={index} className="text-xs border-b border-gray-100 pb-1 last:border-b-0">
+                                  <div className="font-medium">{item.effectiveSKU}</div>
+                                  <div className="text-gray-600">
+                                    Qty: {item.effectiveQuantity} × ${item.price.toFixed(2)} = ${item.totalPrice.toFixed(2)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">No products</span>
+                          )}
                         </div>
                       </td>
                     </tr>
