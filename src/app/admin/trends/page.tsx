@@ -284,6 +284,28 @@ export default function TrendsPage() {
       </div>
 
       <div className="p-4 space-y-6">
+        {/* Summary Stats - Moved to Top */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-sm text-gray-500">Total Sales</div>
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(trendData.reduce((sum, month) => sum + month.totalSales, 0))}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-sm text-gray-500">Total Units</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {formatNumber(trendData.reduce((sum, month) => sum + month.totalQuantity, 0))}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-sm text-gray-500">Average per Month</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {formatCurrency(trendData.length > 0 ? trendData.reduce((sum, month) => sum + month.totalSales, 0) / trendData.length : 0)}
+            </div>
+          </div>
+        </div>
+
         {/* Controls */}
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex flex-wrap gap-4 items-center">
@@ -355,51 +377,54 @@ export default function TrendsPage() {
         {/* Monthly View */}
         {viewMode === "monthly" && (
           <div className="space-y-6">
-            {/* Sales Trend Chart */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Trends</h2>
-              <div className="h-80">
-                <Line 
-                  data={{
-                    labels: chartData.labels,
-                    datasets: [{
-                      label: 'Sales',
-                      data: chartData.salesData,
-                      borderColor: 'rgb(59, 130, 246)',
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      fill: true,
-                      tension: 0.1,
-                    }]
-                  }}
-                  options={salesChartOptions}
-                />
+            {/* Two Column Chart Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Sales Trend Chart */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Trends</h2>
+                <div className="h-96">
+                  <Line 
+                    data={{
+                      labels: chartData.labels,
+                      datasets: [{
+                        label: 'Sales',
+                        data: chartData.salesData,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.1,
+                      }]
+                    }}
+                    options={salesChartOptions}
+                  />
+                </div>
+              </div>
+
+              {/* Quantity Trend Chart */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Quantity Trends</h2>
+                <div className="h-96">
+                  <Bar 
+                    data={{
+                      labels: chartData.labels,
+                      datasets: [{
+                        label: 'Units Sold',
+                        data: chartData.quantityData,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: 'rgb(16, 185, 129)',
+                        borderWidth: 1,
+                      }]
+                    }}
+                    options={quantityChartOptions}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Quantity Trend Chart */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Quantity Trends</h2>
-              <div className="h-80">
-                <Bar 
-                  data={{
-                    labels: chartData.labels,
-                    datasets: [{
-                      label: 'Units Sold',
-                      data: chartData.quantityData,
-                      backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                      borderColor: 'rgb(16, 185, 129)',
-                      borderWidth: 1,
-                    }]
-                  }}
-                  options={quantityChartOptions}
-                />
-              </div>
-            </div>
-
-            {/* SKU Performance Chart */}
+            {/* SKU Performance Chart - Full Width */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Top SKU Performance Over Time</h2>
-              <div className="h-80">
+              <div className="h-96">
                 <Line 
                   data={{
                     labels: chartData.labels,
@@ -430,12 +455,12 @@ export default function TrendsPage() {
                     </div>
                   </div>
                   
-                  {/* Top SKUs */}
-                  <div className="space-y-1">
-                    {month.skuBreakdown.slice(0, 3).map((sku) => (
+                  {/* All SKUs */}
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {month.skuBreakdown.map((sku) => (
                       <div 
                         key={sku.sku}
-                        className="flex justify-between text-xs"
+                        className="flex justify-between text-xs hover:bg-gray-50 cursor-pointer p-1 rounded"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSkuClick(sku.sku);
@@ -460,7 +485,7 @@ export default function TrendsPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Weekly Breakdown: {selectedPeriod}
               </h2>
-              <div className="h-80">
+              <div className="h-96">
                 <Bar 
                   data={{
                     labels: weeklyData.map(w => w.week),
@@ -543,7 +568,7 @@ export default function TrendsPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 SKU Performance: {selectedSku}
               </h2>
-              <div className="h-80">
+              <div className="h-96">
                 <Line 
                   data={{
                     labels: trendData.map(m => m.period),
@@ -635,27 +660,6 @@ export default function TrendsPage() {
           </div>
         )}
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-gray-500">Total Sales</div>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(trendData.reduce((sum, month) => sum + month.totalSales, 0))}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-gray-500">Total Units</div>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatNumber(trendData.reduce((sum, month) => sum + month.totalQuantity, 0))}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-gray-500">Average per Month</div>
-            <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(trendData.length > 0 ? trendData.reduce((sum, month) => sum + month.totalSales, 0) / trendData.length : 0)}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
