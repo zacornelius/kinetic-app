@@ -3,9 +3,9 @@ import webpush from 'web-push';
 
 // Configure web-push
 webpush.setVapidDetails(
-  'mailto:your-email@example.com', // Your email
-  process.env.VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
+  'mailto:test@kinetic.com', // Your email
+  'BF8E--_VAzbhkGHuK7icv2cAJm_O9pqqsfs-J-NFKvD3jEtCDTk7cy3RZdH3UtaZQoyxoq2vU2Qist8eBcpnX6Q', // Public key
+  'DIq6wuPffIjUFnK6mXH6AawsGxwZCavkdburSSs1bH0' // Private key
 );
 
 export async function POST(request: NextRequest) {
