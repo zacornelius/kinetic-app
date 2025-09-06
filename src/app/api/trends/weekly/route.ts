@@ -23,16 +23,17 @@ export async function GET(request: NextRequest) {
       SELECT 
         strftime('%Y-%W', o.createdAt) as week,
         strftime('%Y-%m-%d', o.createdAt) as date,
-        json_extract(li.value, '$.effectiveQuantity') as quantity,
+        json_extract(li.value, '$.quantity') as quantity,
         json_extract(li.value, '$.totalPrice') as price,
-        json_extract(li.value, '$.effectiveSKU') as sku
+        json_extract(li.value, '$.name') as sku
       FROM all_orders o,
       json_each(o.lineItems) as li
       WHERE o.createdAt >= '${startDate.toISOString().split('T')[0]}'
         AND o.createdAt <= '${endDate.toISOString().split('T')[0]}'
-        AND json_extract(li.value, '$.effectiveSKU') IS NOT NULL
-        AND json_extract(li.value, '$.effectiveQuantity') IS NOT NULL
+        AND json_extract(li.value, '$.name') IS NOT NULL
+        AND json_extract(li.value, '$.quantity') IS NOT NULL
         AND json_extract(li.value, '$.totalPrice') IS NOT NULL
+        AND json_extract(li.value, '$.name') != ''
       ORDER BY o.createdAt DESC
     `;
     
