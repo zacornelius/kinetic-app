@@ -39,24 +39,10 @@ interface TrendData {
   }[];
 }
 
-interface WeeklyData {
-  week: string;
-  totalSales: number;
-  totalQuantity: number;
-  skuBreakdown: {
-    sku: string;
-    quantity: number;
-    sales: number;
-  }[];
-}
 
 export default function TrendsPage() {
   const [trendData, setTrendData] = useState<TrendData[]>([]);
-  const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"monthly" | "weekly" | "sku">("monthly");
-  const [selectedSku, setSelectedSku] = useState<string>("");
   const [timeRange, setTimeRange] = useState<"6months" | "12months" | "24months">("12months");
 
   useEffect(() => {
@@ -76,26 +62,6 @@ export default function TrendsPage() {
     }
   };
 
-  const loadWeeklyData = async (period: string) => {
-    try {
-      const response = await fetch(`/api/trends/weekly?period=${period}`);
-      const data = await response.json();
-      setWeeklyData(data);
-    } catch (error) {
-      console.error("Error loading weekly data:", error);
-    }
-  };
-
-  const handlePeriodClick = (period: string) => {
-    setSelectedPeriod(period);
-    setViewMode("weekly");
-    loadWeeklyData(period);
-  };
-
-  const handleSkuClick = (sku: string) => {
-    setSelectedSku(sku);
-    setViewMode("sku");
-  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -322,152 +288,96 @@ export default function TrendsPage() {
               </select>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">View:</label>
-              <div className="flex bg-gray-100 rounded-md p-1">
-                <button
-                  onClick={() => setViewMode("monthly")}
-                  className={`px-3 py-1 text-sm rounded ${
-                    viewMode === "monthly" 
-                      ? "bg-white shadow-sm text-blue-600" 
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setViewMode("weekly")}
-                  className={`px-3 py-1 text-sm rounded ${
-                    viewMode === "weekly" 
-                      ? "bg-white shadow-sm text-blue-600" 
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  disabled={!selectedPeriod}
-                >
-                  Weekly
-                </button>
-                <button
-                  onClick={() => setViewMode("sku")}
-                  className={`px-3 py-1 text-sm rounded ${
-                    viewMode === "sku" 
-                      ? "bg-white shadow-sm text-blue-600" 
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  disabled={!selectedSku}
-                >
-                  SKU Detail
-                </button>
-              </div>
-            </div>
-
-            {viewMode === "weekly" && selectedPeriod && (
-              <div className="text-sm text-gray-600">
-                Showing weeks for: <span className="font-medium">{selectedPeriod}</span>
-              </div>
-            )}
-
-            {viewMode === "sku" && selectedSku && (
-              <div className="text-sm text-gray-600">
-                Showing detail for: <span className="font-medium">{selectedSku}</span>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Monthly View */}
-        {viewMode === "monthly" && (
-          <div className="space-y-6">
-            {/* Two Column Chart Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Sales Trend Chart */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Trends</h2>
-                <div className="h-96">
-                  <Line 
-                    data={{
-                      labels: chartData.labels,
-                      datasets: [{
-                        label: 'Sales',
-                        data: chartData.salesData,
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.1,
-                      }]
-                    }}
-                    options={salesChartOptions}
-                  />
-                </div>
-              </div>
-
-              {/* Quantity Trend Chart */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Quantity Trends</h2>
-                <div className="h-96">
-                  <Bar 
-                    data={{
-                      labels: chartData.labels,
-                      datasets: [{
-                        label: 'Units Sold',
-                        data: chartData.quantityData,
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        borderColor: 'rgb(16, 185, 129)',
-                        borderWidth: 1,
-                      }]
-                    }}
-                    options={quantityChartOptions}
-                  />
-                </div>
-              </div>
+        {/* 4 Core Containers Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Container 1: Sales Trend Chart */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Trends</h2>
+            <div className="h-80">
+              <Line 
+                data={{
+                  labels: chartData.labels,
+                  datasets: [{
+                    label: 'Sales',
+                    data: chartData.salesData,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.1,
+                  }]
+                }}
+                options={salesChartOptions}
+              />
             </div>
+          </div>
 
-            {/* SKU Performance Chart - Full Width */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Top SKU Performance Over Time</h2>
-              <div className="h-96">
-                <Line 
-                  data={{
-                    labels: chartData.labels,
-                    datasets: chartData.skuDatasets
-                  }}
-                  options={skuChartOptions}
-                />
-              </div>
+          {/* Container 2: Quantity Trend Chart */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Quantity Trends</h2>
+            <div className="h-80">
+              <Bar 
+                data={{
+                  labels: chartData.labels,
+                  datasets: [{
+                    label: 'Units Sold',
+                    data: chartData.quantityData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgb(16, 185, 129)',
+                    borderWidth: 1,
+                  }]
+                }}
+                options={quantityChartOptions}
+              />
             </div>
+          </div>
 
-            {/* Monthly Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Container 3: SKU Performance Chart */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Top SKU Performance Over Time</h2>
+            <div className="h-80">
+              <Line 
+                data={{
+                  labels: chartData.labels,
+                  datasets: chartData.skuDatasets
+                }}
+                options={skuChartOptions}
+              />
+            </div>
+          </div>
+
+          {/* Container 4: Monthly Detail Cards - Scrollable */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Details</h2>
+            <div className="h-80 overflow-y-auto space-y-3 pr-2">
               {trendData.map((month, index) => (
                 <div 
                   key={month.period}
-                  className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md cursor-pointer transition-shadow"
-                  onClick={() => handlePeriodClick(month.period)}
+                  className="border rounded-lg p-3 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-gray-900">{month.period}</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-gray-900 text-sm">{month.period}</h3>
                     <div className="text-right">
-                      <div className="text-lg font-semibold text-green-600">
+                      <div className="text-sm font-semibold text-green-600">
                         {formatCurrency(month.totalSales)}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-xs text-gray-500">
                         {formatNumber(month.totalQuantity)} units
                       </div>
                     </div>
                   </div>
                   
-                  {/* All SKUs */}
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {/* All SKUs - Compact */}
+                  <div className="space-y-1 max-h-20 overflow-y-auto">
                     {month.skuBreakdown.map((sku) => (
                       <div 
                         key={sku.sku}
-                        className="flex justify-between text-xs hover:bg-gray-50 cursor-pointer p-1 rounded"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSkuClick(sku.sku);
-                        }}
+                        className="flex justify-between text-xs hover:bg-gray-50 p-1 rounded"
                       >
-                        <span className="truncate">{sku.sku}</span>
-                        <span className="text-gray-500">{formatNumber(sku.quantity)}</span>
+                        <span className="truncate text-xs">{sku.sku}</span>
+                        <span className="text-gray-500 text-xs">{formatNumber(sku.quantity)}</span>
                       </div>
                     ))}
                   </div>
@@ -475,190 +385,8 @@ export default function TrendsPage() {
               ))}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Weekly View */}
-        {viewMode === "weekly" && (
-          <div className="space-y-6">
-            {/* Weekly Sales Chart */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Weekly Breakdown: {selectedPeriod}
-              </h2>
-              <div className="h-96">
-                <Bar 
-                  data={{
-                    labels: weeklyData.map(w => w.week),
-                    datasets: [{
-                      label: 'Sales',
-                      data: weeklyData.map(w => w.totalSales),
-                      backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                      borderColor: 'rgb(59, 130, 246)',
-                      borderWidth: 1,
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: {
-                      legend: {
-                        position: 'top' as const,
-                      },
-                      title: {
-                        display: true,
-                        text: 'Weekly Sales',
-                      },
-                      tooltip: {
-                        callbacks: {
-                          label: function(context: any) {
-                            return `Sales: ${formatCurrency(context.parsed.y)}`;
-                          }
-                        }
-                      }
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          callback: function(value: any) {
-                            return formatCurrency(value);
-                          }
-                        }
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Weekly Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {weeklyData.map((week, index) => (
-                <div key={week.week} className="bg-white rounded-lg shadow-sm p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-gray-900 text-sm">{week.week}</h3>
-                    <div className="text-right">
-                      <div className="font-semibold text-green-600">
-                        {formatCurrency(week.totalSales)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {formatNumber(week.totalQuantity)} units
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div 
-                      className="bg-gradient-to-r from-blue-400 to-green-400 h-1.5 rounded-full"
-                      style={{ 
-                        width: `${(week.totalSales / Math.max(...weeklyData.map(w => w.totalSales))) * 100}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* SKU Detail View */}
-        {viewMode === "sku" && (
-          <div className="space-y-6">
-            {/* SKU Performance Chart */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                SKU Performance: {selectedSku}
-              </h2>
-              <div className="h-96">
-                <Line 
-                  data={{
-                    labels: trendData.map(m => m.period),
-                    datasets: [{
-                      label: selectedSku,
-                      data: trendData.map(month => {
-                        const skuData = month.skuBreakdown.find(sku => sku.sku === selectedSku);
-                        return skuData ? skuData.quantity : 0;
-                      }),
-                      borderColor: 'rgb(139, 92, 246)',
-                      backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                      fill: true,
-                      tension: 0.1,
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: {
-                      legend: {
-                        position: 'top' as const,
-                      },
-                      title: {
-                        display: true,
-                        text: `${selectedSku} Performance Over Time`,
-                      },
-                      tooltip: {
-                        callbacks: {
-                          label: function(context: any) {
-                            const month = trendData[context.dataIndex];
-                            const skuData = month.skuBreakdown.find(sku => sku.sku === selectedSku);
-                            return [
-                              `Quantity: ${formatNumber(context.parsed.y)} units`,
-                              `Sales: ${formatCurrency(skuData?.sales || 0)}`
-                            ];
-                          }
-                        }
-                      }
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          callback: function(value: any) {
-                            return formatNumber(value);
-                          }
-                        }
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* SKU Monthly Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {trendData.map((month) => {
-                const skuData = month.skuBreakdown.find(sku => sku.sku === selectedSku);
-                if (!skuData) return null;
-                
-                return (
-                  <div key={month.period} className="bg-white rounded-lg shadow-sm p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-medium text-gray-900">{month.period}</h3>
-                      <div className="text-right">
-                        <div className="font-semibold text-green-600">
-                          {formatCurrency(skuData.sales)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {formatNumber(skuData.quantity)} units
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div 
-                        className="bg-gradient-to-r from-purple-400 to-pink-400 h-1.5 rounded-full"
-                        style={{ 
-                          width: `${(skuData.quantity / Math.max(...trendData.map(m => {
-                            const sku = m.skuBreakdown.find(s => s.sku === selectedSku);
-                            return sku ? sku.quantity : 0;
-                          }))) * 100}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
       </div>
     </div>
