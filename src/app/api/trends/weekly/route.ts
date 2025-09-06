@@ -18,22 +18,26 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
     const endDate = new Date(parseInt(year), parseInt(month), 0);
     
-    // Get line items data for the specific month
+    // Get line items data for the specific month - only pallet sales (same filter as data explorer)
     const query = `
       SELECT 
         strftime('%Y-%W', o.createdAt) as week,
         strftime('%Y-%m-%d', o.createdAt) as date,
         json_extract(li.value, '$.quantity') as quantity,
         json_extract(li.value, '$.totalPrice') as price,
-        json_extract(li.value, '$.name') as sku
+        json_extract(li.value, '$.title') as title,
+        json_extract(li.value, '$.name') as name
       FROM all_orders o,
       json_each(o.lineItems) as li
       WHERE o.createdAt >= '${startDate.toISOString().split('T')[0]}'
         AND o.createdAt <= '${endDate.toISOString().split('T')[0]}'
-        AND json_extract(li.value, '$.name') IS NOT NULL
+        AND json_extract(li.value, '$.title') IS NOT NULL
         AND json_extract(li.value, '$.quantity') IS NOT NULL
         AND json_extract(li.value, '$.totalPrice') IS NOT NULL
-        AND json_extract(li.value, '$.name') != ''
+        AND (
+          json_extract(li.value, '$.title') = 'Build a Pallet' 
+          OR json_extract(li.value, '$.title') LIKE '%Pallet%'
+        )
       ORDER BY o.createdAt DESC
     `;
     
@@ -48,12 +52,28 @@ export async function GET(request: NextRequest) {
     
     // Process each line item
     lines.forEach(line => {
-      const [week, date, quantity, price, sku] = line.split('|');
+      const [week, date, quantity, price, title, name] = line.split('|');
       
-      if (!week || !quantity || !price || !sku) return;
+      if (!week || !quantity || !price || !title) return;
       
       const qty = parseFloat(quantity) || 0;
       const sales = parseFloat(price) || 0;
+      
+      // Calculate effective SKU and quantity (same logic as data explorer)
+      let effectiveSKU = '';
+      let effectiveQuantity = qty;
+      
+      if (title === 'Build a Pallet') {
+        // Handle "Build a Pallet" - extract product name from name field
+        effectiveSKU = name?.replace('Build a Pallet - ', '') || `V-${name}`;
+        effectiveQuantity = qty; // quantity is units of that SKU on the pallet
+      } else if (title?.includes('Pallet')) {
+        // Handle pre-built pallet products - extract base SKU
+        effectiveSKU = title.replace(' Pallet', '');
+        effectiveQuantity = qty * 50; // multiply quantity by 50 for pallet products
+      }
+      
+      if (!effectiveSKU) return; // Skip if we couldn't determine effective SKU
       
       // Create a more readable week label
       const weekDate = new Date(date);
@@ -73,14 +93,14 @@ export async function GET(request: NextRequest) {
       }
       
       weeklyData[weekLabel].totalSales += sales;
-      weeklyData[weekLabel].totalQuantity += qty;
+      weeklyData[weekLabel].totalQuantity += effectiveQuantity;
       
-      if (!weeklyData[weekLabel].skuBreakdown[sku]) {
-        weeklyData[weekLabel].skuBreakdown[sku] = { quantity: 0, sales: 0 };
+      if (!weeklyData[weekLabel].skuBreakdown[effectiveSKU]) {
+        weeklyData[weekLabel].skuBreakdown[effectiveSKU] = { quantity: 0, sales: 0 };
       }
       
-      weeklyData[weekLabel].skuBreakdown[sku].quantity += qty;
-      weeklyData[weekLabel].skuBreakdown[sku].sales += sales;
+      weeklyData[weekLabel].skuBreakdown[effectiveSKU].quantity += effectiveQuantity;
+      weeklyData[weekLabel].skuBreakdown[effectiveSKU].sales += sales;
     });
     
     // Convert to array format
