@@ -15,34 +15,30 @@ export async function POST(request: NextRequest) {
     console.log('New push subscription:', subscription);
     
     // Store subscription in database
-    const sqlite3 = require('sqlite3').verbose();
-    const db = new sqlite3.Database('./kinetic.db');
+    const { execSync } = require('child_process');
     
-    return new Promise((resolve) => {
-      db.run(`
-        INSERT OR REPLACE INTO push_subscriptions (endpoint, p256dh, auth)
-        VALUES (?, ?, ?)
-      `, [
-        subscription.endpoint,
-        subscription.keys.p256dh,
-        subscription.keys.auth
-      ], function(err) {
-        if (err) {
-          console.error('Error saving subscription:', err);
-          resolve(NextResponse.json(
-            { error: 'Failed to save subscription' },
-            { status: 500 }
-          ));
-        } else {
-          console.log('Subscription saved successfully');
-          resolve(NextResponse.json({ 
-            success: true, 
-            message: 'Subscription saved successfully' 
-          }));
-        }
-        db.close();
+    try {
+      // Use sqlite3 command line to insert the subscription
+      const endpoint = subscription.endpoint.replace(/'/g, "''");
+      const p256dh = subscription.keys.p256dh.replace(/'/g, "''");
+      const auth = subscription.keys.auth.replace(/'/g, "''");
+      
+      const sql = `INSERT OR REPLACE INTO push_subscriptions (endpoint, p256dh, auth) VALUES ('${endpoint}', '${p256dh}', '${auth}')`;
+      
+      execSync(`sqlite3 kinetic.db "${sql}"`, { stdio: 'pipe' });
+      
+      console.log('Subscription saved successfully');
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Subscription saved successfully' 
       });
-    });
+    } catch (dbError) {
+      console.error('Error saving subscription:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to save subscription: ' + dbError.message },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Error saving subscription:', error);
     return NextResponse.json(
