@@ -1,5 +1,5 @@
 // Service Worker for Kinetic App PWA
-const CACHE_NAME = 'kinetic-app-v2.0.0';
+const CACHE_NAME = 'kinetic-app-v3.0.0';
 const STATIC_CACHE = 'kinetic-static-v1.0.0';
 const DYNAMIC_CACHE = 'kinetic-dynamic-v1.0.0';
 
