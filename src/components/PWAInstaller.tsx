@@ -23,6 +23,13 @@ export default function PWAInstaller() {
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
     }
+    
+    // Force a small delay to ensure state updates properly
+    setTimeout(() => {
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        setIsInstalled(true);
+      }
+    }, 100);
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -167,6 +174,7 @@ export default function PWAInstaller() {
   };
 
   if (isInstalled) {
+    console.log('PWA is installed, showing notification buttons');
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
         <div className="flex items-start">
