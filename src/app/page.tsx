@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import PWAInstaller from "@/components/PWAInstaller";
 
 type Category = "bulk" | "issues" | "questions";
 
@@ -374,6 +375,11 @@ export default function Home() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* PWA Installer */}
+      <div className="px-4 py-2">
+        <PWAInstaller />
       </div>
 
       {/* Content */}
