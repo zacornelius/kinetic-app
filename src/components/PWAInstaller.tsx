@@ -96,10 +96,8 @@ export default function PWAInstaller() {
           icon: '/icons/icon-192x192.png'
         });
         
-        // For non-Safari browsers, also register for push notifications
-        if (!isSafari) {
-          await registerForPushNotifications();
-        }
+        // Always try to register for push notifications (PWA should support this)
+        await registerForPushNotifications();
       } else {
         alert('Notifications were denied. You can enable them in your browser settings.');
       }
