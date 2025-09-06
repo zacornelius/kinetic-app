@@ -12,25 +12,36 @@ export async function POST(request: NextRequest) {
   try {
     const subscription = await request.json();
     
-    // Store subscription in database (you might want to add a subscriptions table)
-    // For now, we'll just log it
     console.log('New push subscription:', subscription);
     
-    // You could store this in your database:
-    // const db = require('@/lib/database').default;
-    // db.prepare(`
-    //   INSERT OR REPLACE INTO push_subscriptions (endpoint, p256dh, auth, user_id)
-    //   VALUES (?, ?, ?, ?)
-    // `).run(
-    //   subscription.endpoint,
-    //   subscription.keys.p256dh,
-    //   subscription.keys.auth,
-    //   'anonymous' // You might want to associate with a user
-    // );
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Subscription saved successfully' 
+    // Store subscription in database
+    const sqlite3 = require('sqlite3').verbose();
+    const db = new sqlite3.Database('./kinetic.db');
+    
+    return new Promise((resolve) => {
+      db.run(`
+        INSERT OR REPLACE INTO push_subscriptions (endpoint, p256dh, auth)
+        VALUES (?, ?, ?)
+      `, [
+        subscription.endpoint,
+        subscription.keys.p256dh,
+        subscription.keys.auth
+      ], function(err) {
+        if (err) {
+          console.error('Error saving subscription:', err);
+          resolve(NextResponse.json(
+            { error: 'Failed to save subscription' },
+            { status: 500 }
+          ));
+        } else {
+          console.log('Subscription saved successfully');
+          resolve(NextResponse.json({ 
+            success: true, 
+            message: 'Subscription saved successfully' 
+          }));
+        }
+        db.close();
+      });
     });
   } catch (error) {
     console.error('Error saving subscription:', error);
