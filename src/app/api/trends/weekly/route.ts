@@ -127,21 +127,24 @@ export async function GET(request: NextRequest) {
           .sort((a, b) => b.sales - a.sales) // Sort by sales descending
       }))
       .sort((a, b) => {
-        // Extract week number from "Week of Aug 10 - Aug 16" format
-        const getWeekNumber = (weekStr: string) => {
+        // Extract date from "Week of Aug 10 - Aug 16" format and sort by actual date
+        const getDateFromWeek = (weekStr: string) => {
           const match = weekStr.match(/Week of (\w+) (\d+)/);
           if (match) {
             const month = match[1];
             const day = parseInt(match[2]);
             const monthMap: { [key: string]: number } = {
-              'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-              'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+              'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+              'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
             };
-            return (monthMap[month] || 0) * 100 + day;
+            const monthIndex = monthMap[month] || 0;
+            // Assume current year for now, but this should be more sophisticated
+            const currentYear = new Date().getFullYear();
+            return new Date(currentYear, monthIndex, day);
           }
-          return 0;
+          return new Date(0);
         };
-        return getWeekNumber(a.week) - getWeekNumber(b.week); // Sort chronologically
+        return getDateFromWeek(a.week).getTime() - getDateFromWeek(b.week).getTime();
       });
     
     return NextResponse.json(trendData);

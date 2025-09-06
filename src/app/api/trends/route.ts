@@ -116,7 +116,18 @@ export async function GET(request: NextRequest) {
           }))
           .sort((a, b) => b.sales - a.sales) // Sort by sales descending
       }))
-      .sort((a, b) => a.period.localeCompare(b.period)); // Sort by period
+      .sort((a, b) => {
+        // Sort by actual date, not string comparison
+        const getDateFromPeriod = (period: string) => {
+          const [month, year] = period.split(' ');
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const monthIndex = monthNames.indexOf(month);
+          const fullYear = parseInt('20' + year);
+          return new Date(fullYear, monthIndex, 1);
+        };
+        return getDateFromPeriod(a.period).getTime() - getDateFromPeriod(b.period).getTime();
+      });
     
     return NextResponse.json(trendData);
     
