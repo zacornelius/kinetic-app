@@ -2,6 +2,31 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 interface TrendData {
   period: string;
@@ -81,6 +106,141 @@ export default function TrendsPage() {
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US').format(num);
+  };
+
+  // Prepare chart data
+  const prepareChartData = () => {
+    const labels = trendData.map(item => item.period);
+    const salesData = trendData.map(item => item.totalSales);
+    const quantityData = trendData.map(item => item.totalQuantity);
+    
+    // Get all unique SKUs across all periods
+    const allSkus = new Set<string>();
+    trendData.forEach(period => {
+      period.skuBreakdown.forEach(sku => allSkus.add(sku.sku));
+    });
+    
+    // Create SKU datasets
+    const skuDatasets = Array.from(allSkus).slice(0, 5).map((sku, index) => {
+      const colors = [
+        'rgb(59, 130, 246)',   // Blue
+        'rgb(16, 185, 129)',   // Green
+        'rgb(245, 101, 101)',  // Red
+        'rgb(251, 191, 36)',   // Yellow
+        'rgb(139, 92, 246)',   // Purple
+      ];
+      
+      return {
+        label: sku,
+        data: trendData.map(period => {
+          const skuData = period.skuBreakdown.find(s => s.sku === sku);
+          return skuData ? skuData.quantity : 0;
+        }),
+        borderColor: colors[index % colors.length],
+        backgroundColor: colors[index % colors.length] + '20',
+        fill: false,
+        tension: 0.1,
+      };
+    });
+
+    return {
+      labels,
+      salesData,
+      quantityData,
+      skuDatasets,
+    };
+  };
+
+  const chartData = prepareChartData();
+
+  const salesChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Monthly Sales Trends',
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            return `Sales: ${formatCurrency(context.parsed.y)}`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value: any) {
+            return formatCurrency(value);
+          }
+        }
+      }
+    }
+  };
+
+  const quantityChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Monthly Quantity Trends',
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            return `Quantity: ${formatNumber(context.parsed.y)} units`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value: any) {
+            return formatNumber(value);
+          }
+        }
+      }
+    }
+  };
+
+  const skuChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Top SKU Performance Over Time',
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            return `${context.dataset.label}: ${formatNumber(context.parsed.y)} units`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value: any) {
+            return formatNumber(value);
+          }
+        }
+      }
+    }
   };
 
   if (loading) {
@@ -194,16 +354,71 @@ export default function TrendsPage() {
 
         {/* Monthly View */}
         {viewMode === "monthly" && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Trends</h2>
-            <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Sales Trend Chart */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Trends</h2>
+              <div className="h-80">
+                <Line 
+                  data={{
+                    labels: chartData.labels,
+                    datasets: [{
+                      label: 'Sales',
+                      data: chartData.salesData,
+                      borderColor: 'rgb(59, 130, 246)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      fill: true,
+                      tension: 0.1,
+                    }]
+                  }}
+                  options={salesChartOptions}
+                />
+              </div>
+            </div>
+
+            {/* Quantity Trend Chart */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Quantity Trends</h2>
+              <div className="h-80">
+                <Bar 
+                  data={{
+                    labels: chartData.labels,
+                    datasets: [{
+                      label: 'Units Sold',
+                      data: chartData.quantityData,
+                      backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                      borderColor: 'rgb(16, 185, 129)',
+                      borderWidth: 1,
+                    }]
+                  }}
+                  options={quantityChartOptions}
+                />
+              </div>
+            </div>
+
+            {/* SKU Performance Chart */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Top SKU Performance Over Time</h2>
+              <div className="h-80">
+                <Line 
+                  data={{
+                    labels: chartData.labels,
+                    datasets: chartData.skuDatasets
+                  }}
+                  options={skuChartOptions}
+                />
+              </div>
+            </div>
+
+            {/* Monthly Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {trendData.map((month, index) => (
                 <div 
                   key={month.period}
-                  className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md cursor-pointer transition-shadow"
                   onClick={() => handlePeriodClick(month.period)}
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <h3 className="font-medium text-gray-900">{month.period}</h3>
                     <div className="text-right">
                       <div className="text-lg font-semibold text-green-600">
@@ -215,29 +430,19 @@ export default function TrendsPage() {
                     </div>
                   </div>
                   
-                  {/* Progress bar */}
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${(month.totalSales / Math.max(...trendData.map(m => m.totalSales))) * 100}%` 
-                      }}
-                    ></div>
-                  </div>
-
                   {/* Top SKUs */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {month.skuBreakdown.slice(0, 4).map((sku) => (
+                  <div className="space-y-1">
+                    {month.skuBreakdown.slice(0, 3).map((sku) => (
                       <div 
                         key={sku.sku}
-                        className="text-xs bg-gray-100 rounded px-2 py-1 hover:bg-blue-100 cursor-pointer"
+                        className="flex justify-between text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSkuClick(sku.sku);
                         }}
                       >
-                        <div className="font-medium truncate">{sku.sku}</div>
-                        <div className="text-gray-500">{formatNumber(sku.quantity)}</div>
+                        <span className="truncate">{sku.sku}</span>
+                        <span className="text-gray-500">{formatNumber(sku.quantity)}</span>
                       </div>
                     ))}
                   </div>
@@ -249,15 +454,63 @@ export default function TrendsPage() {
 
         {/* Weekly View */}
         {viewMode === "weekly" && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Weekly Breakdown: {selectedPeriod}
-            </h2>
-            <div className="space-y-3">
+          <div className="space-y-6">
+            {/* Weekly Sales Chart */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Weekly Breakdown: {selectedPeriod}
+              </h2>
+              <div className="h-80">
+                <Bar 
+                  data={{
+                    labels: weeklyData.map(w => w.week),
+                    datasets: [{
+                      label: 'Sales',
+                      data: weeklyData.map(w => w.totalSales),
+                      backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                      borderColor: 'rgb(59, 130, 246)',
+                      borderWidth: 1,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    plugins: {
+                      legend: {
+                        position: 'top' as const,
+                      },
+                      title: {
+                        display: true,
+                        text: 'Weekly Sales',
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context: any) {
+                            return `Sales: ${formatCurrency(context.parsed.y)}`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function(value: any) {
+                            return formatCurrency(value);
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Weekly Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {weeklyData.map((week, index) => (
-                <div key={week.week} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-gray-900">{week.week}</h3>
+                <div key={week.week} className="bg-white rounded-lg shadow-sm p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-medium text-gray-900 text-sm">{week.week}</h3>
                     <div className="text-right">
                       <div className="font-semibold text-green-600">
                         {formatCurrency(week.totalSales)}
@@ -268,7 +521,7 @@ export default function TrendsPage() {
                     </div>
                   </div>
                   
-                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
                     <div 
                       className="bg-gradient-to-r from-blue-400 to-green-400 h-1.5 rounded-full"
                       style={{ 
@@ -284,18 +537,75 @@ export default function TrendsPage() {
 
         {/* SKU Detail View */}
         {viewMode === "sku" && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              SKU Performance: {selectedSku}
-            </h2>
-            <div className="space-y-4">
+          <div className="space-y-6">
+            {/* SKU Performance Chart */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                SKU Performance: {selectedSku}
+              </h2>
+              <div className="h-80">
+                <Line 
+                  data={{
+                    labels: trendData.map(m => m.period),
+                    datasets: [{
+                      label: selectedSku,
+                      data: trendData.map(month => {
+                        const skuData = month.skuBreakdown.find(sku => sku.sku === selectedSku);
+                        return skuData ? skuData.quantity : 0;
+                      }),
+                      borderColor: 'rgb(139, 92, 246)',
+                      backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                      fill: true,
+                      tension: 0.1,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    plugins: {
+                      legend: {
+                        position: 'top' as const,
+                      },
+                      title: {
+                        display: true,
+                        text: `${selectedSku} Performance Over Time`,
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context: any) {
+                            const month = trendData[context.dataIndex];
+                            const skuData = month.skuBreakdown.find(sku => sku.sku === selectedSku);
+                            return [
+                              `Quantity: ${formatNumber(context.parsed.y)} units`,
+                              `Sales: ${formatCurrency(skuData?.sales || 0)}`
+                            ];
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function(value: any) {
+                            return formatNumber(value);
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* SKU Monthly Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {trendData.map((month) => {
                 const skuData = month.skuBreakdown.find(sku => sku.sku === selectedSku);
                 if (!skuData) return null;
                 
                 return (
-                  <div key={month.period} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between">
+                  <div key={month.period} className="bg-white rounded-lg shadow-sm p-4">
+                    <div className="flex items-center justify-between mb-3">
                       <h3 className="font-medium text-gray-900">{month.period}</h3>
                       <div className="text-right">
                         <div className="font-semibold text-green-600">
@@ -307,7 +617,7 @@ export default function TrendsPage() {
                       </div>
                     </div>
                     
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div 
                         className="bg-gradient-to-r from-purple-400 to-pink-400 h-1.5 rounded-full"
                         style={{ 
