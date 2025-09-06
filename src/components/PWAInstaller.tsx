@@ -16,6 +16,7 @@ export default function PWAInstaller() {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [isSafari, setIsSafari] = useState(false);
 
   useEffect(() => {
     // Check if app is already installed
@@ -41,6 +42,10 @@ export default function PWAInstaller() {
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
+
+    // Detect Safari
+    const isSafariBrowser = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    setIsSafari(isSafariBrowser);
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -69,7 +74,7 @@ export default function PWAInstaller() {
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
-      alert('This browser does not support notifications');
+      alert('Safari has limited notification support. For full PWA features, try Chrome or Firefox.');
       return;
     }
 
@@ -179,19 +184,28 @@ export default function PWAInstaller() {
                 Install App
               </button>
             )}
-            <button
-              onClick={requestNotificationPermission}
-              className="bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              {notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
-            </button>
-            {notificationPermission === 'granted' && (
-              <button
-                onClick={sendTestNotification}
-                className="bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                Test Notification
-              </button>
+            {!isSafari && (
+              <>
+                <button
+                  onClick={requestNotificationPermission}
+                  className="bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  {notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
+                </button>
+                {notificationPermission === 'granted' && (
+                  <button
+                    onClick={sendTestNotification}
+                    className="bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    Test Notification
+                  </button>
+                )}
+              </>
+            )}
+            {isSafari && (
+              <div className="text-sm text-blue-600">
+                💡 For notifications, try Chrome or Firefox
+              </div>
             )}
           </div>
         </div>
