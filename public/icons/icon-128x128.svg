@@ -1,4 +1,12 @@
 <svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
   <rect width="128" height="128" fill="#3b82f6" rx="25.6"/>
-  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="51.2" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="white">K</text>
+  
+  <!-- Kinetic "K" logo -->
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="76.8" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="white">K</text>
+  
+  <!-- Add more design elements as needed:
+  <circle cx="64" cy="64" r="38.4" fill="white" opacity="0.2"/>
+  <path d="M25.6 25.6 L102.4 25.6 L102.4 102.4 L25.6 102.4 Z" fill="none" stroke="white" stroke-width="2.56"/>
+  -->
 </svg>
