@@ -39,11 +39,23 @@ interface TrendData {
   }[];
 }
 
+interface WeeklyData {
+  week: string;
+  totalSales: number;
+  totalQuantity: number;
+  skuBreakdown: {
+    sku: string;
+    quantity: number;
+    sales: number;
+  }[];
+}
+
 
 export default function TrendsPage() {
   const [trendData, setTrendData] = useState<TrendData[]>([]);
+  const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<"6months" | "12months" | "24months">("12months");
+  const [timeRange, setTimeRange] = useState<"3months" | "6months" | "12months" | "24months">("12months");
 
   useEffect(() => {
     loadTrendData();
@@ -52,9 +64,19 @@ export default function TrendsPage() {
   const loadTrendData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/trends?range=${timeRange}`);
-      const data = await response.json();
-      setTrendData(data);
+      if (timeRange === "3months") {
+        // For 3 months, load weekly data
+        const response = await fetch(`/api/trends/weekly?range=3months`);
+        const data = await response.json();
+        setWeeklyData(data);
+        setTrendData([]); // Clear monthly data
+      } else {
+        // For other ranges, load monthly data
+        const response = await fetch(`/api/trends?range=${timeRange}`);
+        const data = await response.json();
+        setTrendData(data);
+        setWeeklyData([]); // Clear weekly data
+      }
     } catch (error) {
       console.error("Error loading trend data:", error);
     } finally {
@@ -76,13 +98,16 @@ export default function TrendsPage() {
 
   // Prepare chart data
   const prepareChartData = () => {
-    const labels = trendData.map(item => item.period);
-    const salesData = trendData.map(item => item.totalSales);
-    const quantityData = trendData.map(item => item.totalQuantity);
+    const isWeekly = timeRange === "3months";
+    const data = isWeekly ? weeklyData : trendData;
+    
+    const labels = data.map(item => isWeekly ? item.week : item.period);
+    const salesData = data.map(item => item.totalSales);
+    const quantityData = data.map(item => item.totalQuantity);
     
     // Get all unique SKUs across all periods
     const allSkus = new Set<string>();
-    trendData.forEach(period => {
+    data.forEach(period => {
       period.skuBreakdown.forEach(sku => allSkus.add(sku.sku));
     });
     
@@ -98,7 +123,7 @@ export default function TrendsPage() {
       
       return {
         label: sku,
-        data: trendData.map(period => {
+        data: data.map(period => {
           const skuData = period.skuBreakdown.find(s => s.sku === sku);
           return skuData ? skuData.quantity : 0;
         }),
@@ -114,6 +139,7 @@ export default function TrendsPage() {
       salesData,
       quantityData,
       skuDatasets,
+      isWeekly,
     };
   };
 
@@ -127,7 +153,7 @@ export default function TrendsPage() {
       },
       title: {
         display: true,
-        text: 'Monthly Sales Trends',
+        text: chartData.isWeekly ? 'Weekly Sales Trends' : 'Monthly Sales Trends',
       },
       tooltip: {
         callbacks: {
@@ -157,7 +183,7 @@ export default function TrendsPage() {
       },
       title: {
         display: true,
-        text: 'Monthly Quantity Trends',
+        text: chartData.isWeekly ? 'Weekly Quantity Trends' : 'Monthly Quantity Trends',
       },
       tooltip: {
         callbacks: {
@@ -187,7 +213,7 @@ export default function TrendsPage() {
       },
       title: {
         display: true,
-        text: 'Top SKU Performance Over Time',
+        text: chartData.isWeekly ? 'Top SKU Performance (Weekly)' : 'Top SKU Performance Over Time',
       },
       tooltip: {
         callbacks: {
@@ -255,19 +281,30 @@ export default function TrendsPage() {
           <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="text-sm text-gray-500">Total Sales</div>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(trendData.reduce((sum, month) => sum + month.totalSales, 0))}
+              {formatCurrency(chartData.isWeekly 
+                ? weeklyData.reduce((sum, week) => sum + week.totalSales, 0)
+                : trendData.reduce((sum, month) => sum + month.totalSales, 0)
+              )}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="text-sm text-gray-500">Total Units</div>
             <div className="text-2xl font-bold text-blue-600">
-              {formatNumber(trendData.reduce((sum, month) => sum + month.totalQuantity, 0))}
+              {formatNumber(chartData.isWeekly 
+                ? weeklyData.reduce((sum, week) => sum + week.totalQuantity, 0)
+                : trendData.reduce((sum, month) => sum + month.totalQuantity, 0)
+              )}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="text-sm text-gray-500">Average per Month</div>
+            <div className="text-sm text-gray-500">
+              {chartData.isWeekly ? 'Average per Week' : 'Average per Month'}
+            </div>
             <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(trendData.length > 0 ? trendData.reduce((sum, month) => sum + month.totalSales, 0) / trendData.length : 0)}
+              {formatCurrency(chartData.isWeekly 
+                ? (weeklyData.length > 0 ? weeklyData.reduce((sum, week) => sum + week.totalSales, 0) / weeklyData.length : 0)
+                : (trendData.length > 0 ? trendData.reduce((sum, month) => sum + month.totalSales, 0) / trendData.length : 0)
+              )}
             </div>
           </div>
         </div>
@@ -282,6 +319,7 @@ export default function TrendsPage() {
                 onChange={(e) => setTimeRange(e.target.value as any)}
                 className="border rounded-md px-3 py-1 text-sm"
               >
+                <option value="3months">3 Months (Weekly)</option>
                 <option value="6months">6 Months</option>
                 <option value="12months">12 Months</option>
                 <option value="24months">24 Months</option>
@@ -295,7 +333,9 @@ export default function TrendsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Container 1: Sales Trend Chart */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Trends</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {chartData.isWeekly ? 'Weekly Sales Trends' : 'Monthly Sales Trends'}
+            </h2>
             <div className="h-80">
               <Line 
                 data={{
@@ -316,7 +356,9 @@ export default function TrendsPage() {
 
           {/* Container 2: Quantity Trend Chart */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Quantity Trends</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {chartData.isWeekly ? 'Weekly Quantity Trends' : 'Monthly Quantity Trends'}
+            </h2>
             <div className="h-80">
               <Bar 
                 data={{
@@ -336,7 +378,9 @@ export default function TrendsPage() {
 
           {/* Container 3: SKU Performance Chart */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Top SKU Performance Over Time</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {chartData.isWeekly ? 'Top SKU Performance (Weekly)' : 'Top SKU Performance Over Time'}
+            </h2>
             <div className="h-80">
               <Line 
                 data={{
@@ -348,30 +392,34 @@ export default function TrendsPage() {
             </div>
           </div>
 
-          {/* Container 4: Monthly Detail Cards - Scrollable */}
+          {/* Container 4: Detail Cards - Scrollable */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Details</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {chartData.isWeekly ? 'Weekly Details' : 'Monthly Details'}
+            </h2>
             <div className="h-80 overflow-y-auto space-y-3 pr-2">
-              {trendData.map((month, index) => (
+              {(chartData.isWeekly ? weeklyData : trendData).map((period, index) => (
                 <div 
-                  key={month.period}
+                  key={chartData.isWeekly ? period.week : period.period}
                   className="border rounded-lg p-3 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-gray-900 text-sm">{month.period}</h3>
+                    <h3 className="font-medium text-gray-900 text-sm">
+                      {chartData.isWeekly ? period.week : period.period}
+                    </h3>
                     <div className="text-right">
                       <div className="text-sm font-semibold text-green-600">
-                        {formatCurrency(month.totalSales)}
+                        {formatCurrency(period.totalSales)}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {formatNumber(month.totalQuantity)} units
+                        {formatNumber(period.totalQuantity)} units
                       </div>
                     </div>
                   </div>
                   
                   {/* All SKUs - Compact */}
                   <div className="space-y-1 max-h-20 overflow-y-auto">
-                    {month.skuBreakdown.map((sku) => (
+                    {period.skuBreakdown.map((sku) => (
                       <div 
                         key={sku.sku}
                         className="flex justify-between text-xs hover:bg-gray-50 p-1 rounded"

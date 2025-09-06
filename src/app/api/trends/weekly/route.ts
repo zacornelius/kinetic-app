@@ -5,18 +5,27 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period');
+    const range = searchParams.get('range');
     
-    if (!period) {
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (range === '3months') {
+      // For 3 months, get last 3 months of weekly data
+      const now = new Date();
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    } else if (period) {
+      // Parse the period (YYYY-MM format)
+      const [year, month] = period.split('-');
+      startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      endDate = new Date(parseInt(year), parseInt(month), 0);
+    } else {
       return NextResponse.json(
-        { error: 'Period parameter is required' },
+        { error: 'Period or range parameter is required' },
         { status: 400 }
       );
     }
-    
-    // Parse the period (YYYY-MM format)
-    const [year, month] = period.split('-');
-    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-    const endDate = new Date(parseInt(year), parseInt(month), 0);
     
     // Get line items data for the specific month - only pallet sales (same filter as data explorer)
     const query = `
