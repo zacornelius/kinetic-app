@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 
+function formatPeriod(period: string): string {
+  // Convert "2024-08" to "Aug 24"
+  const [year, month] = period.split('-');
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  const monthIndex = parseInt(month) - 1;
+  const shortYear = year.slice(-2);
+  return `${monthNames[monthIndex]} ${shortYear}`;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -93,7 +105,7 @@ export async function GET(request: NextRequest) {
     // Convert to array format
     const trendData = Object.entries(monthlyData)
       .map(([period, data]) => ({
-        period,
+        period: formatPeriod(period),
         totalSales: data.totalSales,
         totalQuantity: data.totalQuantity,
         skuBreakdown: Object.entries(data.skuBreakdown)

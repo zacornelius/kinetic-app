@@ -126,7 +126,23 @@ export async function GET(request: NextRequest) {
           }))
           .sort((a, b) => b.sales - a.sales) // Sort by sales descending
       }))
-      .sort((a, b) => a.week.localeCompare(b.week)); // Sort by week
+      .sort((a, b) => {
+        // Extract week number from "Week of Aug 10 - Aug 16" format
+        const getWeekNumber = (weekStr: string) => {
+          const match = weekStr.match(/Week of (\w+) (\d+)/);
+          if (match) {
+            const month = match[1];
+            const day = parseInt(match[2]);
+            const monthMap: { [key: string]: number } = {
+              'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+              'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+            };
+            return (monthMap[month] || 0) * 100 + day;
+          }
+          return 0;
+        };
+        return getWeekNumber(a.week) - getWeekNumber(b.week); // Sort chronologically
+      });
     
     return NextResponse.json(trendData);
     
