@@ -108,33 +108,43 @@ export default function PWAInstaller() {
   };
 
   const registerForPushNotifications = async () => {
+    console.log('Attempting to register for push notifications...');
+    
     if (!('serviceWorker' in navigator)) {
       console.log('Service Worker not supported');
       return;
     }
 
     try {
+      console.log('Getting service worker registration...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('Service worker ready:', registration);
       
       // Subscribe to push notifications
+      console.log('Subscribing to push notifications...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: 'BF8E--_VAzbhkGHuK7icv2cAJm_O9pqqsfs-J-NFKvD3jEtCDTk7cy3RZdH3UtaZQoyxoq2vU2Qist8eBcpnX6Q'
       });
 
-      console.log('Push subscription:', subscription);
+      console.log('Push subscription created:', subscription);
       
       // Send subscription to server
-      await fetch('/api/notifications/subscribe', {
+      console.log('Sending subscription to server...');
+      const response = await fetch('/api/notifications/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(subscription),
       });
+      
+      const result = await response.json();
+      console.log('Server response:', result);
 
     } catch (error) {
       console.error('Error registering for push notifications:', error);
+      alert('Error setting up push notifications: ' + error.message);
     }
   };
 
