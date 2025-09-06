@@ -74,16 +74,31 @@ export default function PWAInstaller() {
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
-      alert('Safari has limited notification support. For full PWA features, try Chrome or Firefox.');
+      alert('This browser does not support notifications');
       return;
     }
 
-    const permission = await Notification.requestPermission();
-    setNotificationPermission(permission);
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
 
-    if (permission === 'granted') {
-      // Register for push notifications
-      await registerForPushNotifications();
+      if (permission === 'granted') {
+        // Show immediate notification to confirm it works
+        new Notification('Kinetic App', {
+          body: 'Notifications enabled! You can now receive updates.',
+          icon: '/icons/icon-192x192.png'
+        });
+        
+        // For non-Safari browsers, also register for push notifications
+        if (!isSafari) {
+          await registerForPushNotifications();
+        }
+      } else {
+        alert('Notifications were denied. You can enable them in your browser settings.');
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      alert('Error enabling notifications. Please try again.');
     }
   };
 
@@ -125,19 +140,29 @@ export default function PWAInstaller() {
     }
 
     try {
-      await fetch('/api/notifications/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: 'Test Notification',
+      // For Safari, show a direct notification
+      if (isSafari) {
+        new Notification('Test Notification', {
           body: 'This is a test notification from Kinetic App!',
           icon: '/icons/icon-192x192.png'
-        }),
-      });
+        });
+      } else {
+        // For other browsers, use the API
+        await fetch('/api/notifications/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: 'Test Notification',
+            body: 'This is a test notification from Kinetic App!',
+            icon: '/icons/icon-192x192.png'
+          }),
+        });
+      }
     } catch (error) {
       console.error('Error sending test notification:', error);
+      alert('Error sending test notification. Please try again.');
     }
   };
 
@@ -184,28 +209,19 @@ export default function PWAInstaller() {
                 Install App
               </button>
             )}
-            {!isSafari && (
-              <>
-                <button
-                  onClick={requestNotificationPermission}
-                  className="bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  {notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
-                </button>
-                {notificationPermission === 'granted' && (
-                  <button
-                    onClick={sendTestNotification}
-                    className="bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    Test Notification
-                  </button>
-                )}
-              </>
-            )}
-            {isSafari && (
-              <div className="text-sm text-blue-600">
-                💡 For notifications, try Chrome or Firefox
-              </div>
+            <button
+              onClick={requestNotificationPermission}
+              className="bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              {notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
+            </button>
+            {notificationPermission === 'granted' && (
+              <button
+                onClick={sendTestNotification}
+                className="bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                Test Notification
+              </button>
             )}
           </div>
         </div>
