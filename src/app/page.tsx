@@ -192,7 +192,7 @@ export default function Home() {
                 </span>
               </div>
               <div className="flex gap-2">
-                {currentUser && (
+                {user && (
                   <button
                     onClick={() => takeOwnership(q.id)}
                     className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium"
