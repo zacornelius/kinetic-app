@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists in database
-    const userQuery = `SELECT * FROM users WHERE email = '${email}'`;
+    const userQuery = `SELECT id, email, password, firstName, lastName, role, createdAt FROM users WHERE email = '${email}'`;
     const userResult = execSync(`sqlite3 kinetic.db "${userQuery}"`, { encoding: 'utf8' });
     
     if (!userResult.trim()) {
@@ -27,11 +27,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = JSON.parse(userResult);
+    // Parse pipe-separated SQLite output
+    const [id, userEmail, hashedPassword, firstName, lastName, role, createdAt] = userResult.trim().split('|');
+    const user = { id, email: userEmail, password: hashedPassword, firstName, lastName, role, createdAt };
     
-    // For now, we'll use a simple password check since we don't have hashed passwords yet
-    // In production, you should hash passwords during signup
-    if (user.password !== password) {
+    // Verify password using bcrypt
+    const isPasswordValid = await bcrypt.compare(password, hashedPassword);
+    if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
