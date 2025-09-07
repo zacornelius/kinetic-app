@@ -306,32 +306,44 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Data Explorer & Trends */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        
-        {/* Data Explorer */}
-        <div className="bg-white border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Data Explorer</h2>
-          <p className="text-gray-600 mb-4">Explore and analyze your data across all sources</p>
+        {/* User Management */}
+        <div className="bg-white border rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">User Management</h2>
+          <p className="text-gray-600 mb-4">Manage team access and user accounts</p>
           <a 
-            href="/admin/data-explorer" 
-            className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-center block"
+            href="/admin/users" 
+            className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-center block"
           >
-            Open Data Explorer
+            Manage Users
           </a>
         </div>
 
-        {/* Sales Trends */}
-        <div className="bg-white border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Sales Trends</h2>
-          <p className="text-gray-600 mb-4">Visualize sales performance and SKU trends over time</p>
-          <a 
-            href="/admin/trends" 
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-center block"
-          >
-            View Sales Trends
-          </a>
-        </div>
+        {/* Data Explorer & Trends */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          
+          {/* Data Explorer */}
+          <div className="bg-white border rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Data Explorer</h2>
+            <p className="text-gray-600 mb-4">Explore and analyze your data across all sources</p>
+            <a 
+              href="/admin/data-explorer" 
+              className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-center block"
+            >
+              Open Data Explorer
+            </a>
+          </div>
+
+          {/* Sales Trends */}
+          <div className="bg-white border rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Sales Trends</h2>
+            <p className="text-gray-600 mb-4">Visualize sales performance and SKU trends over time</p>
+            <a 
+              href="/admin/trends" 
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-center block"
+            >
+              View Sales Trends
+            </a>
+          </div>
 
         {/* Data Status Overview */}
         <div className="bg-white border rounded-lg p-6">
