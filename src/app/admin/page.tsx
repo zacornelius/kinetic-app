@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 
 type User = {
   id: string;
@@ -11,6 +13,7 @@ type User = {
 };
 
 export default function AdminDashboard() {
+  const { user, logout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -134,8 +137,22 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen p-6 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Admin Cockpit ⚡</h1>
+    <ProtectedRoute adminOnly={true}>
+      <div className="min-h-screen p-6 max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Admin Cockpit ⚡</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              Welcome, {user?.firstName} {user?.lastName}
+            </span>
+            <button
+              onClick={logout}
+              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
       
       {/* User Management Section */}
       <div className="bg-white border rounded-lg p-6 mb-6">
@@ -339,6 +356,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

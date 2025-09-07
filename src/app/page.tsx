@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import PWAInstaller from "@/components/PWAInstaller";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Category = "bulk" | "issues" | "questions";
 
@@ -41,17 +43,15 @@ type User = {
 type TabType = "home" | "actions" | "orders" | "customers";
 
 export default function Home() {
+  const { user, logout } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [category, setCategory] = useState<"all" | Category>("all");
   const [subject, setSubject] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
-  const [signInEmail, setSignInEmail] = useState("");
 
   async function refresh() {
     const params = category === "all" ? "" : `?category=${category}`;
@@ -92,14 +92,14 @@ export default function Home() {
   }
 
   async function takeOwnership(id: string) {
-    if (!currentUser) {
+    if (!user) {
       alert("Please sign in first");
       return;
     }
     await fetch("/api/inquiries", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, ownerEmail: currentUser.email }),
+      body: JSON.stringify({ id, ownerEmail: user.email }),
     });
     refresh();
   }
@@ -113,19 +113,8 @@ export default function Home() {
     refresh();
   }
 
-  async function signIn() {
-    const user = users.find(u => u.email === signInEmail);
-    if (user) {
-      setCurrentUser(user);
-      setShowSignIn(false);
-      setSignInEmail("");
-    } else {
-      alert("User not found. Please check your email.");
-    }
-  }
-
   function signOut() {
-    setCurrentUser(null);
+    logout();
   }
 
   // Data filtering
@@ -133,10 +122,10 @@ export default function Home() {
     inquiries.filter(q => !q.ownerEmail && q.status !== "not_relevant"), [inquiries]);
   
   const assignedInquiries = useMemo(() => 
-    inquiries.filter(q => q.ownerEmail === currentUser?.email), [inquiries, currentUser]);
+    inquiries.filter(q => q.ownerEmail === user?.email), [inquiries, user]);
 
   const currentOrders = useMemo(() => 
-    orders.filter(o => o.ownerEmail === currentUser?.email && o.status !== "delivered" && o.status !== "cancelled"), [orders, currentUser]);
+    orders.filter(o => o.ownerEmail === user?.email && o.status !== "delivered" && o.status !== "cancelled"), [orders, user]);
 
   const allCustomerOrders = useMemo(() => {
     const customerMap = new Map();
@@ -347,33 +336,25 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50 pb-20">
       {/* Mobile Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-gray-900">Sales Dashboard</h1>
-            {currentUser ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">
-                  {currentUser.firstName} {currentUser.lastName}
-                </span>
-                <button
-                  onClick={signOut}
-                  className="px-3 py-1 bg-gray-600 text-white rounded text-sm"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowSignIn(true)}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-              >
-                Sign In
-              </button>
-            )}
-          </div>
+                 <div className="flex items-center justify-between">
+                   <h1 className="text-lg font-semibold text-gray-900">Sales Dashboard</h1>
+                   <div className="flex items-center gap-2">
+                     <span className="text-sm text-gray-600">
+                       {user?.firstName} {user?.lastName}
+                     </span>
+                     <button
+                       onClick={signOut}
+                       className="px-3 py-1 bg-gray-600 text-white rounded text-sm"
+                     >
+                       Sign Out
+                     </button>
+                   </div>
+                 </div>
         </div>
       </div>
 
@@ -443,17 +424,15 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Floating Add Button */}
-      {currentUser && (
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="fixed bottom-20 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-30 hover:bg-blue-700"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      )}
+             {/* Floating Add Button */}
+             <button
+               onClick={() => setShowAddModal(true)}
+               className="fixed bottom-20 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-30 hover:bg-blue-700"
+             >
+               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+               </svg>
+             </button>
 
       {/* Add Inquiry Modal */}
       {showAddModal && (
@@ -582,6 +561,7 @@ export default function Home() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Inquiry = {
   id: string;
@@ -67,6 +69,7 @@ type Customer = {
 };
 
 export default function DataExplorer() {
+  const { user, logout } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -244,11 +247,16 @@ export default function DataExplorer() {
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Data Explorer {isLoading && <span className="text-sm text-blue-600">(Loading...)</span>}</h1>
-        <div className="flex gap-2">
-          <button
+    <ProtectedRoute adminOnly={true}>
+      <div className="min-h-screen p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold">Data Explorer {isLoading && <span className="text-sm text-blue-600">(Loading...)</span>}</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <div className="flex gap-2">
+              <button
             onClick={loadData}
             disabled={isLoading}
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
@@ -1049,10 +1057,11 @@ export default function DataExplorer() {
         </div>
       )}
 
-      <div className="mt-4 text-sm text-gray-600">
-        <p>💡 Click on any cell to edit. Press Enter to save, Escape to cancel. Click on customers to view their purchase history.</p>
+        <div className="mt-4 text-sm text-gray-600">
+          <p>💡 Click on any cell to edit. Press Enter to save, Escape to cancel. Click on customers to view their purchase history.</p>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
 
