@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
     // Get user from database
-    const userQuery = `SELECT * FROM users WHERE id = '${decoded.userId}'`;
+    const userQuery = `SELECT id, email, password, firstName, lastName, role, createdAt FROM users WHERE id = '${decoded.userId}'`;
     const userResult = execSync(`sqlite3 kinetic.db "${userQuery}"`, { encoding: 'utf8' });
     
     if (!userResult.trim()) {
@@ -31,8 +31,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = JSON.parse(userResult);
-    const { password, ...userWithoutPassword } = user;
+    // Parse pipe-separated SQLite output
+    const [id, email, password, firstName, lastName, role, createdAt] = userResult.trim().split('|');
+    const user = { id, email, password, firstName, lastName, role, createdAt };
+    const { password: _, ...userWithoutPassword } = user;
 
     return NextResponse.json({
       user: userWithoutPassword,
