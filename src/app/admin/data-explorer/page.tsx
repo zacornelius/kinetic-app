@@ -1036,6 +1036,7 @@ export default function DataExplorer() {
               </div>
             </div>
           </div>
+          </div>
           
           <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
             <h4 className="font-medium text-yellow-800 mb-2">Issue Analysis:</h4>
@@ -1057,10 +1058,10 @@ export default function DataExplorer() {
         </div>
       )}
 
-        <div className="mt-4 text-sm text-gray-600">
-          <p>💡 Click on any cell to edit. Press Enter to save, Escape to cancel. Click on customers to view their purchase history.</p>
-        </div>
+      <div className="mt-4 text-sm text-gray-600">
+        <p>💡 Click on any cell to edit. Press Enter to save, Escape to cancel. Click on customers to view their purchase history.</p>
       </div>
+    </div>
     </ProtectedRoute>
   );
 }

@@ -505,62 +505,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Sign In Modal */}
-      {showSignIn && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md">
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Sign In</h3>
-                <button
-                  onClick={() => setShowSignIn(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                  placeholder="your@email.com"
-                  value={signInEmail}
-                  onChange={(e) => setSignInEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowSignIn(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={signIn}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
-                >
-                  Sign In
-                </button>
-              </div>
-              <div className="text-center">
-                <a 
-                  href="/admin" 
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Admin Access
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </ProtectedRoute>
   );
