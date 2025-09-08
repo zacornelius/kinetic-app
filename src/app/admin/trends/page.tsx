@@ -70,13 +70,13 @@ export default function TrendsPage() {
     try {
       if (timeRange === "3months") {
         // For 3 months, load weekly data
-        const response = await fetch(`/api/trends/weekly?range=3months`);
+        const response = await fetch(`/api/trends/weekly?range=3months&t=${Date.now()}`, { cache: "no-store" });
         const data = await response.json();
         setWeeklyData(data);
         setTrendData([]); // Clear monthly data
       } else {
         // For other ranges, load monthly data
-        const response = await fetch(`/api/trends?range=${timeRange}`);
+        const response = await fetch(`/api/trends?range=${timeRange}&t=${Date.now()}`, { cache: "no-store" });
         const data = await response.json();
         setTrendData(data);
         setWeeklyData([]); // Clear weekly data
@@ -245,13 +245,22 @@ export default function TrendsPage() {
         <div className="bg-white shadow-sm border-b">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl kinetic-title text-gray-900">Team Kinetic</h1>
-              <Link 
-                href="/admin" 
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-              >
-                Back to Admin
-              </Link>
+              <h1 className="text-2xl kinetic-title text-gray-900">Sales Trends</h1>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadTrendData}
+                  disabled={loading}
+                  className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                >
+                  {loading ? 'Loading...' : 'Refresh'}
+                </button>
+                <Link 
+                  href="/admin" 
+                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  Back to Admin
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -269,8 +278,15 @@ export default function TrendsPage() {
         <div className="bg-white shadow-sm border-b">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl kinetic-title text-gray-900">Team Kinetic</h1>
+              <h1 className="text-2xl kinetic-title text-gray-900">Sales Trends</h1>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={loadTrendData}
+                  disabled={loading}
+                  className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                >
+                  {loading ? 'Loading...' : 'Refresh'}
+                </button>
                 <Link 
                   href="/admin" 
                   className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
