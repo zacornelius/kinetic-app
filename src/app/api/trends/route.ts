@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
               SELECT 
                 strftime('%Y-%m', o.createdAt) as period,
                 json_extract(li.value, '$.quantity') as quantity,
-                json_extract(li.value, '$.totalPrice') as price,
+                COALESCE(json_extract(li.value, '$.totalPrice'), json_extract(li.value, '$.price'), 0) as price,
                 json_extract(li.value, '$.title') as title,
                 json_extract(li.value, '$.name') as name,
                 json_extract(li.value, '$.sku') as sku
