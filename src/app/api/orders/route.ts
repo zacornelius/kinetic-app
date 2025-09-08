@@ -25,57 +25,9 @@ function generateId() {
 }
 
 // Seed initial orders if database is empty
-function seedInitialOrders() {
-  const orderCount = db.prepare('SELECT COUNT(*) as count FROM all_orders').get() as { count: number };
-  
-  if (orderCount.count === 0) {
-    const insertOrder = db.prepare(`
-      INSERT INTO all_orders (id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, status, shippingAddress, billingAddress, trackingNumber, dueDate, notes, ownerEmail, source, sourceId)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    insertOrder.run(
-      "1", 
-      new Date().toISOString(), 
-      "ORD-001", 
-      "customer1@example.com", 
-      "John Doe", 
-      299.99, 
-      "USD", 
-      "pending", 
-      "123 Main St, City, State 12345", 
-      "123 Main St, City, State 12345",
-      null, 
-      null,
-      "First order", 
-      null,
-      "manual",
-      "1"
-    );
-    insertOrder.run(
-      "2", 
-      new Date().toISOString(), 
-      "ORD-002", 
-      "customer2@example.com", 
-      "Jane Smith", 
-      149.50, 
-      "USD", 
-      "shipped", 
-      "456 Oak Ave, City, State 67890", 
-      "456 Oak Ave, City, State 67890",
-      "TRK123456789", 
-      null,
-      "Express shipping", 
-      null,
-      "manual",
-      "2"
-    );
-  }
-}
 
 export async function GET(request: NextRequest) {
   try {
-    seedInitialOrders();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const source = searchParams.get("source");

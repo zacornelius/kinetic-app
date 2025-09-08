@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const inter = Inter({
@@ -66,7 +65,6 @@ export default function RootLayout({
         className={`${inter.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <ServiceWorkerRegistration />
           {children}
         </AuthProvider>
       </body>

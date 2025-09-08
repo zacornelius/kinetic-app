@@ -17,40 +17,9 @@ function generateId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// Seed initial inquiries if database is empty
-function seedInitialInquiries() {
-  const inquiryCount = db.prepare('SELECT COUNT(*) as count FROM inquiries').get() as { count: number };
-  
-  if (inquiryCount.count === 0) {
-    const insertInquiry = db.prepare(`
-      INSERT INTO inquiries (id, createdAt, category, subject, customerEmail, ownerEmail, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    insertInquiry.run(
-      "1", 
-      new Date().toISOString(), 
-      "bulk", 
-      "Bulk purchase request for 500 units", 
-      "acme@example.com", 
-      null, 
-      "open"
-    );
-    insertInquiry.run(
-      "2", 
-      new Date().toISOString(), 
-      "issues", 
-      "Product arrived damaged", 
-      "jane@example.com", 
-      null, 
-      "open"
-    );
-  }
-}
 
 export async function GET(request: Request) {
   try {
-    seedInitialInquiries();
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") as Category | null;
     

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
-import sqlite3 from 'sqlite3';
+import db from '@/lib/database';
+import jwt from 'jsonwebtoken';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
 
     if (!decoded || !decoded.userId) {
       return NextResponse.json(
@@ -37,31 +37,20 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update the password in the database
-    const db = new sqlite3.Database('kinetic.db');
-    
-    return new Promise((resolve) => {
-      db.run(
-        'UPDATE users SET password = ? WHERE id = ?',
-        [hashedPassword, decoded.userId],
-        function(err) {
-          db.close();
-          
-          if (err) {
-            console.error('Database error:', err);
-            resolve(NextResponse.json(
-              { message: 'Failed to update password' },
-              { status: 500 }
-            ));
-            return;
-          }
-
-          resolve(NextResponse.json(
-            { message: 'Password updated successfully' },
-            { status: 200 }
-          ));
-        }
+    try {
+      db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, decoded.userId);
+      
+      return NextResponse.json(
+        { message: 'Password updated successfully' },
+        { status: 200 }
       );
-    });
+    } catch (error) {
+      console.error('Database error:', error);
+      return NextResponse.json(
+        { message: 'Failed to update password' },
+        { status: 500 }
+      );
+    }
 
   } catch (error) {
     console.error('Password change error:', error);

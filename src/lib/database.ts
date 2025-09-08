@@ -187,7 +187,6 @@ function initializeDatabase() {
         INSERT INTO shopify_customers (id, email, firstName, lastName, phone, createdAt, updatedAt)
         SELECT id, email, firstName, lastName, phone, createdAt, updatedAt FROM customers
       `);
-      console.log('Migrated customers to shopify_customers');
     }
     
     if (oldOrdersExists && !db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='shopify_orders'").get()) {
@@ -196,12 +195,11 @@ function initializeDatabase() {
         INSERT INTO shopify_orders (id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, status, shippingAddress, trackingNumber, notes, ownerEmail)
         SELECT id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, status, shippingAddress, trackingNumber, notes, ownerEmail FROM orders
       `);
-      console.log('Migrated orders to shopify_orders');
     }
     
 
   } catch (error) {
-    console.log('Migration completed or not needed:', error.message);
+    // Migration completed or not needed
   }
 
   // Add missing columns to existing tables (migration)
@@ -319,7 +317,78 @@ function initializeDatabase() {
 
 }
 
+// Seed initial data if tables are empty
+function seedInitialData() {
+  try {
+    // Check if users table is empty
+    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
+    if (userCount.count === 0) {
+      // Insert admin user
+      db.prepare(`
+        INSERT INTO users (id, email, firstName, lastName, createdAt)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(
+        "1",
+        "zac@kineticdogfood.com", 
+        "Zac", 
+        "Admin", 
+        new Date().toISOString()
+      );
+      
+      // Insert test user
+      db.prepare(`
+        INSERT INTO users (id, email, firstName, lastName, createdAt)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(
+        "2",
+        "sarah@company.com", 
+        "Sarah", 
+        "Johnson", 
+        new Date().toISOString()
+      );
+    }
+
+    // Check if inquiries table is empty
+    const inquiryCount = db.prepare('SELECT COUNT(*) as count FROM inquiries').get() as { count: number };
+    if (inquiryCount.count === 0) {
+      // Insert sample inquiries
+      const inquiries = [
+        ["1", new Date().toISOString(), "bulk", "Interested in bulk pricing", "customer1@example.com", null, "open"],
+        ["2", new Date().toISOString(), "issues", "Product not working", "customer2@example.com", null, "open"],
+        ["3", new Date().toISOString(), "questions", "How to use the product?", "customer3@example.com", null, "open"]
+      ];
+      
+      const insertInquiry = db.prepare(`
+        INSERT INTO inquiries (id, createdAt, category, subject, customerEmail, ownerEmail, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      inquiries.forEach(inquiry => insertInquiry.run(...inquiry));
+    }
+
+    // Check if all_orders table is empty
+    const orderCount = db.prepare('SELECT COUNT(*) as count FROM all_orders').get() as { count: number };
+    if (orderCount.count === 0) {
+      // Insert sample orders
+      const orders = [
+        ["1", new Date().toISOString(), "ORD-001", "customer1@example.com", "John Doe", 99.99, "USD", "pending", "123 Main St", null, "Sample order", "manual", "1"],
+        ["2", new Date().toISOString(), "ORD-002", "customer2@example.com", "Jane Smith", 149.99, "USD", "shipped", "456 Oak Ave", "TRK123456", "Express shipping", "manual", "2"]
+      ];
+      
+      const insertOrder = db.prepare(`
+        INSERT INTO all_orders (id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, status, shippingAddress, trackingNumber, notes, source, sourceId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      orders.forEach(order => insertOrder.run(...order));
+    }
+  } catch (error) {
+    // Seed data already exists or error occurred
+  }
+}
+
 // Initialize database on import
 initializeDatabase();
+seedInitialData();
 
 export default db;

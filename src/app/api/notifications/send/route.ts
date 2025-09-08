@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
   try {
     const { title, body, category } = await request.json();
     
-    console.log('Sending push notification:', { title, body, category });
     
     // Get all push subscriptions from database
     const { execSync } = require('child_process');
@@ -22,7 +21,6 @@ export async function POST(request: NextRequest) {
       const result = execSync(`sqlite3 kinetic.db "${sql}"`, { stdio: 'pipe' });
       
       if (!result || result.toString().trim() === '') {
-        console.log('No push subscriptions found');
         return NextResponse.json({ 
           success: true, 
           message: 'No subscriptions to notify',
@@ -41,7 +39,6 @@ export async function POST(request: NextRequest) {
         };
       });
       
-      console.log(`Found ${subscriptions.length} subscriptions`);
       
       // Send notification to all subscriptions
       const notifications = subscriptions.map(async (subscription) => {
@@ -57,7 +54,6 @@ export async function POST(request: NextRequest) {
           });
           
           await webpush.sendNotification(subscription, payload);
-          console.log('Notification sent successfully');
           return { success: true };
         } catch (error) {
           console.error('Error sending notification:', error);
@@ -69,7 +65,6 @@ export async function POST(request: NextRequest) {
       const successful = results.filter(r => r.success).length;
       const failed = results.filter(r => !r.success).length;
       
-      console.log(`Notifications sent: ${successful} successful, ${failed} failed`);
       
       return NextResponse.json({ 
         success: true, 

@@ -81,13 +81,11 @@ export default function PWAInstaller() {
     const { outcome } = await deferredPrompt.userChoice;
     
     if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
       // Request notification permission after successful installation
       setTimeout(() => {
         requestNotificationPermission();
       }, 1000);
     } else {
-      console.log('User dismissed the install prompt');
     }
     
     setDeferredPrompt(null);
@@ -123,30 +121,23 @@ export default function PWAInstaller() {
   };
 
   const registerForPushNotifications = async () => {
-    console.log('Attempting to register for push notifications...');
     
     if (!('serviceWorker' in navigator)) {
-      console.log('Service Worker not supported');
       return;
     }
 
     try {
-      console.log('Getting service worker registration...');
       const registration = await navigator.serviceWorker.register('/sw.js?v=' + Date.now());
       await navigator.serviceWorker.ready;
-      console.log('Service worker ready:', registration);
       
       // Subscribe to push notifications
-      console.log('Subscribing to push notifications...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: 'BFaG3z0R7CrT_J6CIB3G3YdumRrQUBXdsGnsEEZQL7cygZqtefy_ausFswT428tkHuY81pSCs2nj3jXB-255buk'
       });
 
-      console.log('Push subscription created:', subscription);
       
       // Send subscription to server
-      console.log('Sending subscription to server...');
       const response = await fetch('/api/notifications/subscribe', {
         method: 'POST',
         headers: {
@@ -156,7 +147,6 @@ export default function PWAInstaller() {
       });
       
       const result = await response.json();
-      console.log('Server response:', result);
 
     } catch (error) {
       console.error('Error registering for push notifications:', error);

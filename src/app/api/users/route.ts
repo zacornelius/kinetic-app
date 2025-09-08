@@ -13,24 +13,9 @@ function generateId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// Seed initial users if database is empty
-function seedInitialUsers() {
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-  
-  if (userCount.count === 0) {
-    const insertUser = db.prepare(`
-      INSERT INTO users (id, email, firstName, lastName, createdAt)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    
-    insertUser.run("1", "john@company.com", "John", "Smith", new Date().toISOString());
-    insertUser.run("2", "sarah@company.com", "Sarah", "Johnson", new Date().toISOString());
-  }
-}
 
 export async function GET() {
   try {
-    seedInitialUsers();
     const users = db.prepare('SELECT * FROM users ORDER BY createdAt DESC').all() as User[];
     return NextResponse.json(users);
   } catch (error) {
