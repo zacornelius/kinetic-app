@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
                 strftime('%Y-%W', o.createdAt) as week,
                 strftime('%Y-%m-%d', o.createdAt) as date,
                 json_extract(li.value, '$.quantity') as quantity,
-                COALESCE(json_extract(li.value, '$.totalPrice'), json_extract(li.value, '$.price'), 0) as price,
+                COALESCE(json_extract(li.value, '$.totalPrice'), (json_extract(li.value, '$.quantity') * json_extract(li.value, '$.price')), 0) as price,
                 json_extract(li.value, '$.title') as title,
                 json_extract(li.value, '$.name') as name,
                 json_extract(li.value, '$.sku') as sku
