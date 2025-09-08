@@ -27,14 +27,15 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
     const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     
-    // Get line items data from all_orders - only pallet sales (same filter as data explorer)
+    // Get line items data from all_orders - ALL sales, not just pallet sales
     const query = `
       SELECT 
         strftime('%Y-%m', o.createdAt) as period,
         json_extract(li.value, '$.quantity') as quantity,
         json_extract(li.value, '$.totalPrice') as price,
         json_extract(li.value, '$.title') as title,
-        json_extract(li.value, '$.name') as name
+        json_extract(li.value, '$.name') as name,
+        json_extract(li.value, '$.sku') as sku
       FROM all_orders o,
       json_each(o.lineItems) as li
       WHERE o.createdAt >= '${startDate.toISOString().split('T')[0]}'
@@ -42,10 +43,6 @@ export async function GET(request: NextRequest) {
         AND json_extract(li.value, '$.title') IS NOT NULL
         AND json_extract(li.value, '$.quantity') IS NOT NULL
         AND json_extract(li.value, '$.totalPrice') IS NOT NULL
-        AND (
-          json_extract(li.value, '$.title') = 'Build a Pallet' 
-          OR json_extract(li.value, '$.title') LIKE '%Pallet%'
-        )
       ORDER BY o.createdAt DESC
     `;
     
@@ -60,14 +57,14 @@ export async function GET(request: NextRequest) {
     
     // Process each line item
     lines.forEach(line => {
-      const [period, quantity, price, title, name] = line.split('|');
+      const [period, quantity, price, title, name, sku] = line.split('|');
       
       if (!period || !quantity || !price || !title) return;
       
       const qty = parseFloat(quantity) || 0;
       const sales = parseFloat(price) || 0;
       
-      // Calculate effective SKU and quantity (same logic as data explorer)
+      // Calculate effective SKU and quantity - handle all product types
       let effectiveSKU = '';
       let effectiveQuantity = qty;
       
@@ -79,6 +76,10 @@ export async function GET(request: NextRequest) {
         // Handle pre-built pallet products - extract base SKU
         effectiveSKU = title.replace(' Pallet', '');
         effectiveQuantity = qty * 50; // multiply quantity by 50 for pallet products
+      } else {
+        // Handle all other products - use SKU if available, otherwise use title
+        effectiveSKU = sku || title;
+        effectiveQuantity = qty;
       }
       
       if (!effectiveSKU) return; // Skip if we couldn't determine effective SKU

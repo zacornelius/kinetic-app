@@ -217,15 +217,15 @@ export default function AdminDashboard() {
             </a>
           </div>
 
-          {/* Team Kinetic */}
+          {/* Sales Trends */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 bg-[#915A9D] text-white p-3 rounded-lg">Team Kinetic</h2>
+            <h2 className="text-xl font-semibold mb-4 bg-[#915A9D] text-white p-3 rounded-lg">Sales Trends</h2>
             <p className="text-gray-600 mb-4">Visualize sales performance and SKU trends over time</p>
             <a 
               href="/admin/trends" 
               className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-center block"
             >
-              View Team Kinetic
+              View Sales Trends
             </a>
           </div>
 
