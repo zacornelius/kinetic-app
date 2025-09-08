@@ -132,14 +132,15 @@ export default function PWAInstaller() {
 
     try {
       console.log('Getting service worker registration...');
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await navigator.serviceWorker.register('/sw.js?v=' + Date.now());
+      await navigator.serviceWorker.ready;
       console.log('Service worker ready:', registration);
       
       // Subscribe to push notifications
       console.log('Subscribing to push notifications...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: 'BF8E--_VAzbhkGHuK7icv2cAJm_O9pqqsfs-J-NFKvD3jEtCDTk7cy3RZdH3UtaZQoyxoq2vU2Qist8eBcpnX6Q'
+        applicationServerKey: 'BFaG3z0R7CrT_J6CIB3G3YdumRrQUBXdsGnsEEZQL7cygZqtefy_ausFswT428tkHuY81pSCs2nj3jXB-255buk'
       });
 
       console.log('Push subscription created:', subscription);

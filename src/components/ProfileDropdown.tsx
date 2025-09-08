@@ -18,6 +18,7 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Get user initials
@@ -37,6 +38,13 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // Check notification permission status
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
   }, []);
 
   const handleSignOut = async () => {
@@ -89,26 +97,66 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
   };
 
   const requestNotificationPermission = async () => {
-    if ('Notification' in window) {
+    if (!('Notification' in window)) {
+      alert('This browser does not support notifications');
+      return;
+    }
+
+    if (!('serviceWorker' in navigator)) {
+      alert('Service Worker not supported in this browser');
+      return;
+    }
+
+    try {
       const permission = await Notification.requestPermission();
+      
       if (permission === 'granted') {
-        // Subscribe to push notifications
-        try {
-          const response = await fetch('/api/notifications/subscribe', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-          });
-          
-          if (response.ok) {
-            alert('Notifications enabled successfully!');
-          }
-        } catch (error) {
-          console.error('Failed to subscribe to notifications:', error);
+        // Register service worker if not already registered
+        const registration = await navigator.serviceWorker.register('/sw.js?v=' + Date.now());
+        await navigator.serviceWorker.ready;
+        
+        // Force update the service worker
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
+        if (registration.installing) {
+          registration.installing.addEventListener('statechange', (e) => {
+            if (e.target.state === 'installed' && navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          });
+        }
+        
+        // Subscribe to push notifications
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: 'BFaG3z0R7CrT_J6CIB3G3YdumRrQUBXdsGnsEEZQL7cygZqtefy_ausFswT428tkHuY81pSCs2nj3jXB-255buk'
+        });
+
+        // Send subscription to server
+        const response = await fetch('/api/notifications/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(subscription),
+        });
+        
+        if (response.ok) {
+          setNotificationPermission('granted');
+          alert('Notifications enabled successfully! You will now receive notifications when new inquiries arrive.');
+        } else {
+          const error = await response.json();
+          alert(`Failed to enable notifications: ${error.error}`);
+        }
+      } else if (permission === 'denied') {
+        alert('Notifications are blocked. Please enable them in your browser settings.');
+      } else {
+        alert('Notification permission was not granted.');
       }
+    } catch (error) {
+      console.error('Error setting up notifications:', error);
+      alert(`Error setting up notifications: ${error.message}`);
     }
   };
 
@@ -119,9 +167,9 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
       <div className={`relative ${className}`} ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-center w-10 h-10 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-center w-8 h-8 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors"
         >
-          <span className="text-sm font-medium">
+          <span className="text-xs font-medium">
             {getInitials(user.firstName, user.lastName)}
           </span>
         </button>
@@ -267,20 +315,46 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Push Notifications</p>
-                  <p className="text-sm text-gray-500">Receive notifications on your device</p>
+                  <p className="text-sm text-gray-500">
+                    Status: <span className={`font-medium ${
+                      notificationPermission === 'granted' ? 'text-green-600' : 
+                      notificationPermission === 'denied' ? 'text-red-600' : 
+                      'text-yellow-600'
+                    }`}>
+                      {notificationPermission === 'granted' ? 'Enabled' : 
+                       notificationPermission === 'denied' ? 'Blocked' : 
+                       'Not Set'}
+                    </span>
+                  </p>
                 </div>
                 <button
                   onClick={requestNotificationPermission}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={notificationPermission === 'granted'}
+                  className={`px-4 py-2 text-white rounded-md hover:opacity-90 disabled:opacity-50 ${
+                    notificationPermission === 'granted' 
+                      ? 'bg-green-600' 
+                      : notificationPermission === 'denied'
+                      ? 'bg-red-600'
+                      : 'bg-blue-600'
+                  }`}
                 >
-                  Enable
+                  {notificationPermission === 'granted' ? 'Enabled' : 
+                   notificationPermission === 'denied' ? 'Unblock in Settings' : 
+                   'Enable'}
                 </button>
               </div>
               <div className="text-sm text-gray-500">
-                <p>• Get notified about new orders</p>
-                <p>• Receive system updates</p>
-                <p>• Stay informed about important changes</p>
+                <p>• Get notified about new inquiries</p>
+                <p>• Receive updates about your assigned tasks</p>
+                <p>• Stay informed about system changes</p>
               </div>
+              {notificationPermission === 'denied' && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-sm text-red-700">
+                    Notifications are blocked. Please enable them in your browser settings to receive updates.
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex justify-end mt-6">
               <button

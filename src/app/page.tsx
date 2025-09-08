@@ -41,7 +41,7 @@ type User = {
   createdAt: string;
 };
 
-type TabType = "home" | "actions" | "orders" | "customers";
+type TabType = "home" | "queue" | "actions" | "orders" | "customers";
 
 export default function Home() {
   const { user, logout } = useAuth();
@@ -154,6 +154,27 @@ export default function Home() {
   function renderHomeTab() {
     return (
       <div className="space-y-4">
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Team Kinetic</h2>
+          <p className="text-gray-600 mb-6">Your business management dashboard</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{unassignedInquiries.length}</div>
+              <div className="text-sm text-blue-800">New Inquiries</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{assignedInquiries.length}</div>
+              <div className="text-sm text-green-800">My Inquiries</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderQueueTab() {
+    return (
+      <div className="space-y-4">
         {/* Category Filter */}
         <div className="flex gap-2 overflow-x-auto pb-2">
           {(["all", "bulk", "issues", "questions"] as const).map((c) => (
@@ -166,19 +187,21 @@ export default function Home() {
                   : "bg-white text-gray-600 border"
               }`}
             >
-              {c}
+              {c === "all" ? "New" : c === "issues" ? "Issue" : c === "questions" ? "Question" : c.charAt(0).toUpperCase() + c.slice(1)}
             </button>
           ))}
         </div>
 
 
 
-        {/* Unassigned Inquiries */}
+        {/* Inquiries based on category */}
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-red-600">
-            Unassigned Inquiries ({unassignedInquiries.length})
-          </h3>
-          {unassignedInquiries.map((q) => (
+          {category === "all" ? (
+            <>
+              <h3 className="text-sm font-medium text-red-600">
+                New Inquiries ({unassignedInquiries.length})
+              </h3>
+              {unassignedInquiries.map((q) => (
             <div key={q.id} className="bg-white rounded-lg shadow-sm border p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
@@ -189,7 +212,7 @@ export default function Home() {
                   </div>
                 </div>
                 <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 ml-2">
-                  {q.category}
+                  {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -210,6 +233,44 @@ export default function Home() {
               </div>
             </div>
           ))}
+            </>
+          ) : (
+            <>
+              <h3 className="text-sm font-medium text-blue-600">
+                My {category === "issues" ? "Issue" : category === "questions" ? "Question" : category.charAt(0).toUpperCase() + category.slice(1)} Inquiries ({assignedInquiries.filter(q => q.category === category).length})
+              </h3>
+              {assignedInquiries.filter(q => q.category === category).map((q) => (
+                <div key={q.id} className="bg-white rounded-lg shadow-sm border p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900 mb-1">{q.subject}</div>
+                      <div className="text-xs text-gray-500 mb-1">{q.customerEmail}</div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(q.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 ml-2">
+                      {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => markComplete(q.id)}
+                      className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium"
+                    >
+                      Complete
+                    </button>
+                    <button
+                      onClick={() => markNotRelevant(q.id)}
+                      className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium"
+                    >
+                      Not Relevant
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
     );
@@ -234,7 +295,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                    {q.category}
+                    {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
                   </span>
                   <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-600">
                     {q.status}
@@ -368,6 +429,28 @@ export default function Home() {
               </div>
             </button>
             <button
+              onClick={() => setActiveTab("queue")}
+              className={`flex-1 py-3 px-2 text-center relative ${
+                activeTab === "queue"
+                  ? "text-white"
+                  : "text-gray-400"
+              }`}
+            >
+              <div className="flex flex-col items-center">
+                <div className="relative">
+                  <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                  </svg>
+                  {unassignedInquiries.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white rounded-full h-3 w-3 flex items-center justify-center font-bold text-[8px]">
+                      {unassignedInquiries.length}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs">Queue</span>
+              </div>
+            </button>
+            <button
               onClick={() => setActiveTab("actions")}
               className={`flex-1 py-3 px-2 text-center ${
                 activeTab === "actions"
@@ -392,7 +475,7 @@ export default function Home() {
             >
               <div className="flex flex-col items-center">
                 <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                 </svg>
                 <span className="text-xs">Orders</span>
               </div>
@@ -432,6 +515,7 @@ export default function Home() {
           {/* Content */}
           <div className="px-4 py-4">
             {activeTab === "home" && renderHomeTab()}
+            {activeTab === "queue" && renderQueueTab()}
             {activeTab === "actions" && renderActionsTab()}
             {activeTab === "orders" && renderOrdersTab()}
             {activeTab === "customers" && renderCustomersTab()}

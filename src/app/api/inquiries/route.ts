@@ -100,6 +100,46 @@ export async function POST(request: Request) {
       status,
     };
     
+    // Send push notification for new inquiry
+    try {
+      const notificationMessages = {
+        bulk: {
+          title: "New Bulk Inquiry",
+          body: "A customer is interested in buying Kinetic in bulk."
+        },
+        issues: {
+          title: "New Issue Report",
+          body: "A customer has an issue with a Kinetic product."
+        },
+        questions: {
+          title: "New Question",
+          body: "A customer has a question for Kinetic."
+        }
+      };
+      
+      const message = notificationMessages[category] || {
+        title: "New Inquiry",
+        body: "A new inquiry has been submitted."
+      };
+      
+      // Send notification asynchronously
+      fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/notifications/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: message.title,
+          body: message.body,
+          category: category
+        })
+      }).catch(error => {
+        console.error('Error sending push notification:', error);
+      });
+    } catch (error) {
+      console.error('Error preparing push notification:', error);
+    }
+    
     return NextResponse.json(newInquiry, { status: 201 });
   } catch (error) {
     console.error('Error creating inquiry:', error);
