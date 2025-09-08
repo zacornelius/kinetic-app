@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
                 AND o.source = 'shopify'
                 AND json_extract(li.value, '$.title') IS NOT NULL
                 AND json_extract(li.value, '$.quantity') IS NOT NULL
-                AND json_extract(li.value, '$.totalPrice') IS NOT NULL
+                AND (json_extract(li.value, '$.title') LIKE '%Pallet%' OR json_extract(li.value, '$.title') = 'Build a Pallet')
               ORDER BY o.createdAt DESC
             `;
     
@@ -60,27 +60,26 @@ export async function GET(request: NextRequest) {
     lines.forEach(line => {
       const [period, quantity, price, title, name, sku] = line.split('|');
       
-      if (!period || !quantity || !price || !title) return;
+      if (!period || !quantity || !title) return;
       
       const qty = parseFloat(quantity) || 0;
-      const sales = parseFloat(price) || 0;
+      const sales = parseFloat(price) || 0; // Handle empty prices as 0
       
-      // Calculate effective SKU and quantity - handle all product types
+      // Calculate effective SKU and quantity - ONLY track pallets
       let effectiveSKU = '';
-      let effectiveQuantity = qty;
+      let effectiveQuantity = 0;
       
       if (title === 'Build a Pallet') {
         // Handle "Build a Pallet" - extract product name from name field
         effectiveSKU = name?.replace('Build a Pallet - ', '') || `V-${name}`;
-        effectiveQuantity = qty; // quantity is units of that SKU on the pallet
+        effectiveQuantity = qty; // quantity is already in pallets
       } else if (title?.includes('Pallet')) {
         // Handle pre-built pallet products - extract base SKU
         effectiveSKU = title.replace(' Pallet', '');
         effectiveQuantity = qty * 50; // multiply quantity by 50 for pallet products
       } else {
-        // Handle all other products - use SKU if available, otherwise use title
-        effectiveSKU = sku || title;
-        effectiveQuantity = qty;
+        // Skip individual products - we only want pallet tracking
+        return;
       }
       
       if (!effectiveSKU) return; // Skip if we couldn't determine effective SKU
