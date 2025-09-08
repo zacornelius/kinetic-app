@@ -115,15 +115,22 @@ export default function TrendsPage() {
       period.skuBreakdown.forEach(sku => allSkus.add(sku.sku));
     });
     
-    // Create SKU datasets
+    // Create SKU datasets with brand colors
     const skuDatasets = Array.from(allSkus).slice(0, 5).map((sku, index) => {
-      const colors = [
-        'rgb(59, 130, 246)',   // Blue
-        'rgb(16, 185, 129)',   // Green
-        'rgb(245, 101, 101)',  // Red
-        'rgb(251, 191, 36)',   // Yellow
-        'rgb(139, 92, 246)',   // Purple
-      ];
+      // Brand color mapping based on SKU names
+      const getSkuColor = (skuName: string) => {
+        const sku = skuName.toLowerCase();
+        if (sku.includes('active')) return '#5BAB56';  // Green for Active
+        if (sku.includes('puppy')) return '#3B83BE';   // Blue for Puppy
+        if (sku.includes('vital')) return '#D7923E';   // Yellow for Vital
+        if (sku.includes('power')) return '#915A9D';   // Purple for Power
+        if (sku.includes('ultra')) return '#C43C37';   // Red for Ultra
+        // Default fallback colors
+        const defaultColors = ['#5BAB56', '#3B83BE', '#D7923E', '#915A9D', '#C43C37'];
+        return defaultColors[index % defaultColors.length];
+      };
+      
+      const color = getSkuColor(sku);
       
       return {
         label: sku,
@@ -131,8 +138,8 @@ export default function TrendsPage() {
           const skuData = period.skuBreakdown.find(s => s.sku === sku);
           return skuData ? skuData.quantity : 0;
         }),
-        borderColor: colors[index % colors.length],
-        backgroundColor: colors[index % colors.length] + '20',
+        borderColor: color,
+        backgroundColor: color + '20',
         fill: false,
         tension: 0.1,
       };
@@ -441,17 +448,33 @@ export default function TrendsPage() {
                     </div>
                   </div>
                   
-                  {/* All SKUs - Compact */}
+                  {/* All SKUs - Compact with brand colors */}
                   <div className="space-y-1 max-h-20 overflow-y-auto">
-                    {period.skuBreakdown.map((sku) => (
-                      <div 
-                        key={sku.sku}
-                        className="flex justify-between text-xs hover:bg-gray-50 p-1 rounded"
-                      >
-                        <span className="truncate text-xs">{sku.sku}</span>
-                        <span className="text-gray-500 text-xs">{formatNumber(sku.quantity)}</span>
-                      </div>
-                    ))}
+                    {period.skuBreakdown.map((sku) => {
+                      // Get brand color for SKU
+                      const getSkuColor = (skuName: string) => {
+                        const sku = skuName.toLowerCase();
+                        if (sku.includes('active')) return '#5BAB56';  // Green for Active
+                        if (sku.includes('puppy')) return '#3B83BE';   // Blue for Puppy
+                        if (sku.includes('vital')) return '#D7923E';   // Yellow for Vital
+                        if (sku.includes('power')) return '#915A9D';   // Purple for Power
+                        if (sku.includes('ultra')) return '#C43C37';   // Red for Ultra
+                        return '#6B7280'; // Default gray
+                      };
+                      
+                      const color = getSkuColor(sku.sku);
+                      
+                      return (
+                        <div 
+                          key={sku.sku}
+                          className="flex justify-between text-xs hover:opacity-80 p-2 rounded text-white font-medium"
+                          style={{ backgroundColor: color }}
+                        >
+                          <span className="truncate text-xs">{sku.sku}</span>
+                          <span className="text-xs">{formatNumber(sku.quantity)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
