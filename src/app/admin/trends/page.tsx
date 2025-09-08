@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
+import ProfileDropdown from "@/components/ProfileDropdown";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -156,7 +157,7 @@ export default function TrendsPage() {
       },
       title: {
         display: true,
-        text: chartData.isWeekly ? 'Weekly Sales Trends' : 'Monthly Sales Trends',
+        text: chartData.isWeekly ? 'Weekly Team Kinetic Trends' : 'Monthly Team Kinetic Trends',
       },
       tooltip: {
         callbacks: {
@@ -244,7 +245,7 @@ export default function TrendsPage() {
         <div className="bg-white shadow-sm border-b">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-gray-900">Sales Trends</h1>
+              <h1 className="text-2xl kinetic-title text-gray-900">Team Kinetic</h1>
               <Link 
                 href="/admin" 
                 className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
@@ -268,23 +269,15 @@ export default function TrendsPage() {
         <div className="bg-white shadow-sm border-b">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-gray-900">Sales Trends</h1>
+              <h1 className="text-2xl kinetic-title text-gray-900">Team Kinetic</h1>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">
-                  {user?.firstName} {user?.lastName}
-                </span>
                 <Link 
                   href="/admin" 
                   className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                 >
                   Back to Admin
                 </Link>
-                <button
-                  onClick={logout}
-                  className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
-                >
-                  Sign Out
-                </button>
+                <ProfileDropdown />
               </div>
             </div>
           </div>
@@ -349,7 +342,7 @@ export default function TrendsPage() {
           {/* Container 1: Sales Trend Chart */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {chartData.isWeekly ? 'Weekly Sales Trends' : 'Monthly Sales Trends'}
+              {chartData.isWeekly ? 'Weekly Team Kinetic Trends' : 'Monthly Team Kinetic Trends'}
             </h2>
             <div className="h-80">
               <Line 

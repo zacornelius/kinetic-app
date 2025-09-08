@@ -3,67 +3,16 @@
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
-
-type User = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  createdAt: string;
-};
+import ProfileDropdown from "@/components/ProfileDropdown";
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
-  const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [syncProgress, setSyncProgress] = useState("");
   
   // Webhook state
   const [webhookUrl, setWebhookUrl] = useState("");
-
-  async function loadUsers() {
-    const res = await fetch("/api/users");
-    const data = await res.json();
-    setUsers(data);
-  }
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  async function addUser(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email || !firstName || !lastName) return;
-    
-    try {
-      await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, firstName, lastName }),
-      });
-      setEmail("");
-      setFirstName("");
-      setLastName("");
-      loadUsers();
-    } catch (error) {
-      alert("Error adding user");
-    }
-  }
-
-  async function deleteUser(id: string) {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    
-    try {
-      await fetch(`/api/users?id=${id}`, { method: "DELETE" });
-      loadUsers();
-    } catch (error) {
-      alert("Error deleting user");
-    }
-  }
 
   async function syncShopifyOrders() {
     setIsSyncing(true);
@@ -138,84 +87,19 @@ export default function AdminDashboard() {
 
   return (
     <ProtectedRoute adminOnly={true}>
-      <div className="min-h-screen p-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Admin Cockpit ⚡</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              Welcome, {user?.firstName} {user?.lastName}
-            </span>
-            <button
-              onClick={logout}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-            >
-              Sign Out
-            </button>
-          </div>
+      <div className="min-h-screen bg-white p-6 max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8 bg-black p-4 rounded-lg">
+          <h1 className="text-4xl kinetic-title text-white">Admin Cockpit ⚡</h1>
+          <ProfileDropdown />
         </div>
       
-      {/* User Management Section */}
-      <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">User Management</h2>
-        <form onSubmit={addUser} className="grid gap-4 grid-cols-1 sm:grid-cols-4 mb-4">
-          <input
-            className="border rounded px-3 py-2"
-            placeholder="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            required
-          />
-          <input
-            className="border rounded px-3 py-2"
-            placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-          />
-          <input
-            className="border rounded px-3 py-2"
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <button className="px-4 py-2 bg-blue-600 text-white rounded" type="submit">
-            Add User
-          </button>
-        </form>
-        
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium">Sales Team ({users.length} users)</h3>
-        </div>
-        
-        <div className="grid gap-3 max-h-60 overflow-y-auto">
-          {users.map((user) => (
-            <div key={user.id} className="flex items-center justify-between p-3 border rounded">
-              <div>
-                <div className="font-medium">{user.firstName} {user.lastName}</div>
-                <div className="text-sm text-gray-600">{user.email}</div>
-                <div className="text-xs text-gray-500">
-                  Added: {new Date(user.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-              <button
-                onClick={() => deleteUser(user.id)}
-                className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Data Integration Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Shopify Integration */}
-        <div className="bg-white border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Data Sync</h2>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 bg-[#3B83BE] text-white p-3 rounded-lg">Data Sync</h2>
           <div className="mb-4 p-3 bg-green-50 rounded-md">
             <h3 className="font-medium text-green-900 mb-2 text-sm">✅ Historical Data Complete:</h3>
             <ul className="text-xs text-green-800 space-y-1">
@@ -253,8 +137,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* QuickBooks Webhook */}
-        <div className="bg-white border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">QuickBooks via Zapier</h2>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 bg-[#5BAB56] text-white p-3 rounded-lg">QuickBooks via Zapier</h2>
           
           <div className="space-y-4">
             <div>
@@ -307,8 +191,8 @@ export default function AdminDashboard() {
       </div>
 
         {/* User Management */}
-        <div className="bg-white border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">User Management</h2>
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4 bg-[#C43C37] text-white p-3 rounded-lg">User Management</h2>
           <p className="text-gray-600 mb-4">Manage team access and user accounts</p>
           <a 
             href="/admin/users" 
@@ -322,8 +206,8 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           
           {/* Data Explorer */}
-          <div className="bg-white border rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Data Explorer</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4 bg-[#D7923E] text-white p-3 rounded-lg">Data Explorer</h2>
             <p className="text-gray-600 mb-4">Explore and analyze your data across all sources</p>
             <a 
               href="/admin/data-explorer" 
@@ -333,21 +217,21 @@ export default function AdminDashboard() {
             </a>
           </div>
 
-          {/* Sales Trends */}
-          <div className="bg-white border rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Sales Trends</h2>
+          {/* Team Kinetic */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4 bg-[#915A9D] text-white p-3 rounded-lg">Team Kinetic</h2>
             <p className="text-gray-600 mb-4">Visualize sales performance and SKU trends over time</p>
             <a 
               href="/admin/trends" 
               className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-center block"
             >
-              View Sales Trends
+              View Team Kinetic
             </a>
           </div>
 
         {/* Data Status Overview */}
-        <div className="bg-white border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Data Status Overview</h2>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4 bg-black text-white p-3 rounded-lg">Data Status Overview</h2>
           <div className="grid grid-cols-1 gap-4">
             <div className="p-4 bg-gray-50 rounded-md">
               <h3 className="font-medium text-gray-900 mb-2">Source Tables</h3>

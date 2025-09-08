@@ -15,21 +15,29 @@ export default function PWAInstaller() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isSafari, setIsSafari] = useState(false);
 
   useEffect(() => {
     // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-    }
-    
-    // Force a small delay to ensure state updates properly
-    setTimeout(() => {
-      if (window.matchMedia('(display-mode: standalone)').matches) {
+    const checkInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isInApp = window.navigator.standalone === true; // iOS Safari
+      const isInstalledCheck = isStandalone || isInApp;
+      
+      if (isInstalledCheck) {
         setIsInstalled(true);
+        setShowInstallButton(false);
       }
-    }, 100);
+    };
+    
+    checkInstalled();
+    
+    // Check again after a delay to ensure proper detection
+    const timeoutId = setTimeout(checkInstalled, 500);
+    
+    return () => clearTimeout(timeoutId);
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -43,6 +51,9 @@ export default function PWAInstaller() {
       setIsInstalled(true);
       setShowInstallButton(false);
       setDeferredPrompt(null);
+      setShowSuccessMessage(true);
+      // Hide success message after 5 seconds
+      setTimeout(() => setShowSuccessMessage(false), 5000);
     };
 
     // Check notification permission
@@ -71,6 +82,10 @@ export default function PWAInstaller() {
     
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt');
+      // Request notification permission after successful installation
+      setTimeout(() => {
+        requestNotificationPermission();
+      }, 1000);
     } else {
       console.log('User dismissed the install prompt');
     }
@@ -181,10 +196,10 @@ export default function PWAInstaller() {
     }
   };
 
-  if (isInstalled) {
-    console.log('PWA is installed, showing notification buttons');
+  // Only show success message briefly after installation
+  if (isInstalled && showSuccessMessage) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+      <div className="bg-black border border-gray-700 rounded-lg p-4 mb-4">
         <div className="flex items-start">
           <div className="flex-shrink-0">
             <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
@@ -192,7 +207,7 @@ export default function PWAInstaller() {
             </svg>
           </div>
           <div className="ml-3 flex-1">
-            <p className="text-sm font-medium text-green-800 mb-2">
+            <p className="text-sm font-medium text-white mb-2">
               App installed successfully! You can now use it offline.
             </p>
             <div className="flex space-x-3">
@@ -217,47 +232,37 @@ export default function PWAInstaller() {
     );
   }
 
-  return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-      <div className="flex items-start">
-        <div className="flex-shrink-0">
-          <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-          </svg>
-        </div>
-        <div className="ml-3 flex-1">
-          <h3 className="text-sm font-medium text-blue-800">
-            Install Kinetic App
-          </h3>
-          <div className="mt-2 text-sm text-blue-700">
-            <p>Install this app on your device for a better experience with offline access and notifications.</p>
+  // Only show the installer if the app is not installed AND the install button is available
+  if (!isInstalled && showInstallButton) {
+    return (
+      <div className="bg-black border border-gray-700 rounded-lg p-4 mb-4">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
           </div>
-          <div className="mt-3 flex space-x-3">
-            {showInstallButton && (
+          <div className="ml-3 flex-1">
+            <h3 className="text-sm font-medium text-white">
+              Install Team Kinetic
+            </h3>
+            <div className="mt-2 text-sm text-gray-300">
+              <p>Install this app on your device for a better experience with offline access.</p>
+            </div>
+            <div className="mt-3">
               <button
                 onClick={handleInstallClick}
-                className="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="bg-[#3B83BE] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#2D6BA8] focus:outline-none focus:ring-2 focus:ring-[#3B83BE]"
               >
                 Install App
               </button>
-            )}
-            <button
-              onClick={requestNotificationPermission}
-              className="bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              {notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
-            </button>
-            {notificationPermission === 'granted' && (
-              <button
-                onClick={sendTestNotification}
-                className="bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                Test Notification
-              </button>
-            )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Don't render anything if the app is installed or install button is not available
+  return null;
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import ProfileDropdown from "@/components/ProfileDropdown";
 
 type User = {
   id: string;
@@ -138,23 +139,15 @@ export default function UserManagement() {
         <div className="bg-white shadow-sm border-b">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-gray-900">User Management</h1>
+              <h1 className="text-2xl kinetic-title text-gray-900">User Management</h1>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">
-                  {user?.firstName} {user?.lastName}
-                </span>
                 <Link 
                   href="/admin" 
                   className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                 >
                   Back to Admin
                 </Link>
-                <button
-                  onClick={logout}
-                  className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
-                >
-                  Sign Out
-                </button>
+                <ProfileDropdown />
               </div>
             </div>
           </div>

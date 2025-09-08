@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import PWAInstaller from "@/components/PWAInstaller";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
+import ProfileDropdown from "@/components/ProfileDropdown";
 
 type Category = "bulk" | "issues" | "questions";
 
@@ -161,7 +162,7 @@ export default function Home() {
               onClick={() => setCategory(c as any)}
               className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
                 category === c 
-                  ? "bg-blue-600 text-white" 
+                  ? "bg-[#3B83BE] text-white" 
                   : "bg-white text-gray-600 border"
               }`}
             >
@@ -272,7 +273,7 @@ export default function Home() {
                     </div>
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       order.status === "pending" ? "bg-yellow-100 text-yellow-600" :
-                      order.status === "processing" ? "bg-blue-100 text-blue-600" :
+                      order.status === "processing" ? "bg-[#3B83BE]/10 text-[#3B83BE]" :
                       order.status === "shipped" ? "bg-purple-100 text-purple-600" :
                       "bg-gray-100 text-gray-600"
                     }`}>
@@ -337,97 +338,110 @@ export default function Home() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Mobile Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="px-4 py-3">
-                 <div className="flex items-center justify-between">
-                   <h1 className="text-lg font-semibold text-gray-900">Sales Dashboard</h1>
-                   <div className="flex items-center gap-2">
-                     <span className="text-sm text-gray-600">
-                       {user?.firstName} {user?.lastName}
-                     </span>
-                     <button
-                       onClick={signOut}
-                       className="px-3 py-1 bg-gray-600 text-white rounded text-sm"
-                     >
-                       Sign Out
-                     </button>
-                   </div>
-                 </div>
+      <div className="min-h-screen bg-black">
+        {/* Fixed Team Kinetic Header */}
+        <div className="fixed top-0 left-0 right-0 bg-black z-[9999] border-b border-gray-800">
+          <div className="px-4 py-2">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl kinetic-title text-white">Team Kinetic</h1>
+              <ProfileDropdown />
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* PWA Installer */}
-      <div className="px-4 py-2">
-        <PWAInstaller />
-      </div>
-
-      {/* Content */}
-      <div className="px-4 py-4">
-        {activeTab === "home" && renderHomeTab()}
-        {activeTab === "actions" && renderActionsTab()}
-        {activeTab === "orders" && renderOrdersTab()}
-        {activeTab === "customers" && renderCustomersTab()}
-      </div>
-
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">
-        <div className="flex">
-          <button
-            onClick={() => setActiveTab("home")}
-            className={`flex-1 flex flex-col items-center py-2 px-1 ${
-              activeTab === "home" ? "text-blue-600" : "text-gray-500"
-            }`}
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="text-xs">Home</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("actions")}
-            className={`flex-1 flex flex-col items-center py-2 px-1 ${
-              activeTab === "actions" ? "text-blue-600" : "text-gray-500"
-            }`}
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <span className="text-xs">Actions</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("orders")}
-            className={`flex-1 flex flex-col items-center py-2 px-1 ${
-              activeTab === "orders" ? "text-blue-600" : "text-gray-500"
-            }`}
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <span className="text-xs">Orders</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("customers")}
-            className={`flex-1 flex flex-col items-center py-2 px-1 ${
-              activeTab === "customers" ? "text-blue-600" : "text-gray-500"
-            }`}
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-            </svg>
-            <span className="text-xs">Customers</span>
-          </button>
+        {/* Fixed Bottom Navigation */}
+        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 z-[9997] bottom-nav">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab("home")}
+              className={`flex-1 py-3 px-2 text-center ${
+                activeTab === "home"
+                  ? "text-white"
+                  : "text-gray-400"
+              }`}
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+                <span className="text-xs">Home</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("actions")}
+              className={`flex-1 py-3 px-2 text-center ${
+                activeTab === "actions"
+                  ? "text-white"
+                  : "text-gray-400"
+              }`}
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+                <span className="text-xs">Actions</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("orders")}
+              className={`flex-1 py-3 px-2 text-center ${
+                activeTab === "orders"
+                  ? "text-white"
+                  : "text-gray-400"
+              }`}
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                </svg>
+                <span className="text-xs">Orders</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("customers")}
+              className={`flex-1 py-3 px-2 text-center ${
+                activeTab === "customers"
+                  ? "text-white"
+                  : "text-gray-400"
+              }`}
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                </svg>
+                <span className="text-xs">Customers</span>
+              </div>
+            </button>
+          </div>
         </div>
-      </div>
+
+        {/* Scrollable White Content Area */}
+        <div 
+          className="fixed left-0 right-0 bg-white z-10 overflow-y-auto"
+          style={{
+            top: '3rem', // Below header
+            bottom: '5rem', // Above bottom nav
+            height: 'calc(100vh - 3rem - 5rem)' // Full height minus header and nav
+          }}
+        >
+          {/* PWA Installer */}
+          <div className="px-4 py-2">
+            <PWAInstaller />
+          </div>
+
+          {/* Content */}
+          <div className="px-4 py-4">
+            {activeTab === "home" && renderHomeTab()}
+            {activeTab === "actions" && renderActionsTab()}
+            {activeTab === "orders" && renderOrdersTab()}
+            {activeTab === "customers" && renderCustomersTab()}
+          </div>
+        </div>
 
              {/* Floating Add Button */}
              <button
                onClick={() => setShowAddModal(true)}
-               className="fixed bottom-20 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-30 hover:bg-blue-700"
+               className="fixed bottom-20 right-4 w-14 h-14 bg-[#C43C37] text-white rounded-full shadow-lg flex items-center justify-center z-30 hover:bg-[#B03530]"
              >
                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -495,7 +509,7 @@ export default function Home() {
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-[#3B83BE] text-white rounded-lg text-sm font-medium"
                 >
                   Add Inquiry
                 </button>

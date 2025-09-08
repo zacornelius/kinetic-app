@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
+import ProfileDropdown from "@/components/ProfileDropdown";
 
 type Inquiry = {
   id: string;
@@ -250,51 +251,50 @@ export default function DataExplorer() {
     <ProtectedRoute adminOnly={true}>
       <div className="min-h-screen p-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">Data Explorer {isLoading && <span className="text-sm text-blue-600">(Loading...)</span>}</h1>
+          <h1 className="text-3xl kinetic-title">Data Explorer {isLoading && <span className="text-sm text-blue-600">(Loading...)</span>}</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {user?.firstName} {user?.lastName}
-            </span>
             <div className="flex gap-2">
               <button
-            onClick={loadData}
-            disabled={isLoading}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-          >
-            {isLoading ? "Loading..." : "Refresh Data"}
-          </button>
-          <button
-            onClick={() => setActiveTab("inquiries")}
-            className={`px-4 py-2 rounded ${activeTab === "inquiries" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          >
-            Website Inquiries
-          </button>
-          <button
-            onClick={() => setActiveTab("customers")}
-            className={`px-4 py-2 rounded ${activeTab === "customers" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          >
-            Customers
-          </button>
-          <button
-            onClick={() => setActiveTab("orders")}
-            className={`px-4 py-2 rounded ${activeTab === "orders" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          >
-            Orders
-          </button>
-          <button
-            onClick={() => setActiveTab("lineItems")}
-            className={`px-4 py-2 rounded ${activeTab === "lineItems" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-          >
-            Line Items
-          </button>
-          <button
-            onClick={() => setActiveTab("debug")}
-            className={`px-4 py-2 rounded ${activeTab === "debug" ? "bg-red-600 text-white" : "bg-gray-200"}`}
-          >
-            Debug Data
-          </button>
+                onClick={loadData}
+                disabled={isLoading}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              >
+                {isLoading ? "Loading..." : "Refresh Data"}
+              </button>
+              <button
+                onClick={() => setActiveTab("inquiries")}
+                className={`px-4 py-2 rounded ${activeTab === "inquiries" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+              >
+                Website Inquiries
+              </button>
+              <button
+                onClick={() => setActiveTab("customers")}
+                className={`px-4 py-2 rounded ${activeTab === "customers" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+              >
+                Customers
+              </button>
+              <button
+                onClick={() => setActiveTab("orders")}
+                className={`px-4 py-2 rounded ${activeTab === "orders" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+              >
+                Orders
+              </button>
+              <button
+                onClick={() => setActiveTab("lineItems")}
+                className={`px-4 py-2 rounded ${activeTab === "lineItems" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+              >
+                Line Items
+              </button>
+              <button
+                onClick={() => setActiveTab("debug")}
+                className={`px-4 py-2 rounded ${activeTab === "debug" ? "bg-red-600 text-white" : "bg-gray-200"}`}
+              >
+                Debug Data
+              </button>
+            </div>
+            <ProfileDropdown />
+          </div>
         </div>
-      </div>
 
       {activeTab === "inquiries" && (
         <div className="bg-white border rounded-lg overflow-hidden">
@@ -1060,7 +1060,7 @@ export default function DataExplorer() {
       <div className="mt-4 text-sm text-gray-600">
         <p>💡 Click on any cell to edit. Press Enter to save, Escape to cancel. Click on customers to view their purchase history.</p>
       </div>
-    </div>
+      </div>
     </ProtectedRoute>
   );
 }

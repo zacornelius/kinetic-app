@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -22,5 +22,151 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+}
+
+/* Eurostile-style title font */
+.kinetic-title {
+  font-family: 'Arial Black', Arial, sans-serif;
+  font-weight: 900;
+  font-stretch: expanded;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Form input styling for better visibility */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea,
+select {
+  color: #171717 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  color: #171717 !important;
+  background-color: #ffffff !important;
+  border-color: #3B83BE !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Placeholder text styling */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+
+/* Mobile PWA specific styling */
+@supports (padding: max(0px)) {
+  .mobile-safe-area {
+    padding-top: max(env(safe-area-inset-top), 0px);
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
+}
+
+/* Fallback for devices without safe-area-inset support */
+@supports not (height: env(safe-area-inset-top)) {
+  .fixed-header {
+    padding-top: 20px;
+  }
+  
+  .content-with-fixed-header {
+    padding-top: 5rem; /* 80px - status bar + header */
+  }
+}
+
+/* Fix for iPhone bottom navigation being cut off */
+.bottom-nav {
+  padding-bottom: max(env(safe-area-inset-bottom), 20px);
+}
+
+/* Remove any blue status bar styling */
+.status-bar {
+  background-color: #000000 !important;
+  -webkit-appearance: none !important;
+}
+
+/* Ensure proper mobile viewport and black background */
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+  background-color: #000000 !important;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  background-color: #000000 !important;
+  overflow-x: hidden;
+}
+
+/* Force black background for PWA */
+#__next {
+  background-color: #000000 !important;
+}
+
+/* Remove any default blue backgrounds */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  body {
+    background-color: #000000 !important;
+    -webkit-background-size: cover;
+    background-size: cover;
+  }
+}
+
+/* Simple fixed header */
+.fixed {
+  position: fixed;
+}
+
+/* Disable zoom completely for PWA */
+html {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+body {
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent zoom on input focus */
+input, textarea, select {
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS specific zoom prevention */
+@supports (-webkit-touch-callout: none) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-touch-callout: none;
+  }
+  
+  body {
+    -webkit-text-size-adjust: 100%;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
 }
