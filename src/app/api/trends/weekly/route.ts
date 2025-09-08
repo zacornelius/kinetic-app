@@ -28,24 +28,25 @@ export async function GET(request: NextRequest) {
     }
     
     // Get line items data for the specific month - ALL sales, not just pallet sales
-    const query = `
-      SELECT 
-        strftime('%Y-%W', o.createdAt) as week,
-        strftime('%Y-%m-%d', o.createdAt) as date,
-        json_extract(li.value, '$.quantity') as quantity,
-        json_extract(li.value, '$.totalPrice') as price,
-        json_extract(li.value, '$.title') as title,
-        json_extract(li.value, '$.name') as name,
-        json_extract(li.value, '$.sku') as sku
-      FROM all_orders o,
-      json_each(o.lineItems) as li
-      WHERE o.createdAt >= '${startDate.toISOString().split('T')[0]}'
-        AND o.createdAt <= '${endDate.toISOString().split('T')[0]}'
-        AND json_extract(li.value, '$.title') IS NOT NULL
-        AND json_extract(li.value, '$.quantity') IS NOT NULL
-        AND json_extract(li.value, '$.totalPrice') IS NOT NULL
-      ORDER BY o.createdAt DESC
-    `;
+            const query = `
+              SELECT 
+                strftime('%Y-%W', o.createdAt) as week,
+                strftime('%Y-%m-%d', o.createdAt) as date,
+                json_extract(li.value, '$.quantity') as quantity,
+                json_extract(li.value, '$.totalPrice') as price,
+                json_extract(li.value, '$.title') as title,
+                json_extract(li.value, '$.name') as name,
+                json_extract(li.value, '$.sku') as sku
+              FROM all_orders o,
+              json_each(o.lineItems) as li
+              WHERE o.createdAt >= '${startDate.toISOString().split('T')[0]}'
+                AND o.createdAt <= '${endDate.toISOString().split('T')[0]}'
+                AND o.source = 'shopify'
+                AND json_extract(li.value, '$.title') IS NOT NULL
+                AND json_extract(li.value, '$.quantity') IS NOT NULL
+                AND json_extract(li.value, '$.totalPrice') IS NOT NULL
+              ORDER BY o.createdAt DESC
+            `;
     
     const result = execSync(`sqlite3 kinetic.db "${query}"`, { encoding: 'utf8' });
     
