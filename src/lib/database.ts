@@ -10,10 +10,16 @@ const dbPath = process.env.NODE_ENV === 'production'
 const db = new Database(dbPath);
 
 // Enable WAL mode for better concurrent access
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
-db.pragma('cache_size = 1000');
-db.pragma('temp_store = memory');
+try {
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('cache_size = 1000');
+  db.pragma('temp_store = memory');
+} catch (error) {
+  console.error('Database pragma error:', error);
+  // Fallback to DELETE mode if WAL fails
+  db.pragma('journal_mode = DELETE');
+}
 
 // Disable foreign key constraints for now to avoid issues during sync
 db.pragma('foreign_keys = OFF');
