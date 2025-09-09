@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/database";
+import { getCustomerOwner } from "@/lib/customer-assignment";
 
 type Order = {
   id: string;
@@ -15,7 +16,7 @@ type Order = {
   trackingNumber?: string;
   dueDate?: string;
   notes?: string;
-  ownerEmail?: string;
+  assignedOwner?: string; // Derived from customer record
   source: "shopify" | "quickbooks" | "manual";
   sourceId: string;
 };
@@ -33,21 +34,26 @@ export async function GET(request: NextRequest) {
     const source = searchParams.get("source");
     const customerEmail = searchParams.get("customerEmail");
     
-    let query = 'SELECT * FROM all_orders WHERE 1=1';
+    let query = `
+      SELECT o.*, c.assignedTo as assignedOwner
+      FROM all_orders o
+      LEFT JOIN customers c ON LOWER(o.customerEmail) = LOWER(c.email)
+      WHERE 1=1
+    `;
     const params: any[] = [];
     
     if (status) {
-      query += ' AND status = ?';
+      query += ' AND o.status = ?';
       params.push(status);
     }
     
     if (source) {
-      query += ' AND source = ?';
+      query += ' AND o.source = ?';
       params.push(source);
     }
     
     if (customerEmail) {
-      query += ' AND customerEmail LIKE ?';
+      query += ' AND o.customerEmail LIKE ?';
       params.push(`%${customerEmail}%`);
     }
     

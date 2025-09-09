@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/database';
-import { execSync } from 'child_process';
 
 // GET /api/customers/enhanced - Get all customers with enhanced data
 export async function GET(request: NextRequest) {
@@ -17,15 +16,21 @@ export async function GET(request: NextRequest) {
     let params = [];
 
     if (search) {
-      whereConditions.push(`(
-        email LIKE ? OR 
-        firstName LIKE ? OR 
-        lastName LIKE ? OR 
-        companyName LIKE ? OR
-        phone LIKE ?
-      )`);
-      const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      // Check if search is an ID first
+      if (search.length > 5 && !search.includes('@')) {
+        whereConditions.push('id = ?');
+        params.push(search);
+      } else {
+        whereConditions.push(`(
+          email LIKE ? OR 
+          firstName LIKE ? OR 
+          lastName LIKE ? OR 
+          companyName LIKE ? OR
+          phone LIKE ?
+        )`);
+        const searchTerm = `%${search}%`;
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      }
     }
 
     if (source) {
@@ -45,73 +50,59 @@ export async function GET(request: NextRequest) {
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
+    // Get customers from unified table
     const query = `
       SELECT 
         id, email, firstName, lastName, phone, companyName,
-        billingAddress, shippingAddress, source, sourceId,
-        createdAt, updatedAt, lastContactDate,
+        billingAddress, shippingAddress, createdAt, updatedAt, lastContactDate,
         totalInquiries, totalOrders, totalSpent,
-        status, tags, notes, assignedTo, priority
-      FROM customer_profiles 
+        status, tags, notes, assignedTo, source
+      FROM customers 
       ${whereClause}
       ORDER BY updatedAt DESC, createdAt DESC
       LIMIT ? OFFSET ?
     `;
+    
+    const queryParams = [...params, limit, offset];
+    const customers = db.prepare(query).all(...queryParams).map(customer => ({
+            id: customer.id,
+            email: customer.email,
+            firstName: customer.firstName || '',
+            lastName: customer.lastName || '',
+            phone: customer.phone || '',
+            companyName: customer.companyName || '',
+            billingAddress: customer.billingAddress || '',
+            shippingAddress: customer.shippingAddress || '',
+            createdAt: customer.createdAt,
+            updatedAt: customer.updatedAt,
+            lastContactDate: customer.lastContactDate || null,
+            totalInquiries: parseInt(customer.totalInquiries) || 0,
+            totalOrders: parseInt(customer.totalOrders) || 0,
+            totalSpent: parseFloat(customer.totalSpent) || 0,
+            status: customer.status,
+            tags: customer.tags ? (customer.tags.startsWith('[') ? JSON.parse(customer.tags) : [customer.tags]) : [],
+            notes: customer.notes ? (customer.notes.startsWith('[') ? JSON.parse(customer.notes) : [customer.notes]) : [],
+            assignedTo: customer.assignedTo || null,
+            source: customer.source || 'manual',
+            // Set default values for missing CSV fields
+            reason: null,
+            customerType: null,
+            numberOfDogs: null,
+            assignedOwner: customer.assignedTo || null,
+            inquiryStatus: null,
+            countryCode: null,
+            firstInteractionDate: null,
+            lastInteractionDate: customer.lastContactDate || null,
+            interactionCount: parseInt(customer.totalInquiries) || 0,
+            isActiveInquiry: false,
+            inquiryPriority: 'normal',
+            followUpDate: null,
+            leadSource: customer.source || null,
+            customFields: {}
+    }));
 
-    params.push(limit, offset);
-
-    const result = execSync(
-      `sqlite3 kinetic.db "${query.replace(/\?/g, (match, offset) => {
-        const paramIndex = query.substring(0, offset).split('?').length - 1;
-        return `'${params[paramIndex]?.toString().replace(/'/g, "''") || ''}'`;
-      })}"`,
-      { encoding: 'utf8' }
-    );
-
-    const customers = result.trim().split('\n').map(line => {
-      const [
-        id, email, firstName, lastName, phone, companyName,
-        billingAddress, shippingAddress, source, sourceId,
-        createdAt, updatedAt, lastContactDate,
-        totalInquiries, totalOrders, totalSpent,
-        status, tags, notes, assignedTo, priority
-      ] = line.split('|');
-
-      return {
-        id,
-        email,
-        firstName: firstName || '',
-        lastName: lastName || '',
-        phone: phone || '',
-        companyName: companyName || '',
-        billingAddress: billingAddress || '',
-        shippingAddress: shippingAddress || '',
-        source,
-        sourceId,
-        createdAt,
-        updatedAt,
-        lastContactDate: lastContactDate || null,
-        totalInquiries: parseInt(totalInquiries) || 0,
-        totalOrders: parseInt(totalOrders) || 0,
-        totalSpent: parseFloat(totalSpent) || 0,
-        status,
-        tags: tags ? JSON.parse(tags) : [],
-        notes: notes ? JSON.parse(notes) : [],
-        assignedTo: assignedTo || null,
-        priority
-      };
-    });
-
-    // Get total count for pagination
-    const countQuery = `SELECT COUNT(*) as total FROM customer_profiles ${whereClause}`;
-    const countResult = execSync(
-      `sqlite3 kinetic.db "${countQuery.replace(/\?/g, (match, offset) => {
-        const paramIndex = countQuery.substring(0, offset).split('?').length - 1;
-        return `'${params[paramIndex]?.toString().replace(/'/g, "''") || ''}'`;
-      })}"`,
-      { encoding: 'utf8' }
-    );
-    const total = parseInt(countResult.trim());
+    // Get total count for pagination (use same params as main query, but without limit/offset)
+    const total = db.prepare(`SELECT COUNT(*) as total FROM customers ${whereClause}`).get(...params).total;
 
     return NextResponse.json({
       customers,
@@ -139,8 +130,7 @@ export async function POST(request: NextRequest) {
     const {
       email, firstName, lastName, phone, companyName,
       billingAddress, shippingAddress, source, sourceId,
-      status, tags, assignedTo, priority
-    } = body;
+      status, tags, assignedTo    } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -183,8 +173,7 @@ export async function POST(request: NextRequest) {
         INSERT INTO customer_profiles (
           id, email, firstName, lastName, phone, companyName,
           billingAddress, shippingAddress, source, sourceId,
-          createdAt, updatedAt, status, tags, assignedTo, priority
-        ) VALUES (
+          createdAt, updatedAt, status, tags, assignedTo        ) VALUES (
           '${id}', '${email.replace(/'/g, "''")}', '${(firstName || '').replace(/'/g, "''")}',
           '${(lastName || '').replace(/'/g, "''")}', '${(phone || '').replace(/'/g, "''")}',
           '${(companyName || '').replace(/'/g, "''")}', '${(billingAddress || '').replace(/'/g, "''")}',
@@ -203,6 +192,50 @@ export async function POST(request: NextRequest) {
     console.error('Error creating/updating customer:', error);
     return NextResponse.json(
       { error: 'Failed to create/update customer' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/customers/enhanced - Update customer
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, assignedOwner } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Customer ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Update the customer's assignedOwner
+    const updateCustomer = db.prepare(`
+      UPDATE customers_new 
+      SET assignedOwner = ?, updatedAt = ?
+      WHERE id = ?
+    `);
+
+    const result = updateCustomer.run(
+      assignedOwner || null,
+      new Date().toISOString(),
+      id
+    );
+
+    if (result.changes === 0) {
+      return NextResponse.json(
+        { error: 'Customer not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error('Error updating customer:', error);
+    return NextResponse.json(
+      { error: 'Failed to update customer' },
       { status: 500 }
     );
   }

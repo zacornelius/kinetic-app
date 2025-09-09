@@ -17,23 +17,20 @@ export async function GET(request: NextRequest) {
         c.companyName,
         c.billingAddress,
         c.shippingAddress,
-        c.source,
-        c.sourceId,
         c.createdAt,
         c.updatedAt,
-        COUNT(DISTINCT o.id) as totalOrders,
-        COALESCE(SUM(o.totalAmount), 0) as lifetimeValue,
-        MAX(o.createdAt) as lastOrderDate,
-        MIN(o.createdAt) as firstOrderDate
-      FROM all_customers c
-      LEFT JOIN all_orders o ON c.email = o.customerEmail
+        c.totalOrders,
+        c.totalSpent as lifetimeValue,
+        c.lastContactDate as lastOrderDate,
+        c.createdAt as firstOrderDate
+      FROM customers_new c
       WHERE 1=1
     `;
     
     const params: any[] = [];
     
     if (source) {
-      query += ' AND c.source = ?';
+      query += ' AND EXISTS (SELECT 1 FROM customer_sources cs WHERE cs.customerId = c.id AND cs.source = ?)';
       params.push(source);
     }
     
@@ -43,8 +40,6 @@ export async function GET(request: NextRequest) {
     }
     
     query += `
-      GROUP BY c.id, c.email, c.firstName, c.lastName, c.phone, c.companyName, 
-               c.billingAddress, c.shippingAddress, c.source, c.sourceId, c.createdAt, c.updatedAt
       ORDER BY lifetimeValue DESC, totalOrders DESC
     `;
 
@@ -57,6 +52,53 @@ export async function GET(request: NextRequest) {
       { error: "Failed to fetch customers" },
       { status: 500 }
     );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { email, firstName, lastName, phone, companyName, source, status } = body;
+
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    // Generate a unique ID
+    const id = Math.random().toString(36).substr(2, 9);
+    const now = new Date().toISOString();
+
+    // Insert customer
+    db.prepare(`
+      INSERT INTO customers_new (
+        id, email, firstName, lastName, phone, companyName, 
+        source, status, createdAt, updatedAt, totalOrders, totalSpent
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+    `).run(
+      id, email, firstName || 'Unknown', lastName || 'Customer', 
+      phone || null, companyName || null, source || 'manual', 
+      status || 'contact', now, now
+    );
+
+    // Add to customer sources
+    db.prepare(`
+      INSERT INTO customer_sources (id, customerId, source, sourceId)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      Math.random().toString(36).substr(2, 9), id, source || 'website', id
+    );
+
+    return NextResponse.json({ 
+      id, 
+      email, 
+      firstName: firstName || 'Unknown', 
+      lastName: lastName || 'Customer',
+      status: status || 'contact'
+    });
+
+  } catch (error) {
+    console.error("Error creating customer:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 

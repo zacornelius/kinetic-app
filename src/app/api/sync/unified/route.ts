@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/database";
+import { mergeCustomerDataOnPurchase } from "@/lib/data-sync";
 
 export async function POST() {
   try {
@@ -180,6 +181,14 @@ export async function POST() {
     const totalShopifyCustomers = db.prepare("SELECT COUNT(*) as count FROM shopify_customers").get() as { count: number };
     const totalQuickBooksCustomers = db.prepare("SELECT COUNT(*) as count FROM quickbooks_customers").get() as { count: number };
     
+    // Merge customer data for prospects who have made purchases
+    console.log("Merging customer data for prospects who have made purchases...");
+    const mergeResult = mergeCustomerDataOnPurchase();
+    console.log(`Merged ${mergeResult.merged} customers from prospect to customer status`);
+    if (mergeResult.errors > 0) {
+      console.log(`Encountered ${mergeResult.errors} errors during merge`);
+    }
+
     console.log("Unified sync completed successfully!");
     console.log(`Total all_orders: ${totalAllOrders.count}`);
     console.log(`Total shopify_orders: ${totalShopifyOrders.count}`);

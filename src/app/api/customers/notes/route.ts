@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { execSync } from 'child_process';
-import { require } from 'module';
+import db from '@/lib/database';
 
 // GET /api/customers/notes?customerId=xxx - Get notes for a customer
 export async function GET(request: NextRequest) {
@@ -15,38 +14,46 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const query = `
+    const notes = db.prepare(`
       SELECT 
         cn.id, cn.customerId, cn.authorEmail, cn.note, cn.type,
         cn.createdAt, cn.isPrivate,
         u.firstName as authorFirstName, u.lastName as authorLastName
       FROM customer_notes cn
       LEFT JOIN users u ON cn.authorEmail = u.email
-      WHERE cn.customerId = '${customerId.replace(/'/g, "''")}'
+      WHERE cn.customerId = ?
       ORDER BY cn.createdAt DESC
-    `;
+    `).all(customerId);
 
-    const result = execSync(`sqlite3 kinetic.db "${query}"`, { encoding: 'utf8' });
-
-    const notes = result.trim().split('\n').map(line => {
-      const [
-        id, customerId, authorEmail, note, type,
-        createdAt, isPrivate, authorFirstName, authorLastName
-      ] = line.split('|');
+    // Process notes and add default timestamps for notes without dates
+    const processedNotes = notes.map(note => {
+      let createdAt = note.createdAt;
+      
+      // If no timestamp, assume it happened one day after the customer was created
+      if (!createdAt) {
+        const customerCreatedAt = db.prepare(`SELECT createdAt FROM customers_new WHERE id = ?`).get(customerId)?.createdAt;
+        if (customerCreatedAt) {
+          const customerDate = new Date(customerCreatedAt);
+          customerDate.setDate(customerDate.getDate() + 1);
+          createdAt = customerDate.toISOString();
+        } else {
+          createdAt = new Date().toISOString();
+        }
+      }
 
       return {
-        id,
-        customerId,
-        authorEmail,
-        note,
-        type,
+        id: note.id,
+        customerId: note.customerId,
+        authorEmail: note.authorEmail,
+        note: note.note,
+        type: note.type,
         createdAt,
-        isPrivate: isPrivate === '1',
-        authorName: `${authorFirstName || ''} ${authorLastName || ''}`.trim() || authorEmail
+        isPrivate: Boolean(note.isPrivate),
+        authorName: `${note.authorFirstName || ''} ${note.authorLastName || ''}`.trim() || note.authorEmail
       };
     });
 
-    return NextResponse.json({ notes });
+    return NextResponse.json({ notes: processedNotes });
 
   } catch (error) {
     console.error('Error fetching customer notes:', error);
@@ -61,44 +68,87 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerId, authorEmail, note, type = 'general', isPrivate = false } = body;
+    const { customerId, authorEmail, note, type = 'general', isPrivate = false, inquiryEmail } = body;
 
-    if (!customerId || !authorEmail || !note) {
+    if (!customerId && !inquiryEmail) {
       return NextResponse.json(
-        { error: 'Customer ID, author email, and note are required' },
+        { error: 'Customer ID or inquiry email is required' },
         { status: 400 }
       );
+    }
+
+    if (!authorEmail || !note) {
+      return NextResponse.json(
+        { error: 'Author email and note are required' },
+        { status: 400 }
+      );
+    }
+
+    let finalCustomerId = customerId;
+
+    // If no customer ID but we have inquiry email, try to find or create customer
+    if (!finalCustomerId && inquiryEmail) {
+      // First try to find existing customer
+      const existingCustomer = db.prepare(`
+        SELECT id FROM customers_new WHERE email = ?
+      `).get(inquiryEmail);
+
+      if (existingCustomer) {
+        finalCustomerId = existingCustomer.id;
+      } else {
+        // Create a new customer for this inquiry
+        const newCustomerId = Math.random().toString(36).substr(2, 9);
+        const now = new Date().toISOString();
+        
+        db.prepare(`
+          INSERT INTO customers_new (
+            id, email, firstName, lastName, source, status, 
+            createdAt, updatedAt, totalOrders, totalSpent
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+        `).run(
+          newCustomerId, inquiryEmail, 'Unknown', 'Customer', 
+          'manual', 'contact', now, now
+        );
+
+        // Add to customer sources
+        db.prepare(`
+          INSERT INTO customer_sources (id, customerId, source, sourceId)
+          VALUES (?, ?, ?, ?)
+        `).run(
+          Math.random().toString(36).substr(2, 9), newCustomerId, 'manual', newCustomerId
+        );
+
+        finalCustomerId = newCustomerId;
+      }
     }
 
     const id = require('crypto').randomBytes(8).toString('hex');
     const now = new Date().toISOString();
 
-    const insertQuery = `
+    // Insert the note
+    db.prepare(`
       INSERT INTO customer_notes (
         id, customerId, authorEmail, note, type, createdAt, isPrivate
-      ) VALUES (
-        '${id}', '${customerId.replace(/'/g, "''")}', '${authorEmail.replace(/'/g, "''")}',
-        '${note.replace(/'/g, "''")}', '${type}', '${now}', ${isPrivate ? 1 : 0}
-      )
-    `;
-
-    execSync(`sqlite3 kinetic.db "${insertQuery}"`);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, finalCustomerId, authorEmail, note, type, now, isPrivate ? 1 : 0);
 
     // Update customer's last contact date
-    const updateQuery = `
-      UPDATE customer_profiles 
-      SET lastContactDate = '${now}', updatedAt = '${now}'
-      WHERE id = '${customerId.replace(/'/g, "''")}'
-    `;
-
-    execSync(`sqlite3 kinetic.db "${updateQuery}"`);
+    db.prepare(`
+      UPDATE customers_new 
+      SET lastContactDate = ?, updatedAt = ?
+      WHERE id = ?
+    `).run(now, now, finalCustomerId);
 
     return NextResponse.json({ success: true, noteId: id });
 
   } catch (error) {
     console.error('Error adding customer note:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
-      { error: 'Failed to add customer note' },
+      { error: 'Failed to add customer note', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

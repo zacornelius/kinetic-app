@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/database";
+import { getCustomerOwner, assignCustomer, getAutoAssignment, updateCustomerStatus } from "@/lib/customer-assignment";
 
 type Category = "bulk" | "issues" | "questions";
 
@@ -7,10 +8,11 @@ type Inquiry = {
   id: string;
   createdAt: string;
   category: Category;
-  subject: string;
   customerEmail: string;
-  ownerEmail?: string;
-  status: "open" | "assigned" | "closed";
+  status: "active" | "closed";
+  originalMessage?: string;
+  customerName?: string;
+  assignedOwner?: string; // This will be derived from customer record
 };
 
 function generateId() {
@@ -23,11 +25,27 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") as Category | null;
     
-    let query = 'SELECT * FROM inquiries ORDER BY createdAt DESC';
+             let query = `
+               SELECT DISTINCT i.*, i.message as originalMessage,
+                      COALESCE(c.firstName || ' ' || c.lastName, i.customerEmail) as customerName,
+                      c.assignedTo as assignedOwner
+               FROM inquiries i 
+               LEFT JOIN customers c ON LOWER(i.customerEmail) = LOWER(c.email)
+               WHERE i.status != 'not_relevant'
+               ORDER BY i.createdAt DESC
+             `;
     let params: any[] = [];
     
     if (category) {
-      query = 'SELECT * FROM inquiries WHERE category = ? ORDER BY createdAt DESC';
+      query = `
+        SELECT DISTINCT i.*, i.message as originalMessage,
+               COALESCE(c.firstName || ' ' || c.lastName, i.customerEmail) as customerName,
+               c.assignedTo as assignedOwner
+        FROM inquiries i 
+        LEFT JOIN customers c ON LOWER(i.customerEmail) = LOWER(c.email)
+        WHERE i.category = ? AND i.status != 'not_relevant'
+        ORDER BY i.createdAt DESC
+      `;
       params = [category];
     }
     
@@ -42,30 +60,59 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { category, subject, customerEmail, ownerEmail } = body;
+    const { category, customerEmail, message } = body;
     
-    if (!category || !subject || !customerEmail) {
+    if (!category || !customerEmail) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     
-    const id = generateId();
+    // Check if customer exists
+    const existingCustomer = db.prepare(`
+      SELECT id, assignedTo, firstName, lastName, status FROM customers
+      WHERE email = ?
+    `).get(customerEmail) as { id: string, assignedTo: string | null, firstName: string, lastName: string, status: string } | undefined;
+    
+    let assignedOwner: string | null = null;
+    let status: string;
+    
+    if (existingCustomer && existingCustomer.assignedTo) {
+      // Customer exists with assigned owner - auto-assign to active
+      assignedOwner = existingCustomer.assignedTo;
+      status = "active";
+      
+      // Update their last contact date and increment inquiry count
+      db.prepare(`
+        UPDATE customers
+        SET lastContactDate = ?, totalInquiries = totalInquiries + 1, updatedAt = ?
+        WHERE id = ?
+      `).run(new Date().toISOString(), new Date().toISOString(), existingCustomer.id);
+      
+      // Update customer status
+      updateCustomerStatus(existingCustomer.id);
+    } else {
+      // Customer doesn't exist or has no assigned owner - mark as new
+      assignedOwner = null;
+      status = "new";
+    }
+    
+    const id = Math.random().toString(36).slice(2, 15);
     const createdAt = new Date().toISOString();
-    const status = ownerEmail ? "assigned" : "open";
     
     const insertInquiry = db.prepare(`
-      INSERT INTO inquiries (id, createdAt, category, subject, customerEmail, ownerEmail, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO inquiries (id, createdAt, category, customerEmail, status, message)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
     
-    insertInquiry.run(id, createdAt, category, subject, customerEmail, ownerEmail || null, status);
+    // Create a meaningful default message if none provided
+    const defaultMessage = message || `New ${category} inquiry from ${customerEmail}`;
+    insertInquiry.run(id, createdAt, category, customerEmail, status, defaultMessage);
     
     const newInquiry: Inquiry = {
       id,
       createdAt,
       category,
-      subject,
       customerEmail,
-      ownerEmail: ownerEmail || undefined,
+      assignedOwner: assignedOwner || undefined,
       status,
     };
     
@@ -119,52 +166,132 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, ownerEmail, status } = body as Partial<Inquiry> & { id: string };
+    const { id, action, salesPersonEmail } = body;
     
-    if (!id) {
-      return NextResponse.json({ error: "Missing inquiry ID" }, { status: 400 });
+    if (!id || !action) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     
-    // Check if inquiry exists
-    const existingInquiry = db.prepare('SELECT * FROM inquiries WHERE id = ?').get(id) as Inquiry;
-    if (!existingInquiry) {
+    // Get the inquiry
+    const inquiry = db.prepare('SELECT * FROM inquiries WHERE id = ?').get(id) as Inquiry;
+    if (!inquiry) {
       return NextResponse.json({ error: "Inquiry not found" }, { status: 404 });
     }
     
-    // Build update query dynamically
-    const updates: string[] = [];
-    const params: any[] = [];
-    
-    if (ownerEmail !== undefined) {
-      updates.push('ownerEmail = ?');
-      params.push(ownerEmail || null);
+    if (action === "take") {
+      if (!salesPersonEmail) {
+        return NextResponse.json({ error: "Sales person email required for taking inquiry" }, { status: 400 });
+      }
       
-      // Update status based on owner assignment
-      updates.push('status = ?');
-      params.push(ownerEmail ? "assigned" : "open");
+      if (inquiry.status !== "new" && !(inquiry.status === "active" && !inquiry.assignedOwner)) {
+        return NextResponse.json({ error: "Can only take inquiries with 'new' status or unassigned 'active' status" }, { status: 400 });
+      }
+      
+      // Check if customer exists
+      const existingCustomer = db.prepare(`
+        SELECT id, assignedTo, firstName, lastName, status FROM customers
+        WHERE email = ?
+      `).get(inquiry.customerEmail) as { id: string, assignedTo: string | null, firstName: string, lastName: string, status: string } | undefined;
+      
+      let customerId: string;
+      
+      if (existingCustomer) {
+        // Customer exists - update their record
+        customerId = existingCustomer.id;
+        
+        // Update their last contact date and increment inquiry count
+        db.prepare(`
+          UPDATE customers
+          SET lastContactDate = ?, totalInquiries = totalInquiries + 1, updatedAt = ?, assignedTo = ?
+          WHERE id = ?
+        `).run(new Date().toISOString(), new Date().toISOString(), salesPersonEmail, customerId);
+        
+        // Update customer status
+        // updateCustomerStatus(customerId);
+      } else {
+        // Create new customer record
+        customerId = Math.random().toString(36).slice(2, 15);
+        const now = new Date().toISOString();
+        
+        // Extract name from email if possible
+        const emailName = inquiry.customerEmail.split('@')[0].replace(/[._]/g, ' ');
+        const firstName = emailName.split(' ')[0] || 'Unknown';
+        const lastName = emailName.split(' ').slice(1).join(' ') || 'Customer';
+        
+        db.prepare(`
+          INSERT INTO customers (
+            id, email, firstName, lastName, phone, companyName,
+            billingAddress, shippingAddress, source, sourceId,
+            createdAt, updatedAt, lastContactDate, totalInquiries, totalOrders, totalSpent,
+            status, tags, notes, assignedTo
+          ) VALUES (?, ?, ?, ?, '', '', '', '', 'website', ?, ?, ?, ?, 1, 0, 0, 'contact', '[]', '[]', ?)
+        `).run(customerId, inquiry.customerEmail, firstName, lastName, customerId, now, now, now, salesPersonEmail);
+      }
+      
+      // Update inquiry status to active and assign owner
+      db.prepare('UPDATE inquiries SET status = ? WHERE id = ?').run("active", id);
+      
+    } else if (action === "not_relevant") {
+      if (inquiry.status !== "new" && !(inquiry.status === "active" && !inquiry.assignedOwner)) {
+        return NextResponse.json({ error: "Can only mark 'new' or unassigned 'active' inquiries as not relevant" }, { status: 400 });
+      }
+      
+      // Mark inquiry as not relevant (no customer record created)
+      db.prepare('UPDATE inquiries SET status = ? WHERE id = ?').run("not_relevant", id);
+      
+    } else {
+      return NextResponse.json({ error: "Invalid action. Use 'take' or 'not_relevant'" }, { status: 400 });
     }
     
-    if (status) {
-      updates.push('status = ?');
-      params.push(status);
-    }
+    // Return updated inquiry with assigned owner from customer record
+    const updatedInquiry = db.prepare(`
+      SELECT i.*, c.assignedTo as assignedOwner
+      FROM inquiries i
+      LEFT JOIN customers c ON LOWER(i.customerEmail) = LOWER(c.email)
+      WHERE i.id = ?
+    `).get(id) as Inquiry;
     
-    if (updates.length === 0) {
-      return NextResponse.json({ error: "No updates provided" }, { status: 400 });
-    }
-    
-    params.push(id);
-    
-    const updateQuery = `UPDATE inquiries SET ${updates.join(', ')} WHERE id = ?`;
-    db.prepare(updateQuery).run(...params);
-    
-    // Return updated inquiry
-    const updatedInquiry = db.prepare('SELECT * FROM inquiries WHERE id = ?').get(id) as Inquiry;
     return NextResponse.json(updatedInquiry);
   } catch (error) {
-    console.error('Error updating inquiry:', error);
+    console.error('Error processing inquiry action:', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, status } = body;
+    
+    if (!id || !status) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    
+    if (!["active", "closed"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+    
+    // Update inquiry status
+    const result = db.prepare('UPDATE inquiries SET status = ? WHERE id = ?').run(status, id);
+    
+    if (result.changes === 0) {
+      return NextResponse.json({ error: "Inquiry not found" }, { status: 404 });
+    }
+    
+    // Return updated inquiry with assigned owner from customer record
+    const updatedInquiry = db.prepare(`
+      SELECT i.*, c.assignedTo as assignedOwner
+      FROM inquiries i
+      LEFT JOIN customers c ON LOWER(i.customerEmail) = LOWER(c.email)
+      WHERE i.id = ?
+    `).get(id) as Inquiry;
+    
+    return NextResponse.json(updatedInquiry);
+  } catch (error) {
+    console.error('Error updating inquiry status:', error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 
 

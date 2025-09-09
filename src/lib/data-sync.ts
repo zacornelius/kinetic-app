@@ -416,3 +416,65 @@ export function getUnifiedOrders(filters?: {
 
   return db.prepare(query).all(...params) as UnifiedOrder[];
 }
+
+/**
+ * Merge customer data when they make a purchase
+ * This updates website prospects to customers and merges their data
+ */
+export function mergeCustomerDataOnPurchase(): { merged: number; errors: number } {
+  let merged = 0;
+  let errors = 0;
+
+  try {
+    // Find website customers who have made purchases
+    const customersWithOrders = db.prepare(`
+      SELECT DISTINCT c.id, c.email, c.firstName, c.lastName, c.phone, c.companyName,
+             c.billingAddress, c.shippingAddress, c.assignedTo, c.tags, c.notes,
+             SUM(ao.totalAmount) as totalSpent,
+             COUNT(ao.id) as totalOrders,
+             MAX(ao.createdAt) as lastOrderDate
+      FROM customers c
+      JOIN all_orders ao ON c.email = ao.customerEmail
+      WHERE c.source = 'website' AND c.status = 'prospect'
+      GROUP BY c.id, c.email
+    `).all();
+
+    for (const customer of customersWithOrders) {
+      try {
+        // Update customer status to 'customer' and merge order data
+        db.prepare(`
+          UPDATE customers
+          SET status = 'customer',
+              totalOrders = ?,
+              totalSpent = ?,
+              updatedAt = ?
+          WHERE id = ?
+        `).run(
+          customer.totalOrders,
+          customer.totalSpent,
+          new Date().toISOString(),
+          customer.id
+        );
+
+        // Update all orders for this customer to have the same owner
+        if (customer.assignedTo) {
+          db.prepare(`
+            UPDATE all_orders 
+            SET ownerEmail = ?
+            WHERE customerEmail = ? AND (ownerEmail IS NULL OR ownerEmail = '')
+          `).run(customer.assignedTo, customer.email);
+        }
+
+        merged++;
+      } catch (error) {
+        console.error(`Error merging customer ${customer.email}:`, error);
+        errors++;
+      }
+    }
+  } catch (error) {
+    console.error('Error in mergeCustomerDataOnPurchase:', error);
+    errors++;
+  }
+
+  return { merged, errors };
+}
