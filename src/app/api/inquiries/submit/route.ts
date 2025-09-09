@@ -3,9 +3,7 @@ import db from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('API endpoint called');
     const body = await request.json();
-    console.log('Request body:', body);
     
     // Extract form data
     const {

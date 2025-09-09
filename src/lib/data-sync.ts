@@ -343,17 +343,12 @@ export function syncAllDataToUnified(): {
   customers: { shopify: { synced: number; errors: number }; quickbooks: { synced: number; errors: number } };
   orders: { shopify: { synced: number; errors: number }; quickbooks: { synced: number; errors: number } };
 } {
-  console.log('Starting data synchronization...');
   
   const shopifyCustomers = syncShopifyCustomersToUnified();
   const quickbooksCustomers = syncQuickBooksCustomersToUnified();
   const shopifyOrders = syncShopifyOrdersToUnified();
   const quickbooksOrders = syncQuickBooksOrdersToUnified();
 
-  console.log('Data synchronization completed:', {
-    customers: { shopify: shopifyCustomers, quickbooks: quickbooksCustomers },
-    orders: { shopify: shopifyOrders, quickbooks: quickbooksOrders }
-  });
 
   return {
     customers: { shopify: shopifyCustomers, quickbooks: quickbooksCustomers },

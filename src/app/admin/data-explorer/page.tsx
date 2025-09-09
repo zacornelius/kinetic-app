@@ -88,42 +88,33 @@ export default function DataExplorer() {
 
   async function loadData() {
     if (isLoading) {
-      console.log('Already loading data, skipping...');
       return;
     }
     
     setIsLoading(true);
     try {
-      console.log('Loading data...');
       
       // Load data sequentially to avoid race conditions
       const inquiriesRes = await fetch("/api/inquiries");
       const inquiriesData = await inquiriesRes.json();
-      console.log('Inquiries loaded:', inquiriesData.length);
       
       const ordersRes = await fetch("/api/orders");
       const ordersData = await ordersRes.json();
-      console.log('All orders loaded:', ordersData.length);
       
       const usersRes = await fetch("/api/users");
       const usersData = await usersRes.json();
-      console.log('Users loaded:', usersData.length);
       
       const customersRes = await fetch("/api/customers");
       const customersData = await customersRes.json();
-      console.log('All customers loaded:', customersData.length);
       
       const shopifyOrdersRes = await fetch("/api/shopify/orders");
       const shopifyOrdersData = await shopifyOrdersRes.json();
-      console.log('Shopify orders loaded:', shopifyOrdersData.length);
       
       const shopifyCustomersRes = await fetch("/api/shopify/customers");
       const shopifyCustomersData = await shopifyCustomersRes.json();
-      console.log('Shopify customers loaded:', shopifyCustomersData.length);
       
       const lineItemsRes = await fetch("/api/line-items");
       const lineItemsData = await lineItemsRes.json();
-      console.log('Line items loaded:', lineItemsData.length);
       
       setInquiries(inquiriesData);
       setOrders(ordersData);
@@ -134,14 +125,6 @@ export default function DataExplorer() {
       setLineItems(lineItemsData);
       
       // Log the data for debugging
-      console.log('=== DATA LOADED ===');
-      console.log('Inquiries:', inquiriesData.length);
-      console.log('All orders:', ordersData.length);
-      console.log('All customers:', customersData.length);
-      console.log('Shopify orders:', shopifyOrdersData.length);
-      console.log('Shopify customers:', shopifyCustomersData.length);
-      console.log('Line items:', lineItemsData.length);
-      console.log('==================');
     } catch (error) {
       console.error("Error loading data:", error);
       // Set empty arrays on error to prevent undefined states

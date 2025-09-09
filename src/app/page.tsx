@@ -111,11 +111,9 @@ export default function Home() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerLoading, setCustomerLoading] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [customerSourceFilter, setCustomerSourceFilter] = useState('');
   const [customerStatusFilter, setCustomerStatusFilter] = useState('');
   const [customerAssignedFilter, setCustomerAssignedFilter] = useState('');
   const [customerCurrentPage, setCustomerCurrentPage] = useState(0);
-  const [customerTotalPages, setCustomerTotalPages] = useState(0);
   const [customerTotalCustomers, setCustomerTotalCustomers] = useState(0);
   const [customerFilterCounts, setCustomerFilterCounts] = useState({ my_customers: 0, my_contacts: 0, all: 0 });
   const customerLimit = 20;
@@ -180,42 +178,21 @@ export default function Home() {
       if (response.ok && data.customers) {
         setCustomers(data.customers);
         setCustomerTotalCustomers(data.pagination?.total || 0);
-        setCustomerTotalPages(Math.ceil((data.pagination?.total || 0) / customerLimit));
       } else {
         console.error('API Error:', data);
         setCustomers([]);
         setCustomerTotalCustomers(0);
-        setCustomerTotalPages(0);
       }
     } catch (error) {
       console.error('Error loading customers:', error);
       setCustomers([]);
       setCustomerTotalCustomers(0);
-      setCustomerTotalPages(0);
     } finally {
       setCustomerLoading(false);
     }
   };
 
-  const showAllCustomers = () => {
-    setCustomerStatusFilter('');
-    setCustomerSearch('');
-    setCustomerSourceFilter('');
-    setCustomerAssignedFilter('');
-    setCustomerCurrentPage(0);
-    setActiveTab('customers');
-    loadCustomers();
-  };
 
-  const showProspects = () => {
-    setCustomerStatusFilter('prospect');
-    setCustomerSearch('');
-    setCustomerSourceFilter('');
-    setCustomerAssignedFilter('');
-    setCustomerCurrentPage(0);
-    setActiveTab('customers');
-    loadCustomers();
-  };
 
   const loadCustomerDetails = async (customerId: string) => {
     try {
@@ -279,17 +256,6 @@ export default function Home() {
       const customerId = noteInquiryId; // noteInquiryId contains either customer ID or inquiry ID
       const inquiryEmail = isCustomerNote ? selectedCustomer?.email : selectedInquiry?.customerEmail;
 
-      console.log('Adding note with data:', {
-        customerId,
-        inquiryEmail,
-        note: noteText,
-        type: noteType === 'note' ? 'general' : 'general',
-        authorEmail: user?.email || 'system',
-        isCustomerNote,
-        noteInquiryId,
-        selectedCustomer: selectedCustomer?.id,
-        selectedInquiry: selectedInquiry?.id
-      });
 
       const response = await fetch('/api/customers/notes', {
         method: 'POST',
@@ -423,7 +389,6 @@ export default function Home() {
       // Default to "My Customers" (people who purchased and are assigned to me)
       setCustomerAssignedFilter(user?.email || '');
       setCustomerStatusFilter('customer');
-      setCustomerSourceFilter('');
       setCustomerSearch('');
       setCustomerCurrentPage(0);
       loadCustomers();
@@ -435,7 +400,7 @@ export default function Home() {
     if (activeTab === 'customers') {
       loadCustomers();
     }
-  }, [customerAssignedFilter, customerStatusFilter, customerSourceFilter, customerSearch, customerCurrentPage]);
+  }, [customerAssignedFilter, customerStatusFilter, customerSearch, customerCurrentPage]);
 
   async function createInquiry(e: React.FormEvent) {
     e.preventDefault();
@@ -600,8 +565,7 @@ export default function Home() {
           });
         } else {
           // If customer doesn't exist, we'll let the system create one when needed
-          // For now, just log that we couldn't find a customer
-          console.log(`Customer not found for email: ${inquiry.customerEmail}`);
+          // Customer not found for this inquiry
         }
       }
 
@@ -1022,7 +986,6 @@ export default function Home() {
                 onClick={() => {
                   setCustomerAssignedFilter(user?.email || '');
                   setCustomerStatusFilter('customer');
-                  setCustomerSourceFilter('');
                   setCustomerSearch('');
                   setCustomerCurrentPage(0);
                 }}
@@ -1036,7 +999,6 @@ export default function Home() {
                 onClick={() => {
                   setCustomerAssignedFilter(user?.email || '');
                   setCustomerStatusFilter('contact');
-                  setCustomerSourceFilter('');
                   setCustomerSearch('');
                   setCustomerCurrentPage(0);
                 }}
@@ -1050,12 +1012,11 @@ export default function Home() {
                 onClick={() => {
                   setCustomerAssignedFilter('');
                   setCustomerStatusFilter('');
-                  setCustomerSourceFilter('');
                   setCustomerSearch('');
                   setCustomerCurrentPage(0);
                 }}
                 className={`px-4 py-3 rounded-md text-sm font-medium ${
-                  customerAssignedFilter === '' && customerStatusFilter === '' && customerSourceFilter === '' && customerSearch === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  customerAssignedFilter === '' && customerStatusFilter === '' && customerSearch === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 All Customers ({customerFilterCounts.all})

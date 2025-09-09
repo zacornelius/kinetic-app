@@ -67,36 +67,12 @@ textarea::placeholder {
 }
 
 /* Mobile PWA specific styling */
-@supports (padding: max(0px)) {
-  .mobile-safe-area {
-    padding-top: max(env(safe-area-inset-top), 0px);
-    padding-bottom: max(env(safe-area-inset-bottom), 0px);
-    padding-left: max(env(safe-area-inset-left), 0px);
-    padding-right: max(env(safe-area-inset-right), 0px);
-  }
-}
-
-/* Fallback for devices without safe-area-inset support */
-@supports not (height: env(safe-area-inset-top)) {
-  .fixed-header {
-    padding-top: 20px;
-  }
-  
-  .content-with-fixed-header {
-    padding-top: 5rem; /* 80px - status bar + header */
-  }
-}
 
 /* Fix for iPhone bottom navigation being cut off */
 .bottom-nav {
   padding-bottom: max(env(safe-area-inset-bottom), 20px);
 }
 
-/* Remove any blue status bar styling */
-.status-bar {
-  background-color: #000000 !important;
-  -webkit-appearance: none !important;
-}
 
 /* Ensure proper mobile viewport and black background */
 html {

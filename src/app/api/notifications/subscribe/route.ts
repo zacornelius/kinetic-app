@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
   try {
     const subscription = await request.json();
     
-    console.log('New push subscription:', subscription);
     
     // Store subscription in database
     const { execSync } = require('child_process');
@@ -35,7 +34,6 @@ export async function POST(request: NextRequest) {
       
       execSync(`sqlite3 kinetic.db "${sql}"`, { stdio: 'pipe' });
       
-      console.log('Subscription saved successfully');
       return NextResponse.json({ 
         success: true, 
         message: 'Subscription saved successfully' 
