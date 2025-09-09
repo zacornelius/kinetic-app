@@ -361,36 +361,60 @@ export default function Home() {
   function renderCustomersTab() {
     return (
       <div className="space-y-4">
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-4 border-b">
-            <h3 className="text-sm font-medium text-gray-600">
-              Customer Order History ({allCustomerOrders.length} customers)
-            </h3>
-          </div>
-          <div className="divide-y">
-            {allCustomerOrders.map((customer, index) => (
-              <div key={customer.email} className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900 mb-1">
-                      {customer.name || customer.email}
-                    </div>
-                    <div className="text-xs text-gray-500">{customer.email}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900">
-                      ${customer.totalValue.toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {customer.orders.length} orders
-                    </div>
-                  </div>
-                </div>
-                <div className="text-xs text-gray-400">
-                  Latest: {new Date(Math.max(...customer.orders.map(o => new Date(o.createdAt).getTime()))).toLocaleDateString()}
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-900 mb-4">Customer Management</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Access comprehensive customer profiles, notes, and interaction history.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a
+              href="/customers"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center">
+                <svg className="w-8 h-8 text-[#3B83BE] mr-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">All Customers</h4>
+                  <p className="text-xs text-gray-500">View and manage all customer profiles</p>
                 </div>
               </div>
-            ))}
+            </a>
+            <a
+              href="/customers?search=&status=prospect"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center">
+                <svg className="w-8 h-8 text-[#D7923E] mr-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Prospects</h4>
+                  <p className="text-xs text-gray-500">View potential customers</p>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-900 mb-4">Quick Actions</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-[#C43C37] mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Add New Inquiry</h4>
+                  <p className="text-xs text-gray-500">Create a new customer inquiry</p>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       </div>
