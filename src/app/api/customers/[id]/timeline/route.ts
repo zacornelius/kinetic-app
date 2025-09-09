@@ -8,8 +8,8 @@ export async function GET(
   try {
     const { id: customerId } = await params;
 
-  // Get customer data from unified table
-  const customer = db.prepare(`SELECT email, firstInteractionDate, reason, customerType, numberOfDogs, inquiryStatus, assignedOwner FROM customers_new WHERE id = ?`).get(customerId);
+  // Get customer data from customers table
+  const customer = db.prepare(`SELECT email, assignedTo FROM customers WHERE id = ?`).get(customerId);
 
   if (!customer) {
     return NextResponse.json({ interactions: [] });
@@ -31,24 +31,9 @@ export async function GET(
     ORDER BY createdAt DESC
   `).all(customerEmail);
 
-  // Add customer inquiry data if available (from CSV) - only if no inquiries exist in database
-  const hasInquiries = inquiries.length > 0;
-  const customerInquiry = !hasInquiries && customer.firstInteractionDate ? {
-    type: 'customer_inquiry',
-    id: `customer_inquiry_${customerId}`,
-    content: 'Initial Inquiry',
-    authorEmail: customer.assignedOwner || 'system',
-    createdAt: customer.firstInteractionDate,
-    metadata: {
-      reason: customer.reason,
-      customerType: customer.customerType,
-      numberOfDogs: customer.numberOfDogs,
-      status: customer.inquiryStatus,
-      owner: customer.assignedOwner
-    }
-  } : null;
+  // No need for customer inquiry data since we're using the actual inquiries table
 
-    // Get orders
+    // Get orders from shopify_orders table
     const orders = db.prepare(`
       SELECT 
         'order' as type,
@@ -59,7 +44,7 @@ export async function GET(
         orderNumber,
         totalAmount,
         status
-      FROM all_orders 
+      FROM shopify_orders 
       WHERE customerEmail = ?
       ORDER BY createdAt DESC
     `).all(customerEmail);
@@ -82,13 +67,12 @@ export async function GET(
 
   // Format all interactions
   const allInteractions = [
-    ...(customerInquiry ? [customerInquiry] : []),
     ...inquiries.map(i => ({
       id: i.id,
       type: i.type,
       subject: 'Inquiry',
       content: i.content, // Use inquiry message directly
-      authorEmail: customer.assignedOwner || 'system',
+      authorEmail: customer.assignedTo || 'system',
       createdAt: i.createdAt, // Use inquiry date
       metadata: { category: i.category, status: i.status }
     })),
@@ -97,7 +81,7 @@ export async function GET(
       type: o.type,
       subject: o.subject,
       content: o.content,
-      authorEmail: customer.assignedOwner || 'system',
+      authorEmail: customer.assignedTo || 'system',
       createdAt: o.createdAt,
       metadata: { orderNumber: o.orderNumber, totalAmount: o.totalAmount, status: o.status }
     })),
