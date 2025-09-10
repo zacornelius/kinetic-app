@@ -43,7 +43,7 @@ export async function GET(
         orderNumber,
         totalAmount,
         status
-      FROM all_orders 
+      FROM shopify_orders 
       WHERE customerEmail = ?
       ORDER BY createdAt DESC
     `).all(customerEmail);

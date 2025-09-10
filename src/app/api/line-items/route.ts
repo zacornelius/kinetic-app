@@ -11,7 +11,7 @@ export async function GET() {
         customerEmail,
         customerName,
         lineItems
-      FROM all_orders
+      FROM shopify_orders
       WHERE lineItems IS NOT NULL AND lineItems != ''
       ORDER BY createdAt DESC
     `).all();

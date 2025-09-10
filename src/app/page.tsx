@@ -105,7 +105,6 @@ export default function Home() {
     // If more than 3 lines, take first 3 and add ellipsis
     return lines.slice(0, 3).join('\n') + '...';
   };
-  const [showAddModal, setShowAddModal] = useState(false);
   
   // Customer management state
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -115,7 +114,6 @@ export default function Home() {
   const [customerAssignedFilter, setCustomerAssignedFilter] = useState('');
   const [customerCurrentPage, setCustomerCurrentPage] = useState(0);
   const [customerTotalCustomers, setCustomerTotalCustomers] = useState(0);
-  const [customerFilterCounts, setCustomerFilterCounts] = useState({ my_customers: 0, my_contacts: 0, all: 0 });
   const customerLimit = 20;
   
   // Customer detail modal state
@@ -136,19 +134,8 @@ export default function Home() {
   const [showInquiryModal, setShowInquiryModal] = useState(false);
   const [inquiryCustomer, setInquiryCustomer] = useState<any>(null);
   const [inquiryCustomerId, setInquiryCustomerId] = useState<string | null>(null);
+  const [inquiryCustomerTimeline, setInquiryCustomerTimeline] = useState<any[]>([]);
 
-  const loadCustomerFilterCounts = async () => {
-    try {
-      const response = await fetch(`/api/customers/counts?assignedTo=${user?.email}&_t=${Date.now()}`);
-      const data = await response.json();
-      
-      if (response.ok && data.counts) {
-        setCustomerFilterCounts(data.counts);
-      }
-    } catch (error) {
-      console.error('Error loading customer filter counts:', error);
-    }
-  };
 
   const loadCustomers = async () => {
     try {
@@ -172,6 +159,8 @@ export default function Home() {
       if (customerSearch) params.append('search', customerSearch);
       if (user?.email) params.append('assignedTo', user.email);
 
+      // Add cache busting
+      params.append('_t', Date.now().toString());
       const response = await fetch(`/api/customers/simple?${params}`);
       const data = await response.json();
       
@@ -199,7 +188,10 @@ export default function Home() {
       setLoadingCustomer(true);
       
       // Load customer data
-      const customerResponse = await fetch(`/api/customers/enhanced?search=${customerId}&limit=1`);
+      const customerResponse = await fetch(`/api/customers/enhanced?search=${customerId}&limit=1&_t=${Date.now()}`);
+      if (!customerResponse.ok) {
+        throw new Error(`Failed to fetch customer: ${customerResponse.status}`);
+      }
       const customerData = await customerResponse.json();
       
       if (customerData.customers && customerData.customers.length > 0) {
@@ -208,13 +200,21 @@ export default function Home() {
         
         // Load notes
         const notesResponse = await fetch(`/api/customers/notes?customerId=${customerId}`);
-        const notesData = await notesResponse.json();
-        setCustomerNotes(notesData.notes || []);
+        if (notesResponse.ok) {
+          const notesData = await notesResponse.json();
+          setCustomerNotes(notesData.notes || []);
+        } else {
+          setCustomerNotes([]);
+        }
         
         // Load timeline
         const timelineResponse = await fetch(`/api/customers/${customerId}/timeline`);
-        const timelineData = await timelineResponse.json();
-        setCustomerTimeline(timelineData.interactions || []);
+        if (timelineResponse.ok) {
+          const timelineData = await timelineResponse.json();
+          setCustomerTimeline(timelineData.interactions || []);
+        } else {
+          setCustomerTimeline([]);
+        }
         
         setShowCustomerModal(true);
       }
@@ -246,9 +246,17 @@ export default function Home() {
     setNoteType('note');
   };
 
-  const addNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!noteText.trim() || !noteInquiryId) return;
+  const addNote = async (e: React.FormEvent | string) => {
+    // Handle both form submission and button click
+    if (typeof e === 'string') {
+      // Called from button click with inquiry ID
+      if (!noteText.trim() || !e) return;
+      noteInquiryId = e;
+    } else {
+      // Called from form submission
+      e.preventDefault();
+      if (!noteText.trim() || !noteInquiryId) return;
+    }
 
     try {
       // Determine if this is a customer note or inquiry note
@@ -285,6 +293,19 @@ export default function Home() {
         
         closeNoteModal();
         refresh(); // Refresh the inquiry list
+        
+        // Refresh timeline if we're in inquiry modal
+        if (inquiryCustomerId) {
+          try {
+            const timelineResponse = await fetch(`/api/customers/${inquiryCustomerId}/timeline?_t=${Date.now()}`);
+            if (timelineResponse.ok) {
+              const timelineData = await timelineResponse.json();
+              setInquiryCustomerTimeline(timelineData.interactions || []);
+            }
+          } catch (error) {
+            console.error('Error refreshing timeline:', error);
+          }
+        }
       } else {
         console.error('Response not ok:', response.status, response.statusText);
         try {
@@ -306,15 +327,31 @@ export default function Home() {
       setSelectedInquiry(inquiry);
       
       // Load customer details for this inquiry
-      const customerResponse = await fetch(`/api/customers/enhanced?search=${inquiry.customerEmail}&limit=1`);
+      const customerResponse = await fetch(`/api/customers/enhanced?search=${inquiry.customerEmail}&limit=1&_t=${Date.now()}`);
       const customerData = await customerResponse.json();
       
       if (customerData.customers && customerData.customers.length > 0) {
-        setInquiryCustomer(customerData.customers[0]);
-        setInquiryCustomerId(customerData.customers[0].id);
+        const customer = customerData.customers[0];
+        setInquiryCustomer(customer);
+        setInquiryCustomerId(customer.id);
+        
+        // Load customer timeline (includes notes)
+        try {
+          const timelineResponse = await fetch(`/api/customers/${customer.id}/timeline?_t=${Date.now()}`);
+          if (timelineResponse.ok) {
+            const timelineData = await timelineResponse.json();
+            setInquiryCustomerTimeline(timelineData.interactions || []);
+          } else {
+            setInquiryCustomerTimeline([]);
+          }
+        } catch (error) {
+          console.error('Error loading customer timeline:', error);
+          setInquiryCustomerTimeline([]);
+        }
       } else {
         setInquiryCustomer(null);
         setInquiryCustomerId(null);
+        setInquiryCustomerTimeline([]);
       }
       
       setShowInquiryModal(true);
@@ -328,35 +365,46 @@ export default function Home() {
     setSelectedInquiry(null);
     setInquiryCustomer(null);
     setInquiryCustomerId(null);
+    setInquiryCustomerTimeline([]);
+  };
+
+  const closeAllModals = () => {
+    setShowInquiryModal(false);
+    setShowCustomerModal(false);
+    setShowNoteModal(false);
+    setSelectedInquiry(null);
+    setSelectedCustomer(null);
+    setInquiryCustomer(null);
+    setInquiryCustomerId(null);
+    setInquiryCustomerTimeline([]);
+    setCustomerNotes([]);
+    setCustomerTimeline([]);
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    closeAllModals();
+    setActiveTab(tab);
   };
 
   async function refresh() {
-    const params = category === "all" ? `?_t=${Date.now()}&_r=${Math.random()}` : `?category=${category}&_t=${Date.now()}&_r=${Math.random()}`;
-    const [inquiriesRes, allInquiriesRes, ordersRes] = await Promise.all([
+    const params = category === "all" ? `?_t=${Date.now()}` : `?category=${category}&_t=${Date.now()}`;
+    const [inquiriesRes, ordersRes] = await Promise.all([
       fetch(`/api/inquiries${params}`, { 
-        cache: "no-store",
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      }),
-      fetch(`/api/inquiries?_t=${Date.now()}&_r=${Math.random()}`, { 
-        cache: "no-store",
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
+        cache: "no-store"
       }),
       fetch("/api/orders", { cache: "no-store" })
     ]);
     const inquiriesData = await inquiriesRes.json();
-    const allInquiriesData = await allInquiriesRes.json();
     const ordersData = await ordersRes.json();
     setInquiries(inquiriesData);
-    setAllInquiries(allInquiriesData);
     setOrders(ordersData);
+    
+    // Only load all inquiries if we don't have them yet or if category is "all"
+    if (category === "all" || allInquiries.length === 0) {
+      const allInquiriesRes = await fetch(`/api/inquiries?_t=${Date.now()}`);
+      const allInquiriesData = await allInquiriesRes.json();
+      setAllInquiries(allInquiriesData);
+    }
   }
 
   async function loadUsers() {
@@ -367,9 +415,12 @@ export default function Home() {
 
   useEffect(() => {
     refresh();
-    loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category]);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   // Load all inquiries for counting on initial load
   useEffect(() => {
@@ -384,12 +435,11 @@ export default function Home() {
   // Load customers when customer tab is active
   useEffect(() => {
     if (activeTab === 'customers') {
-      // Load filter counts first
-      loadCustomerFilterCounts();
-      // Default to "My Customers" (people who purchased and are assigned to me)
-      setCustomerAssignedFilter(user?.email || '');
-      setCustomerStatusFilter('customer');
-      setCustomerSearch('');
+      // Only set default filter if no filter is currently selected
+      if (!customerAssignedFilter && !customerStatusFilter && !customerSearch) {
+        setCustomerAssignedFilter(user?.email || '');
+        setCustomerStatusFilter('customer');
+      }
       setCustomerCurrentPage(0);
       loadCustomers();
     }
@@ -400,20 +450,8 @@ export default function Home() {
     if (activeTab === 'customers') {
       loadCustomers();
     }
-  }, [customerAssignedFilter, customerStatusFilter, customerSearch, customerCurrentPage]);
+  }, [customerAssignedFilter, customerStatusFilter, customerSearch, customerCurrentPage, activeTab]);
 
-  async function createInquiry(e: React.FormEvent) {
-    e.preventDefault();
-    if (!customerEmail.trim()) return;
-    await fetch("/api/inquiries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customerEmail, category: category === "all" ? "questions" : category }),
-    });
-    setCustomerEmail("");
-    setShowAddModal(false);
-    refresh();
-  }
 
   async function takeOwnership(id: string) {
     if (!user) {
@@ -436,7 +474,7 @@ export default function Home() {
       
       if (inquiry) {
         // Find the customer record for this inquiry
-        const customerResponse = await fetch(`/api/customers/enhanced?search=${encodeURIComponent(inquiry.customerEmail)}&limit=1`);
+        const customerResponse = await fetch(`/api/customers/enhanced?search=${encodeURIComponent(inquiry.customerEmail)}&limit=1&_t=${Date.now()}`);
         const customerData = await customerResponse.json();
         const customer = customerData.customers?.[0];
         
@@ -452,28 +490,30 @@ export default function Home() {
           });
           
           // Add a note to the customer timeline using the customer ID
-          await fetch("/api/customers/notes", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              customerId: customer.id,
-              note: `Inquiry taken by ${user?.email}`,
-              type: "general",
-              authorEmail: user?.email
-            })
-          });
+          // Temporarily disabled due to API issues
+          // await fetch("/api/customers/notes", {
+          //   method: "POST",
+          //   headers: { "Content-Type": "application/json" },
+          //   body: JSON.stringify({
+          //     customerId: customer.id,
+          //     note: `Inquiry taken by ${user?.email}`,
+          //     type: "general",
+          //     authorEmail: user?.email
+          //   })
+          // });
         } else {
           // Fallback to using inquiry email if customer not found
-          await fetch("/api/customers/notes", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              inquiryEmail: inquiry.customerEmail,
-              note: `Inquiry taken by ${user.email}`,
-              type: "general",
-              authorEmail: user.email
-            })
-          });
+          // Temporarily disabled due to API issues
+          // await fetch("/api/customers/notes", {
+          //   method: "POST",
+          //   headers: { "Content-Type": "application/json" },
+          //   body: JSON.stringify({
+          //     inquiryEmail: inquiry.customerEmail,
+          //     note: `Inquiry taken by ${user.email}`,
+          //     type: "general",
+          //     authorEmail: user.email
+          //   })
+          // });
         }
       }
       
@@ -506,17 +546,17 @@ export default function Home() {
 
   async function markNotRelevant(id: string) {
     try {
-      await fetch("/api/inquiries", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+    await fetch("/api/inquiries", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           id, 
           action: "not_relevant" 
         }),
-      });
+    });
 
       // Refresh data
-      refresh();
+    refresh();
     } catch (error) {
       console.error("Error marking inquiry as not relevant:", error);
     }
@@ -524,14 +564,36 @@ export default function Home() {
 
   async function closeInquiry(id: string) {
     try {
-      await fetch("/api/inquiries", {
+      console.log("Closing inquiry:", id);
+      console.log("Current modal state:", showInquiryModal);
+      
+      // Close the inquiry
+      const response = await fetch("/api/inquiries", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: "closed" }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to close inquiry: ${response.status}`);
+      }
+      
+      console.log("Inquiry closed successfully");
+      console.log("About to close modal...");
+      
+      // Close the modal
+      closeInquiryModal();
+      console.log("Modal close function called");
+      
+      // Refresh data
       refresh();
+      console.log("Refresh function called");
+      
     } catch (error) {
       console.error("Error closing inquiry:", error);
+      // Still close modal and refresh even if API fails
+      console.log("Error occurred, still closing modal...");
+      closeInquiryModal();
       refresh();
     }
   }
@@ -549,7 +611,7 @@ export default function Home() {
       const inquiry = inquiries.find((i: any) => i.id === id);
       if (inquiry) {
         // Check if customer exists and update their assignedOwner
-        const customerResponse = await fetch(`/api/customers/enhanced?search=${encodeURIComponent(inquiry.customerEmail)}&limit=1`);
+        const customerResponse = await fetch(`/api/customers/enhanced?search=${encodeURIComponent(inquiry.customerEmail)}&limit=1&_t=${Date.now()}`);
         const customerData = await customerResponse.json();
         const customer = customerData.customers?.[0];
         
@@ -563,7 +625,7 @@ export default function Home() {
               assignedOwner: newOwnerEmail || null
             })
           });
-        } else {
+    } else {
           // If customer doesn't exist, we'll let the system create one when needed
           // Customer not found for this inquiry
         }
@@ -626,27 +688,12 @@ export default function Home() {
   const assignedInquiries = useMemo(() => 
     inquiries.filter(q => q.assignedOwner === user?.email && q.status === "active"), [inquiries, user]);
 
-  // New inquiry counts (unassigned, just came in)
-  const newInquiriesByCategory = useMemo(() => {
-    const newInquiries = allInquiries.filter(q => q.status === "new");
-    return {
-      bulk: newInquiries.filter(q => q.category === "bulk").length,
-      issues: newInquiries.filter(q => q.category === "issues").length,
-      questions: newInquiries.filter(q => q.category === "questions").length,
-      total: newInquiries.length
-    };
-  }, [allInquiries]);
+  // Simplified inquiry filtering - use allInquiries for consistent counts
+  const newInquiries = useMemo(() => 
+    allInquiries.filter(q => q.status === "new"), [allInquiries]);
 
-  // Active inquiry counts by category (assigned and being worked on)
-  const activeInquiriesByCategory = useMemo(() => {
-    const activeInquiries = allInquiries.filter(q => q.status === "active" && q.assignedOwner === user?.email);
-    return {
-      bulk: activeInquiries.filter(q => q.category === "bulk").length,
-      issues: activeInquiries.filter(q => q.category === "issues").length,
-      questions: activeInquiries.filter(q => q.category === "questions").length,
-      total: activeInquiries.length
-    };
-  }, [allInquiries, user]);
+  const activeInquiries = useMemo(() => 
+    allInquiries.filter(q => q.status === "active" && q.assignedOwner === user?.email), [allInquiries, user]);
 
   const currentOrders = useMemo(() => 
     orders.filter(o => o.assignedOwner === user?.email && o.status !== "delivered" && o.status !== "cancelled"), [orders, user]);
@@ -702,26 +749,26 @@ export default function Home() {
         <div className="flex gap-2 overflow-x-auto pb-2">
           {(["all", "bulk", "issues", "questions"] as const).map((c) => {
             // "New" tab shows new inquiries, other tabs show active inquiries
-            const count = c === "all" ? newInquiriesByCategory.total : activeInquiriesByCategory[c as keyof typeof activeInquiriesByCategory];
+            const count = c === "all" ? newInquiries.length : activeInquiries.filter(q => q.category === c).length;
             return (
-              <button
-                key={c}
-                onClick={() => setCategory(c as any)}
+            <button
+              key={c}
+              onClick={() => setCategory(c as any)}
                 className={`px-3 py-1 rounded-full text-sm whitespace-nowrap relative ${
-                  category === c 
+                category === c 
                     ? "bg-[#3B83BE] text-white" 
-                    : "bg-white text-gray-600 border"
-                }`}
-              >
+                  : "bg-white text-gray-600 border"
+              }`}
+            >
                 <div className="flex items-center gap-1">
-                  {c === "all" ? "New" : c === "issues" ? "Issue" : c === "questions" ? "Question" : c.charAt(0).toUpperCase() + c.slice(1)}
+                  {c === "all" ? "New" : c === "bulk" ? "Bulk" : c === "issues" ? "Issue" : "Question"}
                   {count > 0 && (
                     <span className="bg-red-500 text-white rounded-full h-4 w-4 flex items-center justify-center font-bold text-[10px]">
                       {count}
                     </span>
                   )}
                 </div>
-              </button>
+            </button>
             );
           })}
         </div>
@@ -733,7 +780,7 @@ export default function Home() {
           {category === "all" ? (
             <>
           <h3 className="text-sm font-medium text-red-600">
-                New Inquiries ({newInquiriesByCategory.total})
+                New Inquiries
           </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)).map((q) => (
@@ -794,7 +841,7 @@ export default function Home() {
           ) : (
             <>
               <h3 className="text-sm font-medium text-blue-600">
-                {category === "issues" ? "Issue" : category === "questions" ? "Question" : category.charAt(0).toUpperCase() + category.slice(1)} Inquiries ({activeInquiriesByCategory[category as keyof typeof activeInquiriesByCategory]}) - My Assigned ({assignedInquiries.filter(q => q.category === category).length})
+                {category === "bulk" ? "My Bulk Prospects" : category === "issues" ? "My Issues" : "My Questions"}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {assignedInquiries.filter(q => q.category === category).map((q) => (
@@ -993,7 +1040,7 @@ export default function Home() {
                   customerAssignedFilter === user?.email && customerStatusFilter === 'customer' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                My Customers ({customerFilterCounts.my_customers})
+                My Customers
               </button>
               <button
                 onClick={() => {
@@ -1006,7 +1053,7 @@ export default function Home() {
                   customerAssignedFilter === user?.email && customerStatusFilter === 'contact' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                My Contacts ({customerFilterCounts.my_contacts})
+                My Contacts
               </button>
               <button
                 onClick={() => {
@@ -1019,7 +1066,7 @@ export default function Home() {
                   customerAssignedFilter === '' && customerStatusFilter === '' && customerSearch === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                All Customers ({customerFilterCounts.all})
+                All Customers
               </button>
             </div>
           </div>
@@ -1119,7 +1166,7 @@ export default function Home() {
         <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 z-[9997] bottom-nav">
         <div className="flex">
           <button
-            onClick={() => setActiveTab("home")}
+            onClick={() => handleTabChange("home")}
               className={`flex-1 py-3 px-2 text-center ${
                 activeTab === "home"
                   ? "text-white"
@@ -1133,8 +1180,8 @@ export default function Home() {
             <span className="text-xs">Home</span>
               </div>
           </button>
-            <button
-              onClick={() => setActiveTab("queue")}
+          <button
+              onClick={() => handleTabChange("queue")}
               className={`flex-1 py-3 px-2 text-center relative ${
                 activeTab === "queue"
                   ? "text-white"
@@ -1146,7 +1193,7 @@ export default function Home() {
                   <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                   </svg>
-                  {newInquiriesByCategory.total > 0 && (
+                  {newInquiries.length > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-red-500 rounded-full h-2 w-2"></span>
                   )}
                 </div>
@@ -1154,7 +1201,7 @@ export default function Home() {
               </div>
             </button>
           <button
-            onClick={() => setActiveTab("actions")}
+            onClick={() => handleTabChange("actions")}
               className={`flex-1 py-3 px-2 text-center ${
                 activeTab === "actions"
                   ? "text-white"
@@ -1169,7 +1216,7 @@ export default function Home() {
               </div>
           </button>
           <button
-            onClick={() => setActiveTab("orders")}
+            onClick={() => handleTabChange("orders")}
               className={`flex-1 py-3 px-2 text-center ${
                 activeTab === "orders"
                   ? "text-white"
@@ -1184,7 +1231,7 @@ export default function Home() {
               </div>
           </button>
           <button
-            onClick={() => setActiveTab("customers")}
+            onClick={() => handleTabChange("customers")}
               className={`flex-1 py-3 px-2 text-center ${
                 activeTab === "customers"
                   ? "text-white"
@@ -1224,77 +1271,6 @@ export default function Home() {
             {activeTab === "customers" && renderCustomersTab()}
         </div>
       </div>
-
-      {/* Floating Add Button */}
-        <button
-          onClick={() => setShowAddModal(true)}
-               className="fixed bottom-20 right-4 w-14 h-14 bg-[#C43C37] text-white rounded-full shadow-lg flex items-center justify-center z-30 hover:bg-[#B03530]"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-
-      {/* Add Inquiry Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md">
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Add New Inquiry</h3>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <form onSubmit={createInquiry} className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={category === "all" ? "questions" : category}
-                  onChange={(e) => setCategory(e.target.value as Category)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="bulk">Bulk Purchase</option>
-                  <option value="issues">Product Issues</option>
-                  <option value="questions">Questions</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Email</label>
-                <input
-                  type="email"
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                  placeholder="customer@example.com"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-[#3B83BE] text-white rounded-lg text-sm font-medium"
-                >
-                  Add Inquiry
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
         {/* Customer Detail Modal */}
         {showCustomerModal && selectedCustomer && (
@@ -1482,7 +1458,11 @@ export default function Home() {
                     // Active inquiry - show Add Note, Close
                     <>
                       <button
-                        onClick={() => addNote(selectedInquiry.id)}
+                        onClick={() => {
+                          setNoteInquiryId(inquiryCustomerId);
+                          setNoteType('note');
+                          setShowNoteModal(true);
+                        }}
                         className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
                       >
                         Add Note
@@ -1586,15 +1566,39 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Original Message */}
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Original Message</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700 whitespace-pre-wrap">
-                        {selectedInquiry?.originalMessage || 'No message available'}
-                      </p>
+                  {/* Customer Timeline */}
+                  {inquiryCustomer && (
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Timeline</h3>
+                      <div className="space-y-4">
+                        {inquiryCustomerTimeline.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item, index) => {
+                          const isCurrentInquiry = item.id === selectedInquiry?.id;
+                          return (
+                            <div key={item.id || index} className={`border-l-4 pl-4 ${isCurrentInquiry ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium text-gray-900">{item.subject || item.type}</h4>
+                                  {isCurrentInquiry && (
+                                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                      Current Inquiry
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              <p className="text-gray-600 mt-1">{item.content || item.description || item.note || 'No description available'}</p>
+                              {item.authorEmail && (
+                                <p className="text-sm text-gray-500 mt-1">by {item.authorEmail}</p>
+                              )}
+                              {item.authorName && !item.authorEmail && (
+                                <p className="text-sm text-gray-500 mt-1">by {item.authorName}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                 </div>
               </div>

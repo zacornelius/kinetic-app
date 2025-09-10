@@ -21,9 +21,15 @@ export async function GET(request: NextRequest) {
         c.updatedAt,
         c.totalOrders,
         c.totalSpent as lifetimeValue,
-        c.lastContactDate as lastOrderDate,
-        c.createdAt as firstOrderDate
-      FROM customers_new c
+        COALESCE(
+          (SELECT MAX(o.createdAt) FROM shopify_orders o WHERE LOWER(o.customerEmail) = LOWER(c.email)),
+          c.lastContactDate
+        ) as lastOrderDate,
+        COALESCE(
+          (SELECT MIN(o.createdAt) FROM shopify_orders o WHERE LOWER(o.customerEmail) = LOWER(c.email)),
+          c.createdAt
+        ) as firstOrderDate
+      FROM customers c
       WHERE 1=1
     `;
     
@@ -70,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Insert customer
     db.prepare(`
-      INSERT INTO customers_new (
+      INSERT INTO customers (
         id, email, firstName, lastName, phone, companyName, 
         source, status, createdAt, updatedAt, totalOrders, totalSpent
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)

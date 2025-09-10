@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
     const customerEmail = searchParams.get("customerEmail");
     
     let query = `
-      SELECT o.*, c.assignedTo as assignedOwner
-      FROM all_orders o
+      SELECT o.*, c.assignedTo as assignedOwner, 'shopify' as source, o.id as sourceId
+      FROM shopify_orders o
       LEFT JOIN customers c ON LOWER(o.customerEmail) = LOWER(c.email)
       WHERE 1=1
     `;
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     }
     
     // Check if order number already exists
-    const existingOrder = db.prepare('SELECT id FROM all_orders WHERE orderNumber = ?').get(orderNumber);
+    const existingOrder = db.prepare('SELECT id FROM shopify_orders WHERE orderNumber = ?').get(orderNumber);
     if (existingOrder) {
       return NextResponse.json({ error: "Order number already exists" }, { status: 409 });
     }
@@ -102,8 +102,8 @@ export async function POST(request: Request) {
     const finalSourceId = sourceId || id;
     
     const insertOrder = db.prepare(`
-      INSERT INTO all_orders (id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, status, shippingAddress, billingAddress, trackingNumber, dueDate, notes, ownerEmail, source, sourceId)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO shopify_orders (id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, status, shippingAddress, trackingNumber, notes, ownerEmail)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     insertOrder.run(
@@ -116,13 +116,9 @@ export async function POST(request: Request) {
       currency, 
       status, 
       shippingAddress || null, 
-      billingAddress || null,
       trackingNumber || null, 
-      dueDate || null,
       notes || null, 
-      ownerEmail || null,
-      source,
-      finalSourceId
+      ownerEmail || null
     );
     
     const newOrder: Order = {
@@ -161,7 +157,7 @@ export async function PATCH(request: Request) {
     }
     
     // Check if order exists
-    const existingOrder = db.prepare('SELECT * FROM all_orders WHERE id = ?').get(id) as Order;
+    const existingOrder = db.prepare('SELECT * FROM shopify_orders WHERE id = ?').get(id) as Order;
     if (!existingOrder) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -188,11 +184,11 @@ export async function PATCH(request: Request) {
     
     params.push(id);
     
-    const updateQuery = `UPDATE all_orders SET ${updateFields.join(', ')} WHERE id = ?`;
+    const updateQuery = `UPDATE shopify_orders SET ${updateFields.join(', ')} WHERE id = ?`;
     db.prepare(updateQuery).run(...params);
     
     // Return updated order
-    const updatedOrder = db.prepare('SELECT * FROM all_orders WHERE id = ?').get(id) as Order;
+    const updatedOrder = db.prepare('SELECT * FROM shopify_orders WHERE id = ?').get(id) as Order;
     return NextResponse.json(updatedOrder);
   } catch (error) {
     console.error('Error updating order:', error);
@@ -209,7 +205,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Missing order ID" }, { status: 400 });
     }
     
-    const deleteOrder = db.prepare('DELETE FROM all_orders WHERE id = ?');
+    const deleteOrder = db.prepare('DELETE FROM shopify_orders WHERE id = ?');
     const result = deleteOrder.run(id);
     
     if (result.changes === 0) {

@@ -37,11 +37,10 @@ export async function GET(request: NextRequest) {
                 json_extract(li.value, '$.title') as title,
                 json_extract(li.value, '$.name') as name,
                 json_extract(li.value, '$.sku') as sku
-              FROM all_orders o,
+              FROM shopify_orders o,
               json_each(o.lineItems) as li
               WHERE o.createdAt >= '${startDate.toISOString().split('T')[0]}'
                 AND o.createdAt <= '${endDate.toISOString().split('T')[0]}'
-                AND o.source = 'shopify'
                 AND json_extract(li.value, '$.title') IS NOT NULL
                 AND json_extract(li.value, '$.quantity') IS NOT NULL
                 AND (json_extract(li.value, '$.title') LIKE '%Pallet%' OR json_extract(li.value, '$.title') = 'Build a Pallet')

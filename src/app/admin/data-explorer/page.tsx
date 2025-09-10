@@ -142,10 +142,89 @@ export default function DataExplorer() {
 
   async function loadCustomerOrders(customer: Customer) {
     try {
-      const response = await fetch(`/api/customers/${encodeURIComponent(customer.email)}/orders`);
-      const orders = await response.json();
-      setCustomerOrders(orders);
-      setSelectedCustomer(customer);
+      // Use the working customer detail API from the main dashboard
+      const customerResponse = await fetch(`/api/customers/enhanced?search=${customer.email}&limit=1&_t=${Date.now()}`);
+      if (!customerResponse.ok) {
+        throw new Error(`Failed to fetch customer: ${customerResponse.status}`);
+      }
+      const customerData = await customerResponse.json();
+      
+      if (customerData.customers && customerData.customers.length > 0) {
+        const customerDetails = customerData.customers[0];
+        setSelectedCustomer(customerDetails);
+        
+        // Load orders directly from orders API for complete data
+        const ordersResponse = await fetch(`/api/orders?customerEmail=${encodeURIComponent(customerDetails.email)}`);
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json();
+          
+          // Process line items for each order
+          const processedOrders = ordersData.map((order: any) => {
+            let processedLineItems = [];
+            if (order.lineItems) {
+              try {
+                const lineItems = JSON.parse(order.lineItems);
+                processedLineItems = lineItems.map((item: any) => {
+                  // Use the same logic as the line items table
+                  const effectiveSKU = (() => {
+                    // Handle "Build a Pallet" - extract product name from name field
+                    if (item.title === 'Build a Pallet') {
+                      return item.name?.replace('Build a Pallet - ', '') || `V-${item.variantId}`;
+                    }
+                    // Handle pre-built pallet products - extract base SKU
+                    else if (item.title?.includes('Pallet')) {
+                      if (item.title.includes('Active 26K Pallet')) {
+                        return 'Active 26K';
+                      } else if (item.title.includes('Power 30K Pallet')) {
+                        return 'Power 30K';
+                      } else if (item.title.includes('Vital 24K Pallet')) {
+                        return 'Vital 24K';
+                      } else if (item.title.includes('Pallet')) {
+                        // Generic pallet handling - extract base product name
+                        return item.title.replace(' Pallet', '');
+                      }
+                    }
+                    // For non-pallet products, show the product name or SKU
+                    return item.name || item.sku || (item.variantId ? `V-${item.variantId}` : "N/A");
+                  })();
+                  
+                  const effectiveQuantity = (() => {
+                    // Handle "Build a Pallet" - quantity is units of that SKU on the pallet
+                    if (item.title === 'Build a Pallet') {
+                      return item.quantity;
+                    }
+                    // Handle pre-built pallet products - multiply quantity by 50
+                    else if (item.title?.includes('Pallet')) {
+                      return item.quantity * 50;
+                    }
+                    // For non-pallet products, show regular quantity
+                    return item.quantity;
+                  })();
+                  
+                  return {
+                    effectiveSKU,
+                    effectiveQuantity,
+                    title: item.title,
+                    vendor: item.vendor || 'Unknown'
+                  };
+                });
+              } catch (error) {
+                console.error('Error parsing line items:', error);
+                processedLineItems = [];
+              }
+            }
+            
+            return {
+              ...order,
+              processedLineItems
+            };
+          });
+          
+          setCustomerOrders(processedOrders);
+        } else {
+          setCustomerOrders([]);
+        }
+      }
     } catch (error) {
       console.error("Error loading customer orders:", error);
     }
@@ -875,7 +954,7 @@ export default function DataExplorer() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{customer.totalOrders}</td>
                     <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                      ${customer.lifetimeValue.toFixed(2)}
+                      ${(customer.lifetimeValue || 0).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {customer.firstOrderDate ? new Date(customer.firstOrderDate).toLocaleDateString() : 'N/A'}
@@ -911,7 +990,7 @@ export default function DataExplorer() {
             <div className="mb-4 text-sm text-gray-600">
               <p><strong>Email:</strong> {selectedCustomer.email}</p>
               <p><strong>Total Orders:</strong> {selectedCustomer.totalOrders}</p>
-              <p><strong>Lifetime Value:</strong> ${selectedCustomer.lifetimeValue.toFixed(2)}</p>
+              <p><strong>Lifetime Value:</strong> ${(selectedCustomer.lifetimeValue || 0).toFixed(2)}</p>
             </div>
 
             <div className="overflow-x-auto">
@@ -959,7 +1038,7 @@ export default function DataExplorer() {
                                 <div key={index} className="text-xs border-b border-gray-100 pb-1 last:border-b-0">
                                   <div className="font-medium">{item.effectiveSKU}</div>
                                   <div className="text-gray-600">
-                                    Qty: {item.effectiveQuantity} × ${item.price.toFixed(2)} = ${item.totalPrice.toFixed(2)}
+                                    Qty: {item.effectiveQuantity}
                                   </div>
                                 </div>
                               ))}

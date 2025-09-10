@@ -58,12 +58,19 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Add CORS headers
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
   try {
     const body = await request.json();
     const { category, customerEmail, message } = body;
     
     if (!category || !customerEmail) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders });
     }
     
     // Check if customer exists
@@ -156,19 +163,19 @@ export async function POST(request: Request) {
       console.error('Error preparing push notification:', error);
     }
     
-    return NextResponse.json(newInquiry, { status: 201 });
+    return NextResponse.json(newInquiry, { status: 201, headers: corsHeaders });
   } catch (error) {
     console.error('Error creating inquiry:', error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: corsHeaders });
   }
 }
 
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, action, salesPersonEmail } = body;
+    const { id, action, salesPersonEmail, status } = body;
     
-    if (!id || !action) {
+    if (!id || (!action && !status)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     
@@ -239,8 +246,12 @@ export async function PATCH(request: Request) {
       // Mark inquiry as not relevant (no customer record created)
       db.prepare('UPDATE inquiries SET status = ? WHERE id = ?').run("not_relevant", id);
       
+    } else if (status === "closed") {
+      // Handle direct status update for closing inquiries
+      db.prepare('UPDATE inquiries SET status = ? WHERE id = ?').run("closed", id);
+      
     } else {
-      return NextResponse.json({ error: "Invalid action. Use 'take' or 'not_relevant'" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid action. Use 'take', 'not_relevant', or provide 'status'" }, { status: 400 });
     }
     
     // Return updated inquiry with assigned owner from customer record
@@ -291,6 +302,18 @@ export async function PUT(request: Request) {
     console.error('Error updating inquiry status:', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
+
+// Add OPTIONS handler for CORS preflight requests
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
 
