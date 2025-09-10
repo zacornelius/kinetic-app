@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from 'web-push';
+import db from '@/lib/database';
 
 // Configure web-push
 webpush.setVapidDetails(
@@ -14,13 +15,11 @@ export async function POST(request: NextRequest) {
     
     
     // Get all push subscriptions from database
-    const { execSync } = require('child_process');
-    
     try {
       const sql = `SELECT endpoint, p256dh, auth FROM push_subscriptions`;
-      const result = execSync(`sqlite3 kinetic.db "${sql}"`, { stdio: 'pipe' });
+      const subscriptions = await db.prepare(sql).all();
       
-      if (!result || result.toString().trim() === '') {
+      if (!subscriptions || subscriptions.length === 0) {
         return NextResponse.json({ 
           success: true, 
           message: 'No subscriptions to notify',
@@ -28,20 +27,17 @@ export async function POST(request: NextRequest) {
         });
       }
       
-      const subscriptions = result.toString().trim().split('\n').map(line => {
-        const [endpoint, p256dh, auth] = line.split('|');
-        return {
-          endpoint,
-          keys: {
-            p256dh,
-            auth
-          }
-        };
-      });
+      const formattedSubscriptions = subscriptions.map(sub => ({
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: sub.p256dh,
+          auth: sub.auth
+        }
+      }));
       
       
       // Send notification to all subscriptions
-      const notifications = subscriptions.map(async (subscription) => {
+      const notifications = formattedSubscriptions.map(async (subscription) => {
         try {
           const payload = JSON.stringify({
             body: body || 'New notification',

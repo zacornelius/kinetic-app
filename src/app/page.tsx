@@ -121,6 +121,10 @@ export default function Home() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerNotes, setCustomerNotes] = useState<any[]>([]);
   const [customerTimeline, setCustomerTimeline] = useState<any[]>([]);
+  
+  // Top Customers pagination and modal
+  const [topCustomersPage, setTopCustomersPage] = useState(0);
+  const [topCustomersModal, setTopCustomersModal] = useState<Customer | null>(null);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   
   // Note modal state
@@ -136,32 +140,75 @@ export default function Home() {
   const [inquiryCustomerId, setInquiryCustomerId] = useState<string | null>(null);
   const [inquiryCustomerTimeline, setInquiryCustomerTimeline] = useState<any[]>([]);
 
+  // Sales dashboard state
+  const [salesData, setSalesData] = useState<any>(null);
+  const [topCustomers, setTopCustomers] = useState<any[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [monthlyPalletsData, setMonthlyPalletsData] = useState<any[]>([]);
+  const [bulkInquiriesData, setBulkInquiriesData] = useState<any>(null);
+  const [dashboardView, setDashboardView] = useState<'personal' | 'leaderboard'>('personal');
+  const [salesLoading, setSalesLoading] = useState(false);
+
+
+  // Load sales dashboard data
+  const loadSalesData = async () => {
+    if (!user?.email) return;
+    
+    try {
+      setSalesLoading(true);
+      
+      // Load sales data
+      const salesResponse = await fetch(`/api/sales/dashboard?userEmail=${user.email}&view=${dashboardView}&_t=${Date.now()}`);
+      if (salesResponse.ok) {
+        const salesResult = await salesResponse.json();
+        if (dashboardView === 'personal') {
+          setSalesData(salesResult.personal);
+          setMonthlyPalletsData(salesResult.monthlyPallets || []);
+          setBulkInquiriesData(typeof salesResult.bulkInquiries === 'number' ? salesResult.bulkInquiries : 0);
+        } else {
+          setLeaderboardData(salesResult.leaderboard);
+          setMonthlyPalletsData(salesResult.monthlyPallets || []);
+          setBulkInquiriesData(Array.isArray(salesResult.bulkInquiries) ? salesResult.bulkInquiries : []);
+        }
+      }
+      
+      // Load top customers
+      const customersResponse = await fetch(`/api/sales/top-customers?userEmail=${user.email}&view=${dashboardView}&limit=50&_t=${Date.now()}`);
+      if (customersResponse.ok) {
+        const customersResult = await customersResponse.json();
+        setTopCustomers(customersResult.topCustomers || []);
+      }
+    } catch (error) {
+      console.error('Error loading sales data:', error);
+    } finally {
+      setSalesLoading(false);
+    }
+  };
 
   const loadCustomers = async () => {
     try {
       setCustomerLoading(true);
       
-      // Convert old filter logic to new filter system
-      let filter = 'all';
-      if (customerAssignedFilter === user?.email && customerStatusFilter === 'customer') {
-        filter = 'my_customers';
-      } else if (customerAssignedFilter === user?.email && customerStatusFilter === 'contact') {
-        filter = 'my_contacts';
+      // Use enhanced customer API with better search functionality
+      const params = new URLSearchParams();
+      params.append('limit', customerLimit.toString());
+      params.append('offset', (customerCurrentPage * customerLimit).toString());
+      
+      if (customerSearch) {
+        params.append('search', customerSearch);
       }
       
-
-      const params = new URLSearchParams({
-        filter: filter,
-        limit: customerLimit.toString(),
-        offset: (customerCurrentPage * customerLimit).toString()
-      });
-
-      if (customerSearch) params.append('search', customerSearch);
-      if (user?.email) params.append('assignedTo', user.email);
-
+      if (customerStatusFilter) {
+        params.append('status', customerStatusFilter);
+      }
+      
+      if (customerAssignedFilter) {
+        params.append('assignedTo', customerAssignedFilter);
+      }
+      
       // Add cache busting
       params.append('_t', Date.now().toString());
-      const response = await fetch(`/api/customers/simple?${params}`);
+      const response = await fetch(`/api/customers/enhanced?${params}`);
       const data = await response.json();
       
       if (response.ok && data.customers) {
@@ -239,6 +286,39 @@ export default function Home() {
     setShowNoteModal(true);
   };
 
+  const loadTopCustomerDetails = async (customer: any) => {
+    setTopCustomersModal(customer);
+    setLoadingCustomer(true);
+    
+    // Reset timeline and notes
+    setCustomerTimeline([]);
+    setCustomerNotes([]);
+    
+    try {
+      // Load customer timeline and notes - use email as fallback if no ID
+      const customerId = customer.id || customer.email;
+      const timelineResponse = await fetch(`/api/customers/${customerId}/timeline?_t=${Date.now()}`);
+      const notesResponse = await fetch(`/api/customers/notes?customerId=${customerId}&_t=${Date.now()}`);
+      
+      if (timelineResponse.ok) {
+        const timelineData = await timelineResponse.json();
+        setCustomerTimeline(Array.isArray(timelineData.interactions) ? timelineData.interactions : []);
+      }
+      
+      if (notesResponse.ok) {
+        const notesData = await notesResponse.json();
+        setCustomerNotes(Array.isArray(notesData.notes) ? notesData.notes : []);
+      }
+    } catch (error) {
+      console.error('Error loading customer details:', error);
+      // Set empty arrays on error
+      setCustomerTimeline([]);
+      setCustomerNotes([]);
+    } finally {
+      setLoadingCustomer(false);
+    }
+  };
+
   const closeNoteModal = () => {
     setShowNoteModal(false);
     setNoteInquiryId(null);
@@ -251,7 +331,7 @@ export default function Home() {
     if (typeof e === 'string') {
       // Called from button click with inquiry ID
       if (!noteText.trim() || !e) return;
-      noteInquiryId = e;
+      setNoteInquiryId(e);
     } else {
       // Called from form submission
       e.preventDefault();
@@ -435,11 +515,7 @@ export default function Home() {
   // Load customers when customer tab is active
   useEffect(() => {
     if (activeTab === 'customers') {
-      // Only set default filter if no filter is currently selected
-      if (!customerAssignedFilter && !customerStatusFilter && !customerSearch) {
-        setCustomerAssignedFilter(user?.email || '');
-        setCustomerStatusFilter('customer');
-      }
+      // Load all customers by default (no automatic filtering)
       setCustomerCurrentPage(0);
       loadCustomers();
     }
@@ -450,7 +526,13 @@ export default function Home() {
     if (activeTab === 'customers') {
       loadCustomers();
     }
-  }, [customerAssignedFilter, customerStatusFilter, customerSearch, customerCurrentPage, activeTab]);
+  }, [customerAssignedFilter, customerStatusFilter, customerSearch, customerCurrentPage]);
+
+  useEffect(() => {
+    if (activeTab === "home") {
+      loadSalesData();
+    }
+  }, [activeTab, dashboardView, user?.email]);
 
 
   async function takeOwnership(id: string) {
@@ -461,66 +543,20 @@ export default function Home() {
     
     try {
       // Update inquiry ownership
-    await fetch("/api/inquiries", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, assignedOwner: user.email }),
+      await fetch("/api/inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          id, 
+          action: "take", 
+          salesPersonEmail: user.email 
+        }),
       });
 
-      // Find the inquiry to get customer email
-      const inquiryResponse = await fetch("/api/inquiries", { cache: "no-store" });
-      const inquiries = await inquiryResponse.json();
-      const inquiry = inquiries.find((i: any) => i.id === id);
-      
-      if (inquiry) {
-        // Find the customer record for this inquiry
-        const customerResponse = await fetch(`/api/customers/enhanced?search=${encodeURIComponent(inquiry.customerEmail)}&limit=1&_t=${Date.now()}`);
-        const customerData = await customerResponse.json();
-        const customer = customerData.customers?.[0];
-        
-        if (customer) {
-          // Update the customer's assignedOwner to the current user
-          await fetch("/api/customers/enhanced", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: customer.id,
-              assignedOwner: user?.email
-            })
-          });
-          
-          // Add a note to the customer timeline using the customer ID
-          // Temporarily disabled due to API issues
-          // await fetch("/api/customers/notes", {
-          //   method: "POST",
-          //   headers: { "Content-Type": "application/json" },
-          //   body: JSON.stringify({
-          //     customerId: customer.id,
-          //     note: `Inquiry taken by ${user?.email}`,
-          //     type: "general",
-          //     authorEmail: user?.email
-          //   })
-          // });
-        } else {
-          // Fallback to using inquiry email if customer not found
-          // Temporarily disabled due to API issues
-          // await fetch("/api/customers/notes", {
-          //   method: "POST",
-          //   headers: { "Content-Type": "application/json" },
-          //   body: JSON.stringify({
-          //     inquiryEmail: inquiry.customerEmail,
-          //     note: `Inquiry taken by ${user.email}`,
-          //     type: "general",
-          //     authorEmail: user.email
-          //   })
-          // });
-        }
-      }
-      
+      // Refresh data
       refresh();
     } catch (error) {
       console.error("Error taking ownership:", error);
-    refresh();
     }
   }
 
@@ -537,7 +573,8 @@ export default function Home() {
         }),
       });
 
-      // Refresh data
+      // Close modal and refresh data
+      closeInquiryModal();
       refresh();
     } catch (error) {
       console.error("Error taking inquiry:", error);
@@ -555,8 +592,9 @@ export default function Home() {
         }),
     });
 
-      // Refresh data
-    refresh();
+      // Close modal and refresh data
+      closeInquiryModal();
+      refresh();
     } catch (error) {
       console.error("Error marking inquiry as not relevant:", error);
     }
@@ -723,21 +761,237 @@ export default function Home() {
   // Tab content
   function renderHomeTab() {
     return (
-      <div className="space-y-4">
-        <div className="text-center py-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Team Kinetic</h2>
-          <p className="text-gray-600 mb-6">Your business management dashboard</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{unassignedInquiries.length}</div>
-              <div className="text-sm text-blue-800">New Inquiries</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{assignedInquiries.length}</div>
-              <div className="text-sm text-green-800">My Inquiries</div>
-            </div>
-          </div>
+      <div className="space-y-6">
+        {/* Header with Leaderboard Toggle */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-white">Sales Dashboard</h2>
+          <button
+            onClick={() => setDashboardView(dashboardView === 'personal' ? 'leaderboard' : 'personal')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {dashboardView === 'personal' ? 'Leaderboard' : 'My Sales'}
+          </button>
         </div>
+
+        {salesLoading ? (
+          <div className="text-center py-8">
+            <div className="text-white">Loading sales data...</div>
+          </div>
+        ) : (
+          <>
+            {/* Sales This Month - Top Priority */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {dashboardView === 'personal' ? 'My Sales This Month' : 'Team Sales This Month'}
+                </h3>
+              </div>
+              {dashboardView === 'personal' ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">${(salesData?.this_month_sales || 0).toLocaleString()}</div>
+                    <div className="text-xs text-gray-600">Revenue</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{salesData?.this_month_orders || 0}</div>
+                    <div className="text-xs text-gray-600">Orders</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{typeof bulkInquiriesData === 'number' ? bulkInquiriesData : 0}</div>
+                    <div className="text-xs text-gray-600">Bulk Inquiries</div>
+                    <div className="text-[10px] text-gray-500">Last 60 days</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboardData.map((member, index) => {
+                    const memberBulkInquiries = bulkInquiriesData?.find((b: any) => b.owner === member.owner)?.bulk_inquiries_count || 0;
+                    return (
+                      <div key={member.owner} className="flex items-center justify-between bg-blue-500 bg-opacity-30 rounded-lg p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="text-lg font-bold">#{index + 1}</div>
+                          <div>
+                            <div className="font-semibold">
+                              {member.owner === 'iand@kineticdogfood.com' ? 'Ian' : 
+                               member.owner === 'ericb@kineticdogfood.com' ? 'Eric' : 
+                               member.owner === 'Dave@kineticdogfood.com' ? 'Dave' : member.owner}
+                            </div>
+                            <div className="text-sm opacity-90">{member.this_month_orders} orders</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold">${member.this_month_sales.toLocaleString()}</div>
+                          <div className="text-xs opacity-75">{memberBulkInquiries} bulk inquiries</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 12-Month Pallets Sold Trend */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {dashboardView === 'personal' ? 'My Sales Trend' : 'Team Sales Trend'}
+                </h3>
+              </div>
+              
+              {monthlyPalletsData.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Chart */}
+                  <div className="relative">
+                    <div className="h-40 flex items-end justify-between gap-1 px-2">
+                      {monthlyPalletsData.map((month, index) => {
+                        const maxPallets = Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold)));
+                        const height = maxPallets > 0 ? (parseInt(month.pallets_sold) / maxPallets) * 150 : 2;
+                        // Parse the month string directly to avoid timezone issues
+                        const monthStr = month.month; // e.g., "2024-10-01T00:00:00.000Z"
+                        const year = parseInt(monthStr.substring(0, 4));
+                        const monthNum = parseInt(monthStr.substring(5, 7)) - 1; // Convert to 0-based
+                        
+                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const monthName = monthNames[monthNum];
+                        
+                        // Debug logging
+                        console.log(`Month data: ${month.month}, Year: ${year}, Month num: ${monthNum}, Month name: ${monthName}`);
+                        
+                        // Check if this is current month (September 2025)
+                        const isCurrentMonth = monthNum === 8 && year === 2025; // September 2025
+                        
+                        return (
+                          <div key={index} className="flex flex-col items-center flex-1 min-w-0">
+                            <div
+                              className={`w-full rounded-t transition-all duration-300 ${
+                                isCurrentMonth
+                                  ? 'bg-gradient-to-t from-[#C43C37] to-[#E53E3E]'
+                                  : 'bg-gradient-to-t from-gray-400 to-gray-300'
+                              }`}
+                              style={{ height: `${height}px` }}
+                              title={`${monthName}: ${parseInt(month.pallets_sold)} pallets`}
+                            />
+                            <div className="text-xs text-gray-600 mt-2 text-center">
+                              {monthName}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {parseInt(month.pallets_sold)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Scale */}
+                    <div className="absolute left-0 top-0 h-40 flex flex-col justify-between text-xs text-gray-400 -ml-8">
+                      <span>{Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold)))}</span>
+                      <span>{Math.round(Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold))) / 2)}</span>
+                      <span>0</span>
+                    </div>
+                  </div>
+                  
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {monthlyPalletsData.reduce((sum, month) => sum + parseInt(month.pallets_sold), 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {Math.round(monthlyPalletsData.reduce((sum, month) => sum + parseInt(month.pallets_sold), 0) / monthlyPalletsData.length)}
+                      </div>
+                      <div className="text-sm text-gray-600">Avg</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold)))}
+                      </div>
+                      <div className="text-sm text-gray-600">Best</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-3xl mb-2">📊</div>
+                  <div className="text-sm">No sales data available</div>
+                </div>
+              )}
+            </div>
+
+            {/* Top Customers */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {dashboardView === 'personal' ? 'My Top Customers' : 'Top Customers'}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setTopCustomersPage(Math.max(0, topCustomersPage - 1))}
+                    disabled={topCustomersPage === 0}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span className="text-sm text-gray-600 px-2">
+                    {topCustomersPage * 5 + 1}-{Math.min((topCustomersPage + 1) * 5, topCustomers.length)} of {topCustomers.length}
+                  </span>
+                  <button
+                    onClick={() => setTopCustomersPage(topCustomersPage + 1)}
+                    disabled={(topCustomersPage + 1) * 5 >= topCustomers.length}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                {topCustomers.slice(topCustomersPage * 5, (topCustomersPage + 1) * 5).map((customer, index) => (
+                  <div 
+                    key={customer.email} 
+                    onClick={() => loadTopCustomerDetails(customer)}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-lg font-bold text-blue-600">#{topCustomersPage * 5 + index + 1}</div>
+                      <div>
+                        <div className="font-semibold text-gray-900">
+                          {customer.firstname} {customer.lastname}
+                        </div>
+                        <div className="text-sm text-gray-600">{customer.email}</div>
+                        {dashboardView === 'leaderboard' && (
+                          <div className="text-xs text-gray-500">
+                            Owner: {customer.owner === 'iand@kineticdogfood.com' ? 'Ian' : 
+                                   customer.owner === 'ericb@kineticdogfood.com' ? 'Eric' : 
+                                   customer.owner === 'Dave@kineticdogfood.com' ? 'Dave' : customer.owner}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-gray-900">${customer.total_spent.toLocaleString()}</div>
+                      <div className="text-sm text-gray-600">{customer.order_count} orders</div>
+                    </div>
+                  </div>
+                ))}
+                {topCustomers.length === 0 && (
+                  <div className="text-center py-4 text-gray-500">No customer data available</div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -1000,15 +1254,12 @@ export default function Home() {
   function renderCustomersTab() {
     return (
       <div className="space-y-4">
-        {/* Simple Controls */}
+        {/* Master Customer Lookup */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Left side - Total count and search */}
+            {/* Left side - Enhanced search */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="text-2xl font-bold text-blue-600">
-                {customerTotalCustomers} Customers
-              </div>
-              <div className="flex-1 max-w-md flex gap-2">
+              <div className="flex-1 max-w-lg flex gap-2">
                 <input
                   type="text"
                   value={customerSearch}
@@ -1021,39 +1272,51 @@ export default function Home() {
                       loadCustomers();
                     }, 300);
                   }}
-                  placeholder="Search customers..."
-                  className="flex-1 p-3 border border-gray-300 rounded-md text-sm"
+                  placeholder="Search by name, email, company, phone..."
+                  className="flex-1 p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                <button
+                  onClick={() => {
+                    setCustomerSearch('');
+                    setCustomerAssignedFilter('');
+                    setCustomerStatusFilter('');
+                    setCustomerCurrentPage(0);
+                    loadCustomers();
+                  }}
+                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200"
+                >
+                  Clear
+                </button>
               </div>
             </div>
             
-            {/* Right side - Filter buttons */}
+            {/* Right side - Quick filters */}
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  setCustomerAssignedFilter(user?.email || '');
                   setCustomerStatusFilter('customer');
+                  setCustomerAssignedFilter('');
                   setCustomerSearch('');
                   setCustomerCurrentPage(0);
                 }}
                 className={`px-4 py-3 rounded-md text-sm font-medium ${
-                  customerAssignedFilter === user?.email && customerStatusFilter === 'customer' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  customerStatusFilter === 'customer' && !customerAssignedFilter ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                My Customers
+                Customers Only
               </button>
               <button
                 onClick={() => {
-                  setCustomerAssignedFilter(user?.email || '');
                   setCustomerStatusFilter('contact');
+                  setCustomerAssignedFilter('');
                   setCustomerSearch('');
                   setCustomerCurrentPage(0);
                 }}
                 className={`px-4 py-3 rounded-md text-sm font-medium ${
-                  customerAssignedFilter === user?.email && customerStatusFilter === 'contact' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  customerStatusFilter === 'contact' && !customerAssignedFilter ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                My Contacts
+                Contacts Only
               </button>
               <button
                 onClick={() => {
@@ -1275,12 +1538,15 @@ export default function Home() {
         {/* Customer Detail Modal */}
         {showCustomerModal && selectedCustomer && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
               {/* Modal Header */}
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {selectedCustomer.firstName} {selectedCustomer.lastName}
-                </h2>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {selectedCustomer.firstName} {selectedCustomer.lastName}
+                  </h2>
+                  <p className="text-sm text-gray-600">{selectedCustomer.email}</p>
+                </div>
                 <button
                   onClick={closeCustomerModal}
                   className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -1297,81 +1563,81 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {/* Customer Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
-                        <div className="space-y-2">
-                          <div><span className="font-medium">Email:</span> {selectedCustomer.email}</div>
-                          {selectedCustomer.phone && (
-                            <div><span className="font-medium">Phone:</span> {selectedCustomer.phone}</div>
-                          )}
-                          {selectedCustomer.companyName && (
-                            <div><span className="font-medium">Company:</span> {selectedCustomer.companyName}</div>
-                          )}
-                          {selectedCustomer.customerType && (
-                            <div><span className="font-medium">Type:</span> {selectedCustomer.customerType}</div>
-                          )}
-                          {selectedCustomer.numberOfDogs && (
-                            <div><span className="font-medium">Number of Dogs:</span> {selectedCustomer.numberOfDogs}</div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Assigned Owner:</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-600">{selectedCustomer.assignedOwner || 'Unassigned'}</span>
-                              <button
-                                onClick={() => {
-                                  const newOwner = prompt('Enter new owner email (or leave blank to unassign):', selectedCustomer.assignedOwner || '');
-                                  if (newOwner !== null) {
-                                    reassignCustomer(selectedCustomer.id, newOwner);
-                                  }
-                                }}
-                                className="text-xs text-blue-600 hover:text-blue-800 underline"
-                              >
-                                Change
-                              </button>
-                            </div>
-                          </div>
-                          {selectedCustomer.reason && (
-                            <div><span className="font-medium">Inquiry Reason:</span> {selectedCustomer.reason}</div>
-                          )}
-                        </div>
+                    {/* Customer Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">${selectedCustomer.totalSpent?.toFixed(2) || '0'}</div>
+                        <div className="text-sm text-gray-600">Total Spent</div>
                       </div>
-                      
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Business Information</h3>
-                        <div className="space-y-2">
-                          <div><span className="font-medium">Status:</span> 
-                            <span className={`ml-2 inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                              selectedCustomer.status === 'customer' ? 'bg-green-100 text-green-800' :
-                              selectedCustomer.status === 'prospect' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {selectedCustomer.status}
-                            </span>
-                          </div>
-                          <div><span className="font-medium">Source:</span> 
-                            <span className={`ml-2 inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                              selectedCustomer.source === 'shopify' ? 'bg-green-100 text-green-800' :
-                              selectedCustomer.source === 'quickbooks' ? 'bg-blue-100 text-blue-800' :
-                              selectedCustomer.source === 'website' ? 'bg-purple-100 text-purple-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {selectedCustomer.source}
-                            </span>
-                          </div>
-                          <div><span className="font-medium">Total Orders:</span> {selectedCustomer.totalOrders}</div>
-                          <div><span className="font-medium">Total Spent:</span> ${selectedCustomer.totalSpent.toFixed(2)}</div>
-                          <div><span className="font-medium">Last Contact:</span> {new Date(selectedCustomer.lastContactDate).toLocaleDateString()}</div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{selectedCustomer.totalOrders || 0}</div>
+                        <div className="text-sm text-gray-600">Total Orders</div>
+                      </div>
+                    </div>
+
+                    {/* Customer Details */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Email:</span>
+                          <span className="font-medium">{selectedCustomer.email}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Phone:</span>
+                          <span className="font-medium">{selectedCustomer.phone || 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Company:</span>
+                          <span className="font-medium">{selectedCustomer.companyName || 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Type:</span>
+                          <span className="font-medium">{selectedCustomer.customerType || 'Not specified'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Number of Dogs:</span>
+                          <span className="font-medium">{selectedCustomer.numberOfDogs || 'Not specified'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            selectedCustomer.status === 'customer' ? 'bg-green-100 text-green-800' :
+                            selectedCustomer.status === 'prospect' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {selectedCustomer.status || 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Source:</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            selectedCustomer.source === 'shopify' ? 'bg-green-100 text-green-800' :
+                            selectedCustomer.source === 'quickbooks' ? 'bg-blue-100 text-blue-800' :
+                            selectedCustomer.source === 'website' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {selectedCustomer.source || 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Assigned To:</span>
+                          <span className="font-medium">{selectedCustomer.assignedOwner || selectedCustomer.assignedTo || 'Unassigned'}</span>
+                        </div>
+                        {selectedCustomer.reason && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Inquiry Reason:</span>
+                            <span className="font-medium">{selectedCustomer.reason}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Timeline */}
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Timeline</h3>
-                      <div className="space-y-4">
-                        {[...customerTimeline, ...customerNotes.map(note => ({
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Activity Timeline</h3>
+                      <div className="space-y-3">
+                        {[...(customerTimeline || []), ...(customerNotes || []).map(note => ({
                           id: `note-${note.id}`,
                           type: 'note',
                           subject: 'Note',
@@ -1380,48 +1646,223 @@ export default function Home() {
                           authorEmail: note.authorEmail,
                           authorName: note.authorName
                         }))].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item, index) => (
-                          <div key={item.id || index} className="border-l-4 border-blue-200 pl-4">
-              <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-gray-900">{item.subject}</h4>
-                              <span className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <p className="text-gray-600 mt-1">{item.content}</p>
-                            {item.authorEmail && (
-                              <p className="text-sm text-gray-500 mt-1">by {item.authorEmail}</p>
-                            )}
-                            {item.authorName && !item.authorEmail && (
-                              <p className="text-sm text-gray-500 mt-1">by {item.authorName}</p>
-                            )}
-                            {item.metadata && (
-                              <div className="mt-2 text-xs text-gray-500">
-                                {item.type === 'order' && item.metadata.totalAmount && (
-                                  <span>Amount: ${item.metadata.totalAmount.toFixed(2)} | Status: {item.metadata.status}</span>
-                                )}
-                                {item.type === 'customer_inquiry' && item.metadata.reason && (
-                                  <span>Reason: {item.metadata.reason} | Type: {item.metadata.customerType}</span>
-                                )}
+                          <div key={item.id || index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900">{item.subject}</div>
+                              <div className="text-xs text-gray-600 mt-1">{item.content}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {new Date(item.createdAt).toLocaleString()}
+                                {item.authorEmail && ` • by ${item.authorEmail}`}
+                                {item.authorName && !item.authorEmail && ` • by ${item.authorName}`}
                               </div>
-                            )}
+                              {item.metadata && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  {item.type === 'order' && item.metadata.totalAmount && (
+                                    <span>Amount: ${item.metadata.totalAmount.toFixed(2)} | Status: {item.metadata.status}</span>
+                                  )}
+                                  {item.type === 'customer_inquiry' && item.metadata.reason && (
+                                    <span>Reason: {item.metadata.reason} | Type: {item.metadata.customerType}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
+                        {(customerTimeline || []).length === 0 && (customerNotes || []).length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            <div className="text-3xl mb-2">📝</div>
+                            <div className="text-sm">No activity recorded yet</div>
+                          </div>
+                        )}
                       </div>
                     </div>
+                  </div>
+                )}
+              </div>
 
-                    {/* Add Note Button */}
-                    <div className="pt-4 border-t border-gray-200">
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
                 <button
-                        onClick={() => {
-                          closeCustomerModal();
-                          openNoteModal(selectedCustomer.id, 'note');
-                        }}
-                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-                      >
-                        Add Note to Customer
+                  onClick={closeCustomerModal}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    closeCustomerModal();
+                    openNoteModal(selectedCustomer.id, 'note');
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                >
+                  Add Note
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Top Customers Modal */}
+        {topCustomersModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+              {/* Modal Header with Buttons */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {topCustomersModal.firstname} {topCustomersModal.lastname}
+                    </h2>
+                    <p className="text-sm text-gray-600">{topCustomersModal.email}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setTopCustomersModal(null);
+                        openNoteModal(topCustomersModal.id, 'note');
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                    >
+                      Add Note
+                    </button>
+                    <button
+                      onClick={() => setTopCustomersModal(null)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+                {loadingCustomer ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Customer Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">${topCustomersModal.total_spent?.toLocaleString() || '0'}</div>
+                        <div className="text-sm text-gray-600">Lifetime Value</div>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{topCustomersModal.order_count || 0}</div>
+                        <div className="text-sm text-gray-600">Purchase History</div>
+                      </div>
+                    </div>
+
+                    {/* Customer Details */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Email:</span>
+                          <span className="font-medium">{topCustomersModal.email}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Phone:</span>
+                          <span className="font-medium">{topCustomersModal.phone || 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Company:</span>
+                          <span className="font-medium">{topCustomersModal.company || 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            topCustomersModal.status === 'active' ? 'bg-green-100 text-green-800' :
+                            topCustomersModal.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {topCustomersModal.status || 'Unknown'}
+                          </span>
+                        </div>
+                        {dashboardView === 'leaderboard' && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Owner:</span>
+                            <span className="font-medium">
+                              {topCustomersModal.owner === 'iand@kineticdogfood.com' ? 'Ian' : 
+                               topCustomersModal.owner === 'ericb@kineticdogfood.com' ? 'Eric' : 
+                               topCustomersModal.owner === 'Dave@kineticdogfood.com' ? 'Dave' : topCustomersModal.owner}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Address */}
+                    {topCustomersModal.address && (
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Address</h3>
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-sm text-gray-700">{topCustomersModal.address}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {topCustomersModal.notes && (
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold text-gray-900">Notes</h3>
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-sm text-gray-700">{topCustomersModal.notes}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Timeline */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Activity Timeline</h3>
+                      <div className="space-y-3">
+                        {[...(customerTimeline || []), ...(customerNotes || []).map(note => ({
+                          id: `note-${note.id}`,
+                          type: 'note',
+                          subject: 'Note',
+                          content: note.note,
+                          createdAt: note.createdAt,
+                          authorEmail: note.authorEmail,
+                          authorName: note.authorName
+                        }))].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item, index) => (
+                          <div key={item.id || index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900">{item.subject}</div>
+                              <div className="text-xs text-gray-600 mt-1">{item.content}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {new Date(item.createdAt).toLocaleString()}
+                                {item.authorEmail && ` • by ${item.authorEmail}`}
+                                {item.authorName && !item.authorEmail && ` • by ${item.authorName}`}
+                              </div>
+                              {item.metadata && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  {item.type === 'order' && item.metadata.totalAmount && (
+                                    <span>Amount: ${item.metadata.totalAmount.toFixed(2)} | Status: {item.metadata.status}</span>
+                                  )}
+                                  {item.type === 'customer_inquiry' && item.metadata.reason && (
+                                    <span>Reason: {item.metadata.reason} | Type: {item.metadata.customerType}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {(customerTimeline || []).length === 0 && (customerNotes || []).length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            <div className="text-3xl mb-2">📝</div>
+                            <div className="text-sm">No activity recorded yet</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
+
             </div>
           </div>
         )}
@@ -1434,7 +1875,9 @@ export default function Home() {
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {inquiryCustomer?.firstName} {inquiryCustomer?.lastName}
+                  {inquiryCustomer?.firstName && inquiryCustomer?.lastName 
+                    ? `${inquiryCustomer.firstName} ${inquiryCustomer.lastName}`
+                    : selectedInquiry?.customerName || selectedInquiry?.customerEmail}
                 </h2>
                 <div className="flex items-center gap-2">
                   {/* Action Buttons */}
@@ -1559,15 +2002,19 @@ export default function Home() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-gray-500 text-sm">
-                          Customer information not found. This may be a new inquiry.
+                        <div className="space-y-2">
+                          <div><span className="font-medium">Name:</span> {selectedInquiry?.customerName || 'Not provided'}</div>
+                          <div><span className="font-medium">Email:</span> {selectedInquiry?.customerEmail}</div>
+                          <div className="text-gray-500 text-sm mt-2">
+                            This is a new inquiry. Customer name will be captured from the contact form when the inquiry is submitted.
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Customer Timeline */}
-                  {inquiryCustomer && (
+                  {/* Customer Timeline or Inquiry Message */}
+                  {inquiryCustomer ? (
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">Timeline</h3>
                       <div className="space-y-4">
@@ -1596,6 +2043,15 @@ export default function Home() {
                             </div>
                           );
                         })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Inquiry Message</h3>
+                      <div className="bg-gray-50 rounded-lg p-4 border">
+                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {selectedInquiry?.originalMessage || selectedInquiry?.message || 'No message available'}
+                        </div>
                       </div>
                     </div>
                   )}

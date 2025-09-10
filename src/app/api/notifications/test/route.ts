@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from 'web-push';
+import db from '@/lib/database';
 
 // Configure web-push
 webpush.setVapidDetails(
@@ -15,32 +16,27 @@ export async function POST(request: NextRequest) {
     console.log('Test notification requested:', { title, body, icon });
     
     // Get subscriptions from database
-    const { execSync } = require('child_process');
-    
     try {
       // Get all subscriptions from database
-      const subscriptionsJson = execSync('sqlite3 kinetic.db "SELECT endpoint, p256dh, auth FROM push_subscriptions"', { encoding: 'utf8' });
+      const subscriptions = await db.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions').all();
       
-      if (!subscriptionsJson.trim()) {
+      if (!subscriptions || subscriptions.length === 0) {
         return NextResponse.json({ 
           success: false, 
           message: 'No subscriptions found' 
         });
       }
       
-      const lines = subscriptionsJson.trim().split('\n');
       let sentCount = 0;
       
-      for (const line of lines) {
-        const [endpoint, p256dh, auth] = line.split('|');
-        
-        if (endpoint && p256dh && auth) {
+      for (const sub of subscriptions) {
+        if (sub.endpoint && sub.p256dh && sub.auth) {
           try {
             const subscription = {
-              endpoint,
+              endpoint: sub.endpoint,
               keys: {
-                p256dh,
-                auth
+                p256dh: sub.p256dh,
+                auth: sub.auth
               }
             };
             
@@ -54,7 +50,7 @@ export async function POST(request: NextRequest) {
             }));
             
             sentCount++;
-            console.log('Notification sent to:', endpoint);
+            console.log('Notification sent to:', sub.endpoint);
           } catch (error) {
             console.error('Error sending notification to subscription:', error);
           }

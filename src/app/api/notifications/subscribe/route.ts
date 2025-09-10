@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from 'web-push';
+import db from '@/lib/database';
 
 // Configure web-push
 webpush.setVapidDetails(
@@ -14,8 +15,6 @@ export async function POST(request: NextRequest) {
     
     
     // Store subscription in database
-    const { execSync } = require('child_process');
-    
     try {
       // Validate subscription object
       if (!subscription || !subscription.endpoint || !subscription.keys || !subscription.keys.p256dh || !subscription.keys.auth) {
@@ -25,14 +24,10 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Use sqlite3 command line to insert the subscription
-      const endpoint = subscription.endpoint.replace(/'/g, "''");
-      const p256dh = subscription.keys.p256dh.replace(/'/g, "''");
-      const auth = subscription.keys.auth.replace(/'/g, "''");
+      // Use PostgreSQL to insert the subscription
+      const sql = `INSERT INTO push_subscriptions (endpoint, p256dh, auth) VALUES ($1, $2, $3) ON CONFLICT (endpoint) DO UPDATE SET p256dh = $2, auth = $3`;
       
-      const sql = `INSERT OR REPLACE INTO push_subscriptions (endpoint, p256dh, auth) VALUES ('${endpoint}', '${p256dh}', '${auth}')`;
-      
-      execSync(`sqlite3 kinetic.db "${sql}"`, { stdio: 'pipe' });
+      await db.prepare(sql).run(subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth);
       
       return NextResponse.json({ 
         success: true, 

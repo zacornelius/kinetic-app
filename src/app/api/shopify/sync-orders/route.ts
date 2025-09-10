@@ -520,8 +520,8 @@ export async function POST(request: Request) {
 // GET endpoint to check sync status
 export async function GET() {
   try {
-    const totalOrders = db.prepare('SELECT COUNT(*) as count FROM shopify_orders').get() as { count: number };
-    const recentOrders = db.prepare(`
+    const totalOrders = await db.prepare('SELECT COUNT(*) as count FROM shopify_orders').get() as { count: number };
+    const recentOrders = await db.prepare(`
       SELECT orderNumber, customerEmail, totalAmount, status, createdAt 
       FROM shopify_orders 
       ORDER BY createdAt DESC 

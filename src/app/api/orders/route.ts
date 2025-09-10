@@ -35,9 +35,26 @@ export async function GET(request: NextRequest) {
     const customerEmail = searchParams.get("customerEmail");
     
     let query = `
-      SELECT o.*, c.assignedTo as assignedOwner, 'shopify' as source, o.id as sourceId
+      SELECT 
+        o.id,
+        o.createdat as "createdAt",
+        o.ordernumber as "orderNumber",
+        o.shopifyorderid as "shopifyOrderId",
+        o.customeremail as "customerEmail",
+        o.customername as "customerName",
+        o.totalamount as "totalAmount",
+        o.currency,
+        o.status,
+        o.shippingaddress as "shippingAddress",
+        o.trackingnumber as "trackingNumber",
+        o.notes,
+        o.owneremail as "ownerEmail",
+        o.lineitems as "lineItems",
+        c.assignedto as "assignedOwner",
+        'shopify' as source,
+        o.id as "sourceId"
       FROM shopify_orders o
-      LEFT JOIN customers c ON LOWER(o.customerEmail) = LOWER(c.email)
+      LEFT JOIN customers c ON LOWER(o.customeremail) = LOWER(c.email)
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -53,13 +70,13 @@ export async function GET(request: NextRequest) {
     }
     
     if (customerEmail) {
-      query += ' AND o.customerEmail LIKE ?';
+      query += ' AND o.customeremail LIKE ?';
       params.push(`%${customerEmail}%`);
     }
     
-    query += ' ORDER BY createdAt DESC';
+    query += ' ORDER BY o.createdat DESC';
     
-    const data = db.prepare(query).all(...params) as Order[];
+    const data = await db.prepare(query).all(...params) as Order[];
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -92,7 +109,7 @@ export async function POST(request: Request) {
     }
     
     // Check if order number already exists
-    const existingOrder = db.prepare('SELECT id FROM shopify_orders WHERE orderNumber = ?').get(orderNumber);
+    const existingOrder = await db.prepare('SELECT id FROM shopify_orders WHERE ordernumber = ?').get(orderNumber);
     if (existingOrder) {
       return NextResponse.json({ error: "Order number already exists" }, { status: 409 });
     }
@@ -102,11 +119,11 @@ export async function POST(request: Request) {
     const finalSourceId = sourceId || id;
     
     const insertOrder = db.prepare(`
-      INSERT INTO shopify_orders (id, createdAt, orderNumber, customerEmail, customerName, totalAmount, currency, status, shippingAddress, trackingNumber, notes, ownerEmail)
+      INSERT INTO shopify_orders (id, createdat, ordernumber, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
-    insertOrder.run(
+    await insertOrder.run(
       id, 
       createdAt, 
       orderNumber, 
@@ -157,23 +174,33 @@ export async function PATCH(request: Request) {
     }
     
     // Check if order exists
-    const existingOrder = db.prepare('SELECT * FROM shopify_orders WHERE id = ?').get(id) as Order;
+    const existingOrder = await db.prepare('SELECT * FROM shopify_orders WHERE id = ?').get(id) as Order;
     if (!existingOrder) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
     
     // Build update query dynamically
-    const allowedFields = [
-      'orderNumber', 'customerEmail', 'customerName', 'totalAmount', 'currency', 
-      'status', 'shippingAddress', 'billingAddress', 'trackingNumber', 'dueDate', 'notes', 'ownerEmail'
-    ];
+    const fieldMapping: { [key: string]: string } = {
+      'orderNumber': 'ordernumber',
+      'customerEmail': 'customeremail',
+      'customerName': 'customername',
+      'totalAmount': 'totalamount',
+      'currency': 'currency',
+      'status': 'status',
+      'shippingAddress': 'shippingaddress',
+      'billingAddress': 'billingaddress',
+      'trackingNumber': 'trackingnumber',
+      'dueDate': 'duedate',
+      'notes': 'notes',
+      'ownerEmail': 'owneremail'
+    };
     
     const updateFields: string[] = [];
     const params: any[] = [];
     
     for (const [key, value] of Object.entries(updates)) {
-      if (allowedFields.includes(key)) {
-        updateFields.push(`${key} = ?`);
+      if (fieldMapping[key]) {
+        updateFields.push(`${fieldMapping[key]} = ?`);
         params.push(value);
       }
     }
@@ -185,10 +212,10 @@ export async function PATCH(request: Request) {
     params.push(id);
     
     const updateQuery = `UPDATE shopify_orders SET ${updateFields.join(', ')} WHERE id = ?`;
-    db.prepare(updateQuery).run(...params);
+    await db.prepare(updateQuery).run(...params);
     
     // Return updated order
-    const updatedOrder = db.prepare('SELECT * FROM shopify_orders WHERE id = ?').get(id) as Order;
+    const updatedOrder = await db.prepare('SELECT * FROM shopify_orders WHERE id = ?').get(id) as Order;
     return NextResponse.json(updatedOrder);
   } catch (error) {
     console.error('Error updating order:', error);
@@ -206,7 +233,7 @@ export async function DELETE(request: Request) {
     }
     
     const deleteOrder = db.prepare('DELETE FROM shopify_orders WHERE id = ?');
-    const result = deleteOrder.run(id);
+    const result = await deleteOrder.run(id);
     
     if (result.changes === 0) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });

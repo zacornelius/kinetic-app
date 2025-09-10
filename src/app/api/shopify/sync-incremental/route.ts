@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     // Get the last synced order ID
-    const lastOrder = db.prepare('SELECT shopifyOrderId FROM shopify_orders WHERE shopifyOrderId IS NOT NULL ORDER BY createdAt DESC LIMIT 1').get() as { shopifyOrderId: string } | undefined;
+    const lastOrder = await db.prepare('SELECT shopifyOrderId FROM shopify_orders WHERE shopifyOrderId IS NOT NULL ORDER BY createdAt DESC LIMIT 1').get() as { shopifyOrderId: string } | undefined;
     
     if (!lastOrder) {
       return NextResponse.json({
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     
     if (syncResponse.ok) {
       // Update customer records with new order data
-      const newOrders = db.prepare(`
+      const newOrders = await db.prepare(`
         SELECT DISTINCT customerEmail, customerName, totalAmount, currency 
         FROM shopify_orders 
         WHERE createdAt > datetime('now', '-1 hour')
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       let customersUpdated = 0;
       for (const order of newOrders) {
         // Check if customer exists
-        const existingCustomer = db.prepare('SELECT id FROM customers WHERE email = ?').get(order.customerEmail);
+        const existingCustomer = await db.prepare('SELECT id FROM customers WHERE email = ?').get(order.customerEmail);
         
         if (!existingCustomer) {
           // Create new customer

@@ -22,16 +22,16 @@ export async function GET(request: NextRequest) {
     };
 
     // My Customers: assigned to user AND has orders
-    const myCustomersQuery = `SELECT COUNT(*) as count FROM customers WHERE assignedTo = ? AND totalOrders > 0`;
-    counts.my_customers = db.prepare(myCustomersQuery).get(assignedTo).count;
+    const myCustomersQuery = `SELECT COUNT(*) as count FROM customers WHERE assignedTo = $1 AND totalOrders > 0`;
+    counts.my_customers = (await db.prepare(myCustomersQuery).get(assignedTo)).count;
 
     // My Contacts: assigned to user AND has inquiries but NO orders
-    const myContactsQuery = `SELECT COUNT(*) as count FROM customers WHERE assignedTo = ? AND totalInquiries > 0 AND totalOrders = 0`;
-    counts.my_contacts = db.prepare(myContactsQuery).get(assignedTo).count;
+    const myContactsQuery = `SELECT COUNT(*) as count FROM customers WHERE assignedTo = $1 AND totalInquiries > 0 AND totalOrders = 0`;
+    counts.my_contacts = (await db.prepare(myContactsQuery).get(assignedTo)).count;
 
     // All Customers: total count
     const allCustomersQuery = `SELECT COUNT(*) as count FROM customers`;
-    counts.all = db.prepare(allCustomersQuery).get().count;
+    counts.all = (await db.prepare(allCustomersQuery).get()).count;
 
     return NextResponse.json({ counts });
 

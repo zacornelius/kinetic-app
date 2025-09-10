@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
-import { execSync } from 'child_process';
+import db from '@/lib/database';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
@@ -21,19 +21,16 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
     // Get user from database
-    const userQuery = `SELECT id, email, password, firstName, lastName, role, createdAt FROM users WHERE id = '${decoded.userId}'`;
-    const userResult = execSync(`sqlite3 kinetic.db "${userQuery}"`, { encoding: 'utf8' });
+    const userResult = await db.prepare('SELECT id, email, password, firstName, lastName, role, createdAt FROM users WHERE id = ?').get(decoded.userId);
     
-    if (!userResult.trim()) {
+    if (!userResult) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // Parse pipe-separated SQLite output
-    const [id, email, password, firstName, lastName, role, createdAt] = userResult.trim().split('|');
-    const user = { id, email, password, firstName, lastName, role, createdAt };
+    const user = userResult;
     const { password: _, ...userWithoutPassword } = user;
 
     return NextResponse.json({

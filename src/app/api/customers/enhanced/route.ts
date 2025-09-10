@@ -16,20 +16,46 @@ export async function GET(request: NextRequest) {
     let params = [];
 
     if (search) {
-      // Check if search is an ID first
-      if (search.length > 5 && !search.includes('@')) {
+      // Check if search is an ID first (only if it looks like an ID - alphanumeric, no spaces)
+      if (search.length > 5 && !search.includes('@') && !search.includes(' ') && /^[a-zA-Z0-9]+$/.test(search)) {
         whereConditions.push('id = ?');
         params.push(search);
       } else {
-        whereConditions.push(`(
-          email LIKE ? OR 
-          firstName LIKE ? OR 
-          lastName LIKE ? OR 
-          companyName LIKE ? OR
-          phone LIKE ?
-        )`);
-        const searchTerm = `%${search}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        // Handle multi-word searches
+        const searchWords = search.trim().split(/\s+/);
+        
+        if (searchWords.length === 1) {
+          // Single word search
+          whereConditions.push(`(
+            LOWER(email) LIKE ? OR 
+            LOWER(firstname) LIKE ? OR 
+            LOWER(lastname) LIKE ? OR 
+            LOWER(companyname) LIKE ? OR
+            LOWER(phone) LIKE ?
+          )`);
+          const searchTerm = `%${searchWords[0].toLowerCase()}%`;
+          params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        } else {
+          // Multi-word search - each word must match at least one field
+          const wordConditions = searchWords.map(word => {
+            const wordTerm = `%${word.toLowerCase()}%`;
+            return `(
+              LOWER(email) LIKE ? OR 
+              LOWER(firstname) LIKE ? OR 
+              LOWER(lastname) LIKE ? OR 
+              LOWER(companyname) LIKE ? OR
+              LOWER(phone) LIKE ?
+            )`;
+          });
+          
+          whereConditions.push(`(${wordConditions.join(' AND ')})`);
+          
+          // Add parameters for each word
+          searchWords.forEach(word => {
+            const wordTerm = `%${word.toLowerCase()}%`;
+            params.push(wordTerm, wordTerm, wordTerm, wordTerm, wordTerm);
+          });
+        }
       }
     }
 
@@ -44,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (assignedTo) {
-      whereConditions.push('assignedTo = ?');
+      whereConditions.push('assignedto = ?');
       params.push(assignedTo);
     }
 
@@ -53,18 +79,25 @@ export async function GET(request: NextRequest) {
     // Get customers from unified table
     const query = `
       SELECT 
-        id, email, firstName, lastName, phone, companyName,
-        billingAddress, shippingAddress, createdAt, updatedAt, lastContactDate,
-        totalInquiries, totalOrders, totalSpent,
-        status, tags, notes, assignedTo, source
+        id, email, firstname as "firstName", lastname as "lastName", phone, companyname as "companyName",
+        billingaddress as "billingAddress", shippingaddress as "shippingAddress", 
+        createdat as "createdAt", updatedat as "updatedAt", lastcontactdate as "lastContactDate",
+        totalinquiries as "totalInquiries", totalorders as "totalOrders", totalspent as "totalSpent",
+        status, tags, notes, assignedto as "assignedTo", source
       FROM customers 
       ${whereClause}
-      ORDER BY updatedAt DESC, createdAt DESC
+      ORDER BY updatedat DESC, createdat DESC
       LIMIT ? OFFSET ?
     `;
     
     const queryParams = [...params, limit, offset];
-    const customers = db.prepare(query).all(...queryParams).map(customer => ({
+    
+    // Debug logging
+    if (search) {
+      console.log('Search query:', query);
+      console.log('Search params:', queryParams);
+    }
+    const customers = (await db.prepare(query).all(...queryParams)).map(customer => ({
             id: customer.id,
             email: customer.email,
             firstName: customer.firstName || '',
@@ -102,7 +135,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Get total count for pagination (use same params as main query, but without limit/offset)
-    const total = db.prepare(`SELECT COUNT(*) as total FROM customers ${whereClause}`).get(...params).total;
+    const total = (await db.prepare(`SELECT COUNT(*) as total FROM customers ${whereClause}`).get(...params)).total;
 
     return NextResponse.json({
       customers,
@@ -143,47 +176,70 @@ export async function POST(request: NextRequest) {
     const id = sourceId || require('crypto').randomBytes(8).toString('hex');
 
     // Check if customer exists
-    const existingCheck = execSync(
-      `sqlite3 kinetic.db "SELECT id FROM customer_profiles WHERE email = '${email.replace(/'/g, "''")}'"`,
-      { encoding: 'utf8' }
-    ).trim();
+    const existingCheck = await db.prepare('SELECT id FROM customer_profiles WHERE email = ?').get(email);
 
     if (existingCheck) {
       // Update existing customer
       const updateQuery = `
         UPDATE customer_profiles SET
-          firstName = '${(firstName || '').replace(/'/g, "''")}',
-          lastName = '${(lastName || '').replace(/'/g, "''")}',
-          phone = '${(phone || '').replace(/'/g, "''")}',
-          companyName = '${(companyName || '').replace(/'/g, "''")}',
-          billingAddress = '${(billingAddress || '').replace(/'/g, "''")}',
-          shippingAddress = '${(shippingAddress || '').replace(/'/g, "''")}',
-          status = '${status || 'active'}',
-          tags = '${JSON.stringify(tags || [])}',
-          assignedTo = '${assignedTo || ''}',
-          priority = '${priority || 'normal'}',
-          updatedAt = '${now}'
-        WHERE email = '${email.replace(/'/g, "''")}'
+          firstName = ?,
+          lastName = ?,
+          phone = ?,
+          companyName = ?,
+          billingAddress = ?,
+          shippingAddress = ?,
+          status = ?,
+          tags = ?,
+          assignedTo = ?,
+          priority = ?,
+          updatedAt = ?
+        WHERE email = ?
       `;
 
-      execSync(`sqlite3 kinetic.db "${updateQuery}"`);
+      await db.prepare(updateQuery).run(
+        firstName || '',
+        lastName || '',
+        phone || '',
+        companyName || '',
+        billingAddress || '',
+        shippingAddress || '',
+        status || 'active',
+        JSON.stringify(tags || []),
+        assignedTo || '',
+        'normal',
+        now,
+        email
+      );
     } else {
       // Create new customer
       const insertQuery = `
         INSERT INTO customer_profiles (
           id, email, firstName, lastName, phone, companyName,
           billingAddress, shippingAddress, source, sourceId,
-          createdAt, updatedAt, status, tags, assignedTo        ) VALUES (
-          '${id}', '${email.replace(/'/g, "''")}', '${(firstName || '').replace(/'/g, "''")}',
-          '${(lastName || '').replace(/'/g, "''")}', '${(phone || '').replace(/'/g, "''")}',
-          '${(companyName || '').replace(/'/g, "''")}', '${(billingAddress || '').replace(/'/g, "''")}',
-          '${(shippingAddress || '').replace(/'/g, "''")}', '${source || 'manual'}',
-          '${id}', '${now}', '${now}', '${status || 'active'}',
-          '${JSON.stringify(tags || [])}', '${assignedTo || ''}', '${priority || 'normal'}'
+          createdAt, updatedAt, status, tags, assignedTo, priority
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
       `;
 
-      execSync(`sqlite3 kinetic.db "${insertQuery}"`);
+      await db.prepare(insertQuery).run(
+        id,
+        email,
+        firstName || '',
+        lastName || '',
+        phone || '',
+        companyName || '',
+        billingAddress || '',
+        shippingAddress || '',
+        source || 'manual',
+        sourceId || '',
+        now,
+        now,
+        status || 'active',
+        JSON.stringify(tags || []),
+        assignedTo || '',
+        'normal'
+      );
     }
 
     return NextResponse.json({ success: true });

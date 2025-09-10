@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { execSync } from 'child_process';
+import db from '@/lib/database';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
@@ -31,17 +31,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const query = `SELECT id, email, firstName, lastName, role, createdAt FROM users ORDER BY createdAt DESC`;
-    const result = execSync(`sqlite3 kinetic.db "${query}"`, { encoding: 'utf8' });
-    
-    if (!result.trim()) {
-      return NextResponse.json([]);
-    }
-
-    const users = result.trim().split('\n').map(line => {
-      const [id, email, firstName, lastName, role, createdAt] = line.split('|');
-      return { id, email, firstName, lastName, role, createdAt };
-    });
+    const query = `SELECT id, email, firstname as "firstName", lastname as "lastName", role, createdat as "createdAt" FROM users ORDER BY createdat DESC`;
+    const users = await db.prepare(query).all();
 
     return NextResponse.json(users);
 
@@ -72,10 +63,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const existingUserQuery = `SELECT * FROM users WHERE email = '${email}'`;
-    const existingUserResult = execSync(`sqlite3 kinetic.db "${existingUserQuery}"`, { encoding: 'utf8' });
+    const existingUserQuery = `SELECT * FROM users WHERE email = ?`;
+    const existingUser = await db.prepare(existingUserQuery).get(email);
     
-    if (existingUserResult.trim()) {
+    if (existingUser) {
       return NextResponse.json(
         { error: 'User with this email already exists' },
         { status: 409 }
@@ -88,11 +79,11 @@ export async function POST(request: NextRequest) {
     // Create new user
     const userId = `user-${Date.now()}`;
     const insertQuery = `
-      INSERT INTO users (id, email, password, firstName, lastName, role, createdAt)
-      VALUES ('${userId}', '${email}', '${hashedPassword}', '${firstName}', '${lastName}', '${role}', datetime('now'))
+      INSERT INTO users (id, email, password, firstname, lastname, role, createdat)
+      VALUES (?, ?, ?, ?, ?, ?, NOW())
     `;
     
-    execSync(`sqlite3 kinetic.db "${insertQuery}"`);
+    await db.prepare(insertQuery).run(userId, email, hashedPassword, firstName, lastName, role);
 
     // Return user data (without password)
     const user = {
@@ -143,11 +134,11 @@ export async function PUT(request: NextRequest) {
       updateValues.push(email);
     }
     if (firstName) {
-      updateFields.push('firstName = ?');
+      updateFields.push('firstname = ?');
       updateValues.push(firstName);
     }
     if (lastName) {
-      updateFields.push('lastName = ?');
+      updateFields.push('lastname = ?');
       updateValues.push(lastName);
     }
     if (role) {
@@ -167,8 +158,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updateQuery = `UPDATE users SET ${updateFields.join(', ')} WHERE id = '${id}'`;
-    execSync(`sqlite3 kinetic.db "${updateQuery}"`);
+    const updateQuery = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
+    await db.prepare(updateQuery).run(...updateValues, id);
 
     return NextResponse.json({
       message: 'User updated successfully'
@@ -202,18 +193,18 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Prevent deleting admin users
-    const userQuery = `SELECT role FROM users WHERE id = '${id}'`;
-    const userResult = execSync(`sqlite3 kinetic.db "${userQuery}"`, { encoding: 'utf8' });
+    const userQuery = `SELECT role FROM users WHERE id = ?`;
+    const userResult = await db.prepare(userQuery).get(id);
     
-    if (userResult.trim() && userResult.trim().includes('admin')) {
+    if (userResult && userResult.role === 'admin') {
       return NextResponse.json(
         { error: 'Cannot delete admin users' },
         { status: 400 }
       );
     }
 
-    const deleteQuery = `DELETE FROM users WHERE id = '${id}'`;
-    execSync(`sqlite3 kinetic.db "${deleteQuery}"`);
+    const deleteQuery = `DELETE FROM users WHERE id = ?`;
+    await db.prepare(deleteQuery).run(id);
 
     return NextResponse.json({
       message: 'User deleted successfully'

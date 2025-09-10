@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { execSync } from 'child_process';
+import db from '@/lib/database';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
@@ -17,22 +17,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists in database
-    const userQuery = `SELECT id, email, password, firstName, lastName, role, createdAt FROM users WHERE email = '${email}'`;
-    const userResult = execSync(`sqlite3 kinetic.db "${userQuery}"`, { encoding: 'utf8' });
+    const userResult = await db.prepare('SELECT id, email, password, firstName, lastName, role, createdAt FROM users WHERE email = ?').get(email);
     
-    if (!userResult.trim()) {
+    if (!userResult) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       );
     }
 
-    // Parse pipe-separated SQLite output
-    const [id, userEmail, hashedPassword, firstName, lastName, role, createdAt] = userResult.trim().split('|');
-    const user = { id, email: userEmail, password: hashedPassword, firstName, lastName, role, createdAt };
+    const user = userResult;
     
     // Verify password using bcrypt
-    const isPasswordValid = await bcrypt.compare(password, hashedPassword);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Invalid email or password' },

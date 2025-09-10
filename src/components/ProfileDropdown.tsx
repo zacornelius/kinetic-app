@@ -23,7 +23,15 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
 
   // Get user initials
   const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    const first = firstName?.charAt(0) || '';
+    const last = lastName?.charAt(0) || '';
+    return `${first}${last}`.toUpperCase();
+  };
+  
+  // Get initials
+  const getUserInitials = () => {
+    if (!user) return '?';
+    return getInitials(user.firstname, user.lastname);
   };
 
   // Close dropdown when clicking outside
@@ -170,7 +178,7 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
           className="flex items-center justify-center w-8 h-8 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors"
         >
           <span className="text-xs font-medium">
-            {getInitials(user.firstName, user.lastName)}
+            {getUserInitials()}
           </span>
         </button>
 
@@ -178,7 +186,7 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
           <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
             <div className="px-4 py-3 border-b border-gray-200 bg-black rounded-t-lg">
               <p className="text-sm font-medium text-white">
-                {user.firstName} {user.lastName}
+                {user.firstname} {user.lastname}
               </p>
               <p className="text-sm text-gray-300">{user.email}</p>
               {user.role === 'admin' && (

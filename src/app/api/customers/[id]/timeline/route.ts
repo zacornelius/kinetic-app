@@ -8,8 +8,13 @@ export async function GET(
   try {
     const { id: customerId } = await params;
 
-  // Get customer data from customers table
-  const customer = db.prepare(`SELECT email, assignedTo FROM customers WHERE id = ?`).get(customerId);
+  // Get customer data from customers table - try by ID first, then by email
+  let customer = await db.prepare(`SELECT email, assignedto FROM customers WHERE id = ?`).get(customerId);
+  
+  // If not found by ID, try by email (in case we're passed an email instead of ID)
+  if (!customer) {
+    customer = await db.prepare(`SELECT email, assignedto FROM customers WHERE email = ?`).get(customerId);
+  }
 
   if (!customer) {
     return NextResponse.json({ interactions: [] });
@@ -18,51 +23,51 @@ export async function GET(
   const customerEmail = customer.email;
 
   // Get inquiries
-  const inquiries = db.prepare(`
+  const inquiries = await db.prepare(`
     SELECT 
       'inquiry' as type,
       id,
       message as content,
-      createdAt,
+      createdat as "createdAt",
       category,
       status
     FROM inquiries
-    WHERE customerEmail = ? AND status != 'not_relevant'
-    ORDER BY createdAt DESC
+    WHERE customeremail = ? AND status != 'not_relevant'
+    ORDER BY createdat DESC
   `).all(customerEmail);
 
   // No need for customer inquiry data since we're using the actual inquiries table
 
     // Get orders from shopify_orders table
-    const orders = db.prepare(`
+    const orders = await db.prepare(`
       SELECT 
         'order' as type,
         id,
-        'Order #' || orderNumber as subject,
-        'Order #' || orderNumber as content,
-        createdAt,
-        orderNumber,
-        totalAmount,
+        'Order #' || ordernumber as subject,
+        'Order #' || ordernumber as content,
+        createdat as "createdAt",
+        ordernumber,
+        totalamount,
         status
       FROM shopify_orders 
-      WHERE customerEmail = ?
-      ORDER BY createdAt DESC
+      WHERE customeremail = ?
+      ORDER BY createdat DESC
     `).all(customerEmail);
 
     // Get notes
-    const notes = db.prepare(`
+    const notes = await db.prepare(`
       SELECT 
         'note' as type,
         id,
         'Note' as subject,
         note as content,
-        authorEmail,
-        createdAt,
+        authoremail,
+        createdat as "createdAt",
         type as noteType,
-        isPrivate
+        isprivate
       FROM customer_notes 
-      WHERE customerId = ?
-      ORDER BY createdAt DESC
+      WHERE customerid = ?
+      ORDER BY createdat DESC
     `).all(customerId);
 
   // Format all interactions
@@ -72,7 +77,7 @@ export async function GET(
       type: i.type,
       subject: 'Inquiry',
       content: i.content, // Use inquiry message directly
-      authorEmail: customer.assignedTo || 'system',
+      authorEmail: customer.assignedto || 'system',
       createdAt: i.createdAt, // Use inquiry date
       metadata: { category: i.category, status: i.status }
     })),
@@ -81,7 +86,7 @@ export async function GET(
       type: o.type,
       subject: o.subject,
       content: o.content,
-      authorEmail: customer.assignedTo || 'system',
+      authorEmail: customer.assignedto || 'system',
       createdAt: o.createdAt,
       metadata: { orderNumber: o.orderNumber, totalAmount: o.totalAmount, status: o.status }
     })),

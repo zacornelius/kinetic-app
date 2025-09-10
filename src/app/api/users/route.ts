@@ -4,9 +4,9 @@ import db from "@/lib/database";
 type User = {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  createdAt: string;
+  firstname: string;
+  lastname: string;
+  createdat: string;
 };
 
 function generateId() {
@@ -16,7 +16,7 @@ function generateId() {
 
 export async function GET() {
   try {
-    const users = db.prepare('SELECT * FROM users ORDER BY createdAt DESC').all() as User[];
+    const users = await db.prepare('SELECT id, email, firstname, lastname, createdat FROM users ORDER BY createdat DESC').all() as User[];
     return NextResponse.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     }
     
     // Check if user already exists
-    const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existingUser = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (existingUser) {
       return NextResponse.json({ error: "User already exists" }, { status: 409 });
     }
@@ -43,13 +43,13 @@ export async function POST(request: Request) {
     const createdAt = new Date().toISOString();
     
     const insertUser = db.prepare(`
-      INSERT INTO users (id, email, firstName, lastName, createdAt)
+      INSERT INTO users (id, email, firstname, lastname, createdat)
       VALUES (?, ?, ?, ?, ?)
     `);
     
-    insertUser.run(id, email, firstName, lastName, createdAt);
+    await insertUser.run(id, email, firstName, lastName, createdAt);
     
-    const newUser: User = { id, email, firstName, lastName, createdAt };
+    const newUser: User = { id, email, firstname: firstName, lastname: lastName, createdat: createdAt };
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
@@ -67,7 +67,7 @@ export async function DELETE(request: Request) {
     }
     
     const deleteUser = db.prepare('DELETE FROM users WHERE id = ?');
-    const result = deleteUser.run(id);
+    const result = await deleteUser.run(id);
     
     if (result.changes === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

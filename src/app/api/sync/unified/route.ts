@@ -11,7 +11,7 @@ export async function POST() {
     console.log("Cleared existing all_orders data");
     
     // Sync Shopify orders to all_orders
-    const shopifyOrders = db.prepare(`
+    const shopifyOrders = await db.prepare(`
       SELECT 
         id,
         createdAt,
@@ -64,7 +64,7 @@ export async function POST() {
     console.log(`Synced ${syncedCount} Shopify orders to all_orders`);
     
     // Sync QuickBooks orders to all_orders (if any exist)
-    const quickbooksOrders = db.prepare(`
+    const quickbooksOrders = await db.prepare(`
       SELECT 
         id,
         createdAt,
@@ -124,7 +124,7 @@ export async function POST() {
     db.prepare("DELETE FROM all_customers").run();
     
     // Sync Shopify customers
-    const shopifyCustomers = db.prepare(`
+    const shopifyCustomers = await db.prepare(`
       SELECT id, email, firstName, lastName, phone, companyName,
              billingAddress, shippingAddress, createdAt, updatedAt
       FROM shopify_customers
@@ -150,7 +150,7 @@ export async function POST() {
     console.log(`Synced ${shopifyCustomers.length} Shopify customers to all_customers`);
     
     // Sync QuickBooks customers
-    const quickbooksCustomers = db.prepare(`
+    const quickbooksCustomers = await db.prepare(`
       SELECT id, email, firstName, lastName, phone, companyName,
              billingAddress, shippingAddress, createdAt, updatedAt, quickbooksId
       FROM quickbooks_customers
@@ -174,12 +174,12 @@ export async function POST() {
     console.log(`Synced ${quickbooksCustomers.length} QuickBooks customers to all_customers`);
     
     // Get final counts
-    const totalAllOrders = db.prepare("SELECT COUNT(*) as count FROM all_orders").get() as { count: number };
-    const totalShopifyOrders = db.prepare("SELECT COUNT(*) as count FROM shopify_orders").get() as { count: number };
-    const totalQuickBooksOrders = db.prepare("SELECT COUNT(*) as count FROM quickbooks_orders").get() as { count: number };
-    const totalAllCustomers = db.prepare("SELECT COUNT(*) as count FROM all_customers").get() as { count: number };
-    const totalShopifyCustomers = db.prepare("SELECT COUNT(*) as count FROM shopify_customers").get() as { count: number };
-    const totalQuickBooksCustomers = db.prepare("SELECT COUNT(*) as count FROM quickbooks_customers").get() as { count: number };
+    const totalAllOrders = await db.prepare("SELECT COUNT(*) as count FROM all_orders").get() as { count: number };
+    const totalShopifyOrders = await db.prepare("SELECT COUNT(*) as count FROM shopify_orders").get() as { count: number };
+    const totalQuickBooksOrders = await db.prepare("SELECT COUNT(*) as count FROM quickbooks_orders").get() as { count: number };
+    const totalAllCustomers = await db.prepare("SELECT COUNT(*) as count FROM all_customers").get() as { count: number };
+    const totalShopifyCustomers = await db.prepare("SELECT COUNT(*) as count FROM shopify_customers").get() as { count: number };
+    const totalQuickBooksCustomers = await db.prepare("SELECT COUNT(*) as count FROM quickbooks_customers").get() as { count: number };
     
     // Merge customer data for prospects who have made purchases
     console.log("Merging customer data for prospects who have made purchases...");

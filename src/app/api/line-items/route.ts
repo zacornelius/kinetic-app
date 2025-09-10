@@ -4,23 +4,34 @@ import db from "@/lib/database";
 export async function GET() {
   try {
     // Get all orders with line items
-    const orders = db.prepare(`
+    const orders = await db.prepare(`
       SELECT 
         id,
-        orderNumber,
-        customerEmail,
-        customerName,
-        lineItems
+        ordernumber as "orderNumber",
+        customeremail as "customerEmail",
+        customername as "customerName",
+        lineitems as "lineItems"
       FROM shopify_orders
-      WHERE lineItems IS NOT NULL AND lineItems != ''
-      ORDER BY createdAt DESC
+      WHERE lineitems IS NOT NULL AND lineitems != '' AND lineitems != 'null' AND lineitems != 'undefined'
+      ORDER BY createdat DESC
     `).all();
     
     // Parse line items from JSON and flatten them
     const allLineItems = [];
     orders.forEach(order => {
       try {
+        // Skip if lineItems is null, undefined, or empty string
+        if (!order.lineItems || order.lineItems === 'null' || order.lineItems === 'undefined') {
+          return;
+        }
+        
         const lineItems = JSON.parse(order.lineItems);
+        
+        // Ensure lineItems is an array
+        if (!Array.isArray(lineItems)) {
+          return;
+        }
+        
         lineItems.forEach((item, index) => {
           // Calculate total price: (price * quantity) - total_discount
           const price = parseFloat(item.price || 0);

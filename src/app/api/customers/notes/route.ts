@@ -14,26 +14,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const notes = db.prepare(`
+    const notes = await db.prepare(`
       SELECT 
         cn.id, cn.customerId, cn.authorEmail, cn.note, cn.type,
         cn.createdAt, cn.isPrivate,
         u.firstName as authorFirstName, u.lastName as authorLastName
       FROM customer_notes cn
       LEFT JOIN users u ON cn.authorEmail = u.email
-      WHERE cn.customerId = ?
+      WHERE cn.customerId = $1
       ORDER BY cn.createdAt DESC
     `).all(customerId);
 
     // Process notes and add default timestamps for notes without dates
-    const processedNotes = notes.map(note => {
+    const processedNotes = [];
+    for (const note of notes) {
       let createdAt = note.createdAt;
       
       // If no timestamp, assume it happened one day after the customer was created
       if (!createdAt) {
-        const customerCreatedAt = db.prepare(`SELECT createdAt FROM customers_new WHERE id = ?`).get(customerId)?.createdAt;
-        if (customerCreatedAt) {
-          const customerDate = new Date(customerCreatedAt);
+        const customerCreatedAt = await db.prepare(`SELECT createdat FROM customers WHERE id = $1`).get(customerId);
+        if (customerCreatedAt?.createdat) {
+          const customerDate = new Date(customerCreatedAt.createdat);
           customerDate.setDate(customerDate.getDate() + 1);
           createdAt = customerDate.toISOString();
         } else {
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return {
+      processedNotes.push({
         id: note.id,
         customerId: note.customerId,
         authorEmail: note.authorEmail,
@@ -50,8 +51,8 @@ export async function GET(request: NextRequest) {
         createdAt,
         isPrivate: Boolean(note.isPrivate),
         authorName: `${note.authorFirstName || ''} ${note.authorLastName || ''}`.trim() || note.authorEmail
-      };
-    });
+      });
+    }
 
     return NextResponse.json({ notes: processedNotes });
 
@@ -89,8 +90,8 @@ export async function POST(request: NextRequest) {
     // If no customer ID but we have inquiry email, try to find or create customer
     if (!finalCustomerId && inquiryEmail) {
       // First try to find existing customer
-      const existingCustomer = db.prepare(`
-        SELECT id FROM customers_new WHERE email = ?
+      const existingCustomer = await db.prepare(`
+        SELECT id FROM customers_new WHERE email = $1
       `).get(inquiryEmail);
 
       if (existingCustomer) {
@@ -100,20 +101,20 @@ export async function POST(request: NextRequest) {
         const newCustomerId = Math.random().toString(36).substr(2, 9);
         const now = new Date().toISOString();
         
-        db.prepare(`
+        await db.prepare(`
           INSERT INTO customers_new (
             id, email, firstName, lastName, source, status, 
             createdAt, updatedAt, totalOrders, totalSpent
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0)
         `).run(
           newCustomerId, inquiryEmail, 'Unknown', 'Customer', 
           'manual', 'contact', now, now
         );
 
         // Add to customer sources
-        db.prepare(`
+        await db.prepare(`
           INSERT INTO customer_sources (id, customerId, source, sourceId)
-          VALUES (?, ?, ?, ?)
+          VALUES ($1, $2, $3, $4)
         `).run(
           Math.random().toString(36).substr(2, 9), newCustomerId, 'manual', newCustomerId
         );
@@ -126,17 +127,17 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
 
     // Insert the note
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO customer_notes (
         id, customerId, authorEmail, note, type, createdAt, isPrivate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
     `).run(id, finalCustomerId, authorEmail, note, type, now, isPrivate ? 1 : 0);
 
     // Update customer's last contact date
-    db.prepare(`
+    await db.prepare(`
       UPDATE customers_new 
-      SET lastContactDate = ?, updatedAt = ?
-      WHERE id = ?
+      SET lastContactDate = $1, updatedAt = $2
+      WHERE id = $3
     `).run(now, now, finalCustomerId);
 
     return NextResponse.json({ success: true, noteId: id });
@@ -167,8 +168,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const deleteQuery = `DELETE FROM customer_notes WHERE id = '${noteId.replace(/'/g, "''")}'`;
-    execSync(`sqlite3 kinetic.db "${deleteQuery}"`);
+    const deleteQuery = `DELETE FROM customer_notes WHERE id = $1`;
+    await db.prepare(deleteQuery).run(noteId);
 
     return NextResponse.json({ success: true });
 

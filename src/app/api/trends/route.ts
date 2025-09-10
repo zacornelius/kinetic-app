@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execSync } from "child_process";
+import db from '@/lib/database';
 
 function formatPeriod(period: string): string {
   // Convert "2024-08" to "Aug 24"
@@ -30,34 +30,34 @@ export async function GET(request: NextRequest) {
     // Get line items data from shopify_orders - ALL sales, not just pallet sales
             const query = `
               SELECT 
-                strftime('%Y-%m', o.createdAt) as period,
-                json_extract(li.value, '$.quantity') as quantity,
-                COALESCE(json_extract(li.value, '$.totalPrice'), (json_extract(li.value, '$.quantity') * json_extract(li.value, '$.price')), 0) as price,
-                json_extract(li.value, '$.title') as title,
-                json_extract(li.value, '$.name') as name,
-                json_extract(li.value, '$.sku') as sku
+                TO_CHAR(o.createdat::timestamp, 'YYYY-MM') as period,
+                (li.value->>'quantity')::numeric as quantity,
+                COALESCE((li.value->>'totalPrice')::numeric, ((li.value->>'quantity')::numeric * (li.value->>'price')::numeric), 0) as price,
+                li.value->>'title' as title,
+                li.value->>'name' as name,
+                li.value->>'sku' as sku
               FROM shopify_orders o,
-              json_each(o.lineItems) as li
-              WHERE o.createdAt >= '${startDate.toISOString().split('T')[0]}'
-                AND o.createdAt <= '${endDate.toISOString().split('T')[0]}'
-                AND json_extract(li.value, '$.title') IS NOT NULL
-                AND json_extract(li.value, '$.quantity') IS NOT NULL
-                AND (json_extract(li.value, '$.title') LIKE '%Pallet%' OR json_extract(li.value, '$.title') = 'Build a Pallet')
-              ORDER BY o.createdAt DESC
+              jsonb_array_elements(o.lineItems::jsonb) as li
+              WHERE o.createdat::timestamp >= $1::timestamp
+                AND o.createdat::timestamp <= $2::timestamp
+                AND li.value->>'title' IS NOT NULL
+                AND li.value->>'quantity' IS NOT NULL
+                AND (li.value->>'title' LIKE '%Pallet%' OR li.value->>'title' = 'Build a Pallet')
+              ORDER BY o.createdat::timestamp DESC
             `;
     
-    const result = execSync(`sqlite3 kinetic.db "${query}"`, { encoding: 'utf8' });
+    const result = await db.prepare(query).all(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
     
-    if (!result.trim()) {
+    if (!result || result.length === 0) {
       return NextResponse.json([]);
     }
     
-    const lines = result.trim().split('\n');
+    const lines = result;
     const monthlyData: { [key: string]: { totalSales: number; totalQuantity: number; skuBreakdown: { [key: string]: { quantity: number; sales: number } } } } = {};
     
     // Process each line item
     lines.forEach(line => {
-      const [period, quantity, price, title, name, sku] = line.split('|');
+      const { period, quantity, price, title, name, sku } = line;
       
       if (!period || !quantity || !title) return;
       

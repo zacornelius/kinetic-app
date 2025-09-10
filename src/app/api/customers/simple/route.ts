@@ -17,22 +17,23 @@ export async function GET(request: NextRequest) {
     // Base query
     let baseQuery = `
       SELECT 
-        id, email, firstName, lastName, phone, companyName,
-        billingAddress, shippingAddress, createdAt, updatedAt, lastContactDate,
-        totalInquiries, totalOrders, totalSpent,
-        status, tags, notes, assignedTo, source
+        id, email, firstname as "firstName", lastname as "lastName", phone, companyname as "companyName",
+        billingaddress as "billingAddress", shippingaddress as "shippingAddress", 
+        createdat as "createdAt", updatedat as "updatedAt", lastcontactdate as "lastContactDate",
+        totalinquiries as "totalInquiries", totalorders as "totalOrders", totalspent as "totalSpent",
+        status, tags, notes, assignedto as "assignedTo", source
       FROM customers
     `;
 
     // Apply filters
     if (filter === 'my_customers') {
-      whereConditions.push('assignedTo = ?');
-      whereConditions.push('totalOrders > 0');
+      whereConditions.push('assignedto = ?');
+      whereConditions.push('totalorders > 0');
       params.push(assignedTo);
     } else if (filter === 'my_contacts') {
-      whereConditions.push('assignedTo = ?');
-      whereConditions.push('totalInquiries > 0');
-      whereConditions.push('totalOrders = 0');
+      whereConditions.push('assignedto = ?');
+      whereConditions.push('totalinquiries > 0');
+      whereConditions.push('totalorders = 0');
       params.push(assignedTo);
     } else if (filter === 'all') {
       // No additional conditions
@@ -46,9 +47,9 @@ export async function GET(request: NextRequest) {
       } else {
         whereConditions.push(`(
           email LIKE ? OR 
-          firstName LIKE ? OR 
-          lastName LIKE ? OR 
-          companyName LIKE ? OR
+          firstname LIKE ? OR 
+          lastname LIKE ? OR 
+          companyname LIKE ? OR
           phone LIKE ?
         )`);
         const searchTerm = `%${search}%`;
@@ -62,12 +63,12 @@ export async function GET(request: NextRequest) {
     const query = `
       ${baseQuery}
       ${whereClause}
-      ORDER BY updatedAt DESC, createdAt DESC
+      ORDER BY updatedat DESC, createdat DESC
       LIMIT ? OFFSET ?
     `;
     
     const queryParams = [...params, limit, offset];
-    const customers = db.prepare(query).all(...queryParams).map(customer => ({
+    const customers = (await db.prepare(query).all(...queryParams)).map(customer => ({
       id: customer.id,
       email: customer.email,
       firstName: customer.firstName || '',
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
 
     // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM customers ${whereClause}`;
-    const total = db.prepare(countQuery).get(...params).total;
+    const total = (await db.prepare(countQuery).get(...params)).total;
 
     return NextResponse.json({
       customers,

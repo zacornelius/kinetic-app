@@ -30,6 +30,7 @@ type Order = {
   dueDate?: string;
   notes?: string;
   ownerEmail?: string;
+  assignedOwner?: string; // Customer's assigned owner
   source: "shopify" | "quickbooks" | "manual";
   sourceId: string;
   lineItems?: string;
@@ -104,7 +105,7 @@ export default function DataExplorer() {
       const usersRes = await fetch("/api/users");
       const usersData = await usersRes.json();
       
-      const customersRes = await fetch("/api/customers");
+      const customersRes = await fetch("/api/customers/enhanced");
       const customersData = await customersRes.json();
       
       const shopifyOrdersRes = await fetch("/api/shopify/orders");
@@ -119,7 +120,7 @@ export default function DataExplorer() {
       setInquiries(inquiriesData);
       setOrders(ordersData);
       setUsers(usersData);
-      setCustomers(customersData);
+      setCustomers(customersData.customers || customersData);
       setShopifyOrders(shopifyOrdersData);
       setShopifyCustomers(shopifyCustomersData);
       setLineItems(lineItemsData);
@@ -784,9 +785,9 @@ export default function DataExplorer() {
                       ) : (
                         <span
                           className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                          onClick={() => startEdit("orders", order.id, "ownerEmail", order.ownerEmail || "")}
+                          onClick={() => startEdit("orders", order.id, "ownerEmail", order.ownerEmail || order.assignedOwner || "")}
                         >
-                          {order.ownerEmail || "Unassigned"}
+                          {order.ownerEmail || order.assignedOwner || "Unassigned"}
                         </span>
                       )}
                     </td>
