@@ -85,7 +85,9 @@ export default function DataExplorer() {
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{ table: string; id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<"all" | "shopify" | "quickbooks" | "manual">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "shopify" | "quickbooks" | "manual" | "distributor" | "digital">("all");
+  const [customerBusinessUnitFilter, setCustomerBusinessUnitFilter] = useState<"all" | "pallet" | "distributor" | "digital">("all");
+  const [showAllCustomers, setShowAllCustomers] = useState(false);
 
   async function loadData() {
     if (isLoading) {
@@ -105,7 +107,7 @@ export default function DataExplorer() {
       const usersRes = await fetch("/api/users");
       const usersData = await usersRes.json();
       
-      const customersRes = await fetch("/api/customers/enhanced");
+      const customersRes = await fetch("/api/customers/enhanced?limit=500");
       const customersData = await customersRes.json();
       
       const shopifyOrdersRes = await fetch("/api/shopify/orders");
@@ -552,13 +554,17 @@ export default function DataExplorer() {
               <label className="text-sm font-medium text-gray-700">Filter by Source:</label>
               <select
                 value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value as "all" | "shopify" | "quickbooks" | "manual")}
+                onChange={(e) => setSourceFilter(e.target.value as "all" | "shopify" | "quickbooks" | "manual" | "distributor" | "digital")}
                 className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {(() => {
                   const palletOrders = getFilteredOrders().filter(order => {
                     // Include QuickBooks orders regardless of pallet products
                     if (order.source === 'quickbooks') {
+                      return true;
+                    }
+                    // Include distributor and digital orders regardless of pallet products
+                    if (order.source === 'distributor' || order.source === 'digital') {
                       return true;
                     }
                     // For other sources, check if they have pallet products
@@ -574,6 +580,8 @@ export default function DataExplorer() {
                       <option value="shopify">Shopify ({palletOrders.filter(o => o.source === 'shopify').length})</option>
                       <option value="quickbooks">QuickBooks ({palletOrders.filter(o => o.source === 'quickbooks').length})</option>
                       <option value="manual">Manual ({palletOrders.filter(o => o.source === 'manual').length})</option>
+                      <option value="distributor">Distributor ({palletOrders.filter(o => o.source === 'distributor').length})</option>
+                      <option value="digital">Digital ({palletOrders.filter(o => o.source === 'digital').length})</option>
                     </>
                   );
                 })()}
@@ -583,6 +591,10 @@ export default function DataExplorer() {
                   .filter(order => {
                     // Include QuickBooks orders regardless of pallet products
                     if (order.source === 'quickbooks') {
+                      return true;
+                    }
+                    // Include distributor and digital orders regardless of pallet products
+                    if (order.source === 'distributor' || order.source === 'digital') {
                       return true;
                     }
                     // For other sources, check if they have pallet products
@@ -604,6 +616,7 @@ export default function DataExplorer() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Business Unit</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -616,6 +629,10 @@ export default function DataExplorer() {
                   .filter(order => {
                     // Include QuickBooks orders regardless of pallet products
                     if (order.source === 'quickbooks') {
+                      return true;
+                    }
+                    // Include distributor and digital orders regardless of pallet products
+                    if (order.source === 'distributor' || order.source === 'digital') {
                       return true;
                     }
                     // For other sources, only show orders that have pallet products
@@ -654,9 +671,21 @@ export default function DataExplorer() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         order.source === 'shopify' ? 'bg-green-100 text-green-800' :
                         order.source === 'quickbooks' ? 'bg-blue-100 text-blue-800' :
+                        order.source === 'distributor' ? 'bg-purple-100 text-purple-800' :
+                        order.source === 'digital' ? 'bg-orange-100 text-orange-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {order.source}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        order.businessUnit === 'pallet' ? 'bg-red-100 text-red-800' :
+                        order.businessUnit === 'distributor' ? 'bg-purple-100 text-purple-800' :
+                        order.businessUnit === 'digital' ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.businessUnit || 'N/A'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -819,8 +848,10 @@ export default function DataExplorer() {
               <tbody className="divide-y divide-gray-200">
                 {lineItems
                   .filter(item => {
-                    // Only show pallet-related products
-                    return item.title === 'Build a Pallet' || item.title?.includes('Pallet');
+                    // Show pallet-related products AND distributor/digital products
+                    return item.title === 'Build a Pallet' || 
+                           item.title?.includes('Pallet') || 
+                           item.title?.includes('Kinetic Dog Food');
                   })
                   .map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
@@ -891,6 +922,11 @@ export default function DataExplorer() {
                 <div className="text-2xl font-bold text-blue-600">
                   {customers
                     .filter(customer => {
+                      // Show customers who have pallet orders OR are distributor/digital customers
+                      if (customer.businessUnit === 'distributor' || customer.businessUnit === 'digital') {
+                        return true;
+                      }
+                      // For pallet customers, check if they have pallet orders
                       return lineItems.some(item => 
                         item.customerEmail === customer.email && 
                         (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
@@ -913,6 +949,36 @@ export default function DataExplorer() {
             </div>
           </div>
           
+          {/* Business Unit Filter */}
+          <div className="bg-white border rounded-lg p-4">
+            <div className="flex items-center space-x-4">
+              <label className="text-sm font-medium text-gray-700">Filter by Business Unit:</label>
+              <select
+                value={customerBusinessUnitFilter}
+                onChange={(e) => setCustomerBusinessUnitFilter(e.target.value as "all" | "pallet" | "distributor" | "digital")}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Business Units ({customers.filter(customer => {
+                  if (customer.businessUnit === 'distributor' || customer.businessUnit === 'digital') {
+                    return true;
+                  }
+                  return lineItems.some(item => 
+                    item.customerEmail === customer.email && 
+                    (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                  );
+                }).length})</option>
+                <option value="pallet">Pallet ({customers.filter(customer => {
+                  return customer.businessUnit === 'pallet' && lineItems.some(item => 
+                    item.customerEmail === customer.email && 
+                    (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                  );
+                }).length})</option>
+                <option value="distributor">Distributor ({customers.filter(customer => customer.businessUnit === 'distributor').length})</option>
+                <option value="digital">Digital ({customers.filter(customer => customer.businessUnit === 'digital').length})</option>
+              </select>
+            </div>
+          </div>
+          
           <div className="bg-white border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full">
@@ -920,6 +986,7 @@ export default function DataExplorer() {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Business Unit</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lifetime Value</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">First Order</th>
@@ -929,7 +996,23 @@ export default function DataExplorer() {
               <tbody className="divide-y divide-gray-200">
                 {customers
                   .filter(customer => {
-                    // Only show customers who have pallet orders
+                    // Apply business unit filter
+                    if (customerBusinessUnitFilter !== 'all') {
+                      if (customerBusinessUnitFilter === 'pallet') {
+                        return customer.businessUnit === 'pallet' && lineItems.some(item => 
+                          item.customerEmail === customer.email && 
+                          (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
+                        );
+                      } else {
+                        return customer.businessUnit === customerBusinessUnitFilter;
+                      }
+                    }
+                    
+                    // Default filter: Show customers who have pallet orders OR are distributor/digital customers
+                    if (customer.businessUnit === 'distributor' || customer.businessUnit === 'digital') {
+                      return true;
+                    }
+                    // For pallet customers, check if they have pallet orders
                     return lineItems.some(item => 
                       item.customerEmail === customer.email && 
                       (item.title === 'Build a Pallet' || item.title?.includes('Pallet'))
@@ -953,15 +1036,25 @@ export default function DataExplorer() {
                         <div className="text-xs text-gray-500">{customer.email}</div>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        customer.businessUnit === 'pallet' ? 'bg-red-100 text-red-800' :
+                        customer.businessUnit === 'distributor' ? 'bg-purple-100 text-purple-800' :
+                        customer.businessUnit === 'digital' ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {customer.businessUnit || 'pallet'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{customer.totalOrders}</td>
                     <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                       ${(customer.lifetimeValue || 0).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {customer.firstOrderDate ? new Date(customer.firstOrderDate).toLocaleDateString() : 'N/A'}
+                      {customer.firstOrderDate ? new Date(customer.firstOrderDate).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {customer.lastOrderDate ? new Date(customer.lastOrderDate).toLocaleDateString() : 'N/A'}
+                      {customer.lastOrderDate ? new Date(customer.lastOrderDate).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'N/A'}
                     </td>
                   </tr>
                 ))}
@@ -1011,7 +1104,7 @@ export default function DataExplorer() {
                     <tr key={order.id}>
                       <td className="px-4 py-3 text-sm text-gray-900">{order.orderNumber}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        {new Date(order.createdAt).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
                         ${order.totalAmount?.toFixed(2) || '0.00'}
@@ -1119,6 +1212,7 @@ export default function DataExplorer() {
           </div>
         </div>
       )}
+
 
       <div className="mt-4 text-sm text-gray-600">
         <p>💡 Click on any cell to edit. Press Enter to save, Escape to cancel. Click on customers to view their purchase history.</p>

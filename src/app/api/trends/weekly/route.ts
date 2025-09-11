@@ -13,13 +13,13 @@ export async function GET(request: NextRequest) {
     if (range === '3months') {
       // For 3 months, get last 3 months of weekly data
       const now = new Date();
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+      startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 3, 1));
     } else if (period) {
       // Parse the period (YYYY-MM format)
       const [year, month] = period.split('-');
-      startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-      endDate = new Date(parseInt(year), parseInt(month), 0);
+      startDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 1));
+      endDate = new Date(Date.UTC(parseInt(year), parseInt(month), 0));
     } else {
       return NextResponse.json(
         { error: 'Period or range parameter is required' },
@@ -84,12 +84,12 @@ export async function GET(request: NextRequest) {
       
       if (!effectiveSKU) return; // Skip if we couldn't determine effective SKU
       
-      // Create a more readable week label
+      // Create a more readable week label - use UTC to avoid timezone issues
       const weekDate = new Date(date);
       const weekStart = new Date(weekDate);
-      weekStart.setDate(weekDate.getDate() - weekDate.getDay());
+      weekStart.setUTCDate(weekDate.getUTCDate() - weekDate.getUTCDay());
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
       
       const weekLabel = `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
       
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
             };
             const monthIndex = monthMap[month] || 0;
             // Assume current year for now, but this should be more sophisticated
-            const currentYear = new Date().getFullYear();
+            const currentYear = new Date().getUTCFullYear();
             return new Date(currentYear, monthIndex, day);
           }
           return new Date(0);
@@ -147,7 +147,11 @@ export async function GET(request: NextRequest) {
         return getDateFromWeek(a.week).getTime() - getDateFromWeek(b.week).getTime();
       });
     
-    return NextResponse.json(trendData);
+    const response = NextResponse.json(trendData);
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
     
   } catch (error) {
     console.error('Error fetching weekly trends data:', error);

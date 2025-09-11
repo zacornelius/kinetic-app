@@ -17,54 +17,109 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '12months';
+    const businessUnit = searchParams.get('businessUnit') || 'all'; // 'all', 'pallet', 'distributor', 'digital'
     
-    // Calculate date range
+    // Calculate date range - start from beginning of current year (2025) since we only have data from 2025
     const now = new Date();
-    let monthsBack = 12;
-    if (range === '6months') monthsBack = 6;
-    if (range === '24months') monthsBack = 24;
+    const currentYear = now.getUTCFullYear();
+    const startDate = new Date(Date.UTC(currentYear, 0, 1)); // January 1st of current year in UTC
+    const endDate = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999)); // December 31st of current year in UTC
     
-    const startDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    // Get line items data directly from the database (same logic as line items API)
+    let query = `
+      SELECT 
+        id,
+        ordernumber as "orderNumber",
+        customeremail as "customerEmail",
+        customername as "customerName",
+        lineitems as "lineItems",
+        business_unit as "businessUnit",
+        createdat as "createdAt"
+      FROM (
+        SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, createdat::timestamp as createdat FROM shopify_orders
+        UNION ALL
+        SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, createdat::timestamp as createdat FROM distributor_orders
+        UNION ALL
+        SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, createdat::timestamp as createdat FROM digital_orders
+      ) o
+      WHERE lineitems IS NOT NULL AND lineitems != '' AND lineitems != 'null' AND lineitems != 'undefined'
+        AND createdat >= ? AND createdat <= ?
+    `;
     
-    // Get line items data from shopify_orders - ALL sales, not just pallet sales
-            const query = `
-              SELECT 
-                TO_CHAR(o.createdat::timestamp, 'YYYY-MM') as period,
-                (li.value->>'quantity')::numeric as quantity,
-                COALESCE((li.value->>'totalPrice')::numeric, ((li.value->>'quantity')::numeric * (li.value->>'price')::numeric), 0) as price,
-                li.value->>'title' as title,
-                li.value->>'name' as name,
-                li.value->>'sku' as sku
-              FROM shopify_orders o,
-              jsonb_array_elements(o.lineItems::jsonb) as li
-              WHERE o.createdat::timestamp >= $1::timestamp
-                AND o.createdat::timestamp <= $2::timestamp
-                AND li.value->>'title' IS NOT NULL
-                AND li.value->>'quantity' IS NOT NULL
-                AND (li.value->>'title' LIKE '%Pallet%' OR li.value->>'title' = 'Build a Pallet')
-              ORDER BY o.createdat::timestamp DESC
-            `;
+    let params = [startDate.toISOString(), endDate.toISOString()];
     
-    const result = await db.prepare(query).all(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+    if (businessUnit !== 'all') {
+      query += ` AND business_unit = ?`;
+      params.push(businessUnit);
+    }
     
-    if (!result || result.length === 0) {
+    query += ` ORDER BY createdat DESC`;
+    
+    const orders = await db.prepare(query).all(...params);
+    
+    if (!orders || orders.length === 0) {
       return NextResponse.json([]);
     }
     
-    const lines = result;
+    // Parse line items from JSON and flatten them (same logic as line items API)
+    const allLineItems = [];
+    orders.forEach(order => {
+      try {
+        if (!order.lineItems || order.lineItems === 'null' || order.lineItems === 'undefined') {
+          return;
+        }
+        
+        const lineItems = JSON.parse(order.lineItems);
+        
+        if (!Array.isArray(lineItems)) {
+          return;
+        }
+        
+        lineItems.forEach((item, index) => {
+          const price = parseFloat(item.price || 0);
+          const quantity = parseInt(item.quantity || 0);
+          const totalDiscount = parseFloat(item.total_discount || 0);
+          const totalPrice = (price * quantity) - totalDiscount;
+          
+          allLineItems.push({
+            id: `${order.id}-${index}`,
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customerEmail: order.customerEmail,
+            customerName: order.customerName,
+            businessUnit: order.businessUnit,
+            createdAt: order.createdAt,
+            ...item,
+            totalPrice: totalPrice
+          });
+        });
+      } catch (error) {
+        console.error('Error parsing line items:', error);
+      }
+    });
+    
+    // Filter line items by business unit
+    const filteredLineItems = allLineItems.filter(item => 
+      item.businessUnit === 'pallet' || item.businessUnit === 'distributor' || item.businessUnit === 'digital'
+    );
+    
+    const lines = filteredLineItems;
     const monthlyData: { [key: string]: { totalSales: number; totalQuantity: number; skuBreakdown: { [key: string]: { quantity: number; sales: number } } } } = {};
     
     // Process each line item
     lines.forEach(line => {
-      const { period, quantity, price, title, name, sku } = line;
+      const { title, name, sku, quantity, totalPrice, businessUnit, createdAt } = line;
       
-      if (!period || !quantity || !title) return;
+      if (!title || !quantity) return;
       
       const qty = parseFloat(quantity) || 0;
-      const sales = parseFloat(price) || 0; // Handle empty prices as 0
+      const sales = parseFloat(totalPrice) || 0;
       
-      // Calculate effective SKU and quantity - ONLY track pallets
+      // Calculate period from createdAt date - use UTC to avoid timezone issues
+      const itemDate = new Date(createdAt);
+      const period = `${itemDate.getUTCFullYear()}-${String(itemDate.getUTCMonth() + 1).padStart(2, '0')}`;
+      
+      // Calculate effective SKU and quantity - track pallets AND distributor/digital products
       let effectiveSKU = '';
       let effectiveQuantity = 0;
       
@@ -76,8 +131,12 @@ export async function GET(request: NextRequest) {
         // Handle pre-built pallet products - extract base SKU
         effectiveSKU = title.replace(' Pallet', '');
         effectiveQuantity = qty * 50; // multiply quantity by 50 for pallet products
+      } else if (title?.includes('Kinetic Dog Food')) {
+        // Handle distributor/digital products - extract SKU from title
+        effectiveSKU = title.replace(' Kinetic Dog Food', '');
+        effectiveQuantity = qty; // quantity is in bags
       } else {
-        // Skip individual products - we only want pallet tracking
+        // Skip other products
         return;
       }
       
@@ -129,7 +188,11 @@ export async function GET(request: NextRequest) {
         return getDateFromPeriod(a.period).getTime() - getDateFromPeriod(b.period).getTime();
       });
     
-    return NextResponse.json(trendData);
+    const response = NextResponse.json(trendData);
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
     
   } catch (error) {
     console.error('Error fetching trends data:', error);

@@ -19,59 +19,154 @@ export async function GET(request: NextRequest) {
     const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
     // Twelve months ago should be October 2024 (12 months before September 2025)
-      const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
     const thisMonthStart = new Date(currentYear, currentMonth - 1, 1);
 
     if (view === 'leaderboard') {
-      // Leaderboard view - show all sales team members
-      const leaderboardQuery = `
+      // Leaderboard view - show all sales team members (including Lindsey for distributor/digital)
+      // Use line items data for consistent results
+      const orders = await db.prepare(`
         SELECT 
-          c.assignedto as owner,
-          COUNT(DISTINCT o.ordernumber) as total_orders,
-          COALESCE(SUM(o.totalamount), 0) as total_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as this_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as this_month_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as three_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as three_month_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as six_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as six_month_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as twelve_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as twelve_month_sales
-        FROM customers c
-        LEFT JOIN shopify_orders o ON c.email = o.customeremail
-        WHERE c.assignedto IN ('iand@kineticdogfood.com', 'ericb@kineticdogfood.com', 'Dave@kineticdogfood.com')
-        GROUP BY c.assignedto
-        ORDER BY this_month_sales DESC
-      `;
+          id,
+          ordernumber as "orderNumber",
+          customeremail as "customerEmail",
+          customername as "customerName",
+          lineitems as "lineItems",
+          business_unit as "businessUnit",
+          totalamount as "totalAmount",
+          createdat as "createdAt"
+        FROM (
+          SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, totalamount, createdat::timestamp as createdat FROM shopify_orders
+          UNION ALL
+          SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, totalamount, createdat::timestamp as createdat FROM distributor_orders
+          UNION ALL
+          SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, totalamount, createdat::timestamp as createdat FROM digital_orders
+        ) o
+        WHERE lineitems IS NOT NULL AND lineitems != '' AND lineitems != 'null' AND lineitems != 'undefined'
+        ORDER BY createdat DESC
+      `).all();
 
-      const leaderboard = await db.prepare(leaderboardQuery).all(
-        thisMonthStart.toISOString(),
-        thisMonthStart.toISOString(),
-        threeMonthsAgo.toISOString(),
-        threeMonthsAgo.toISOString(),
-        sixMonthsAgo.toISOString(),
-        sixMonthsAgo.toISOString(),
-        twelveMonthsAgo.toISOString(),
-        twelveMonthsAgo.toISOString()
-      );
+      // Get customer assignments
+      const customers = await db.prepare(`
+        SELECT email, assignedto FROM customers 
+        WHERE assignedto IN ('iand@kineticdogfood.com', 'ericb@kineticdogfood.com', 'Dave@kineticdogfood.com', 'lindsey@kineticdogfood.com')
+      `).all();
 
-      // Get monthly pallet data for leaderboard
-      const monthlyPalletsQuery = `
-        SELECT 
-          c.assignedto as owner,
-          DATE_TRUNC('month', o.createdat::timestamp) as month,
-          COUNT(DISTINCT o.ordernumber) as pallets_sold
-        FROM customers c
-        LEFT JOIN shopify_orders o ON c.email = o.customeremail
-        WHERE c.assignedto IN ('iand@kineticdogfood.com', 'ericb@kineticdogfood.com', 'Dave@kineticdogfood.com')
-          AND o.createdat >= ?
-          AND (o.lineitems LIKE '%"title":"Build a Pallet"%' OR o.lineitems LIKE '%Pallet"%')
-        GROUP BY c.assignedto, DATE_TRUNC('month', o.createdat::timestamp)
-        ORDER BY c.assignedto, month
-      `;
+      const customerAssignments = {};
+      customers.forEach(c => {
+        customerAssignments[c.email] = c.assignedto;
+      });
 
-      const monthlyPallets = await db.prepare(monthlyPalletsQuery).all(twelveMonthsAgo.toISOString());
+      // Process orders and calculate metrics for each owner
+      const ownerMetrics = {};
+      orders.forEach(order => {
+        const owner = customerAssignments[order.customerEmail];
+        if (!owner) return;
+
+        if (!ownerMetrics[owner]) {
+          ownerMetrics[owner] = {
+            total_orders: new Set(),
+            total_sales: 0,
+            this_month_orders: new Set(),
+            this_month_sales: 0,
+            three_month_orders: new Set(),
+            three_month_sales: 0,
+            six_month_orders: new Set(),
+            six_month_sales: 0,
+            twelve_month_orders: new Set(),
+            twelve_month_sales: 0
+          };
+        }
+
+        const orderDate = new Date(order.createdAt);
+        const totalAmount = parseFloat(order.totalAmount) || 0;
+
+        // Total metrics
+        ownerMetrics[owner].total_orders.add(order.orderNumber);
+        ownerMetrics[owner].total_sales += totalAmount;
+
+        // This month
+        if (orderDate >= thisMonthStart) {
+          ownerMetrics[owner].this_month_orders.add(order.orderNumber);
+          ownerMetrics[owner].this_month_sales += totalAmount;
+        }
+
+        // Three months
+        if (orderDate >= threeMonthsAgo) {
+          ownerMetrics[owner].three_month_orders.add(order.orderNumber);
+          ownerMetrics[owner].three_month_sales += totalAmount;
+        }
+
+        // Six months
+        if (orderDate >= sixMonthsAgo) {
+          ownerMetrics[owner].six_month_orders.add(order.orderNumber);
+          ownerMetrics[owner].six_month_sales += totalAmount;
+        }
+
+        // Twelve months
+        if (orderDate >= twelveMonthsAgo) {
+          ownerMetrics[owner].twelve_month_orders.add(order.orderNumber);
+          ownerMetrics[owner].twelve_month_sales += totalAmount;
+        }
+      });
+
+      // Convert to array format
+      const leaderboard = Object.entries(ownerMetrics).map(([owner, metrics]) => ({
+        owner,
+        total_orders: metrics.total_orders.size,
+        total_sales: metrics.total_sales,
+        this_month_orders: metrics.this_month_orders.size,
+        this_month_sales: metrics.this_month_sales,
+        three_month_orders: metrics.three_month_orders.size,
+        three_month_sales: metrics.three_month_sales,
+        six_month_orders: metrics.six_month_orders.size,
+        six_month_sales: metrics.six_month_sales,
+        twelve_month_orders: metrics.twelve_month_orders.size,
+        twelve_month_sales: metrics.twelve_month_sales
+      })).sort((a, b) => b.this_month_sales - a.this_month_sales);
+
+      // Get monthly pallet data for leaderboard (including distributor/digital orders)
+      // Use the same orders data we already fetched
+      const monthlyPalletsData = {};
+      
+      orders.forEach(order => {
+        const owner = customerAssignments[order.customerEmail];
+        if (!owner) return;
+        
+        const orderDate = new Date(order.createdAt);
+        if (orderDate < twelveMonthsAgo) return;
+        
+        const monthKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyPalletsData[owner]) {
+          monthlyPalletsData[owner] = {};
+        }
+        
+        if (!monthlyPalletsData[owner][monthKey]) {
+          monthlyPalletsData[owner][monthKey] = new Set();
+        }
+        
+        // Count orders (not individual line items) - all business units count as "pallets sold"
+        monthlyPalletsData[owner][monthKey].add(order.orderNumber);
+      });
+      
+      // Convert to array format
+      const monthlyPallets = [];
+      Object.entries(monthlyPalletsData).forEach(([owner, months]) => {
+        Object.entries(months).forEach(([month, orderNumbers]) => {
+          monthlyPallets.push({
+            owner,
+            month: `${month}-01`, // Format as YYYY-MM-DD
+            pallets_sold: orderNumbers.size
+          });
+        });
+      });
+      
+      monthlyPallets.sort((a, b) => {
+        if (a.owner !== b.owner) return a.owner.localeCompare(b.owner);
+        return a.month.localeCompare(b.month);
+      });
 
       // Get bulk inquiries from last 60 days for each team member
       const bulkInquiriesQuery = `
@@ -97,61 +192,141 @@ export async function GET(request: NextRequest) {
         }))
       });
     } else {
-      // Personal view - show data for the logged-in user
-      const personalQuery = `
+      // Personal view - show data for the logged-in user (including distributor/digital)
+      // Use the same approach as leaderboard but filter for specific user
+      const orders = await db.prepare(`
         SELECT 
-          COUNT(DISTINCT o.ordernumber) as total_orders,
-          COALESCE(SUM(o.totalamount), 0) as total_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as this_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as this_month_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as three_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as three_month_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as six_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as six_month_sales,
-          COUNT(DISTINCT CASE WHEN o.createdat >= ? THEN o.ordernumber END) as twelve_month_orders,
-          COALESCE(SUM(CASE WHEN o.createdat >= ? THEN o.totalamount END), 0) as twelve_month_sales
-        FROM customers c
-        LEFT JOIN shopify_orders o ON c.email = o.customeremail
-        WHERE c.assignedto = ?
-      `;
+          id,
+          ordernumber as "orderNumber",
+          customeremail as "customerEmail",
+          customername as "customerName",
+          lineitems as "lineItems",
+          business_unit as "businessUnit",
+          totalamount as "totalAmount",
+          createdat as "createdAt"
+        FROM (
+          SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, totalamount, createdat::timestamp as createdat FROM shopify_orders
+          UNION ALL
+          SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, totalamount, createdat::timestamp as createdat FROM distributor_orders
+          UNION ALL
+          SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, totalamount, createdat::timestamp as createdat FROM digital_orders
+        ) o
+        WHERE lineitems IS NOT NULL AND lineitems != '' AND lineitems != 'null' AND lineitems != 'undefined'
+        ORDER BY createdat DESC
+      `).all();
 
-      const personalData = await db.prepare(personalQuery).get(
-        thisMonthStart.toISOString(),
-        thisMonthStart.toISOString(),
-        threeMonthsAgo.toISOString(),
-        threeMonthsAgo.toISOString(),
-        sixMonthsAgo.toISOString(),
-        sixMonthsAgo.toISOString(),
-        twelveMonthsAgo.toISOString(),
-        twelveMonthsAgo.toISOString(),
-        userEmail
-      );
+      // Get customer assignments for the specific user
+      const customers = await db.prepare(`
+        SELECT email, assignedto FROM customers WHERE assignedto = ?
+      `).all(userEmail);
 
-      // Get monthly pallet data for personal view
-      const monthlyPalletsQuery = `
-        SELECT 
-          DATE_TRUNC('month', o.createdat::timestamp) as month,
-          COUNT(DISTINCT o.ordernumber) as pallets_sold
-        FROM customers c
-        LEFT JOIN shopify_orders o ON c.email = o.customeremail
-        WHERE c.assignedto = ?
-          AND o.createdat >= ?
-          AND (o.lineitems LIKE '%"title":"Build a Pallet"%' OR o.lineitems LIKE '%Pallet"%')
-        GROUP BY DATE_TRUNC('month', o.createdat::timestamp)
-        ORDER BY month
-      `;
+      const customerAssignments = {};
+      customers.forEach(c => {
+        customerAssignments[c.email] = c.assignedto;
+      });
 
-      const monthlyPallets = await db.prepare(monthlyPalletsQuery).all(userEmail, twelveMonthsAgo.toISOString());
+      // Process orders and calculate metrics for the user
+      const userOrders = orders.filter(order => customerAssignments[order.customerEmail] === userEmail);
+      
+      const personalData = {
+        total_orders: new Set(),
+        total_sales: 0,
+        this_month_orders: new Set(),
+        this_month_sales: 0,
+        three_month_orders: new Set(),
+        three_month_sales: 0,
+        six_month_orders: new Set(),
+        six_month_sales: 0,
+        twelve_month_orders: new Set(),
+        twelve_month_sales: 0
+      };
+
+      userOrders.forEach(order => {
+        const orderDate = new Date(order.createdAt);
+        const totalAmount = parseFloat(order.totalAmount) || 0;
+
+        // Total metrics
+        personalData.total_orders.add(order.orderNumber);
+        personalData.total_sales += totalAmount;
+
+        // This month
+        if (orderDate >= thisMonthStart) {
+          personalData.this_month_orders.add(order.orderNumber);
+          personalData.this_month_sales += totalAmount;
+        }
+
+        // Three months
+        if (orderDate >= threeMonthsAgo) {
+          personalData.three_month_orders.add(order.orderNumber);
+          personalData.three_month_sales += totalAmount;
+        }
+
+        // Six months
+        if (orderDate >= sixMonthsAgo) {
+          personalData.six_month_orders.add(order.orderNumber);
+          personalData.six_month_sales += totalAmount;
+        }
+
+        // Twelve months
+        if (orderDate >= twelveMonthsAgo) {
+          personalData.twelve_month_orders.add(order.orderNumber);
+          personalData.twelve_month_sales += totalAmount;
+        }
+      });
+
+      // Convert to the expected format
+      const personalDataFormatted = {
+        total_orders: personalData.total_orders.size,
+        total_sales: personalData.total_sales,
+        this_month_orders: personalData.this_month_orders.size,
+        this_month_sales: personalData.this_month_sales,
+        three_month_orders: personalData.three_month_orders.size,
+        three_month_sales: personalData.three_month_sales,
+        six_month_orders: personalData.six_month_orders.size,
+        six_month_sales: personalData.six_month_sales,
+        twelve_month_orders: personalData.twelve_month_orders.size,
+        twelve_month_sales: personalData.twelve_month_sales
+      };
+
+      // Get monthly pallet data for personal view (including distributor/digital)
+      // Use the same userOrders data we already filtered
+      const monthlyPalletsData = {};
+      
+      userOrders.forEach(order => {
+        const orderDate = new Date(order.createdAt);
+        if (orderDate < twelveMonthsAgo) return;
+        
+        const monthKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyPalletsData[monthKey]) {
+          monthlyPalletsData[monthKey] = new Set();
+        }
+        
+        // Count orders (not individual line items) - all business units count as "pallets sold"
+        monthlyPalletsData[monthKey].add(order.orderNumber);
+      });
+      
+      // Convert to array format
+      const monthlyPallets = Object.entries(monthlyPalletsData).map(([month, orderNumbers]) => ({
+        month: `${month}-01`, // Format as YYYY-MM-DD
+        pallets_sold: orderNumbers.size
+      })).sort((a, b) => a.month.localeCompare(b.month));
       
       // Debug logging
       console.log('Monthly pallets query result:', monthlyPallets);
       console.log('Query parameters:', { userEmail, twelveMonthsAgo: twelveMonthsAgo.toISOString() });
       
-      // Test query to see all Ian's orders in September
+      // Test query to see all orders in September (including distributor/digital)
       const testQuery = `
-        SELECT o.ordernumber, o.createdat, o.lineitems
+        SELECT o.ordernumber, o.createdat, o.lineitems, o.business_unit
         FROM customers c
-        LEFT JOIN shopify_orders o ON c.email = o.customeremail
+        LEFT JOIN (
+          SELECT ordernumber, customeremail, totalamount, createdat, business_unit, lineitems FROM shopify_orders
+          UNION ALL
+          SELECT ordernumber, customeremail, totalamount, createdat, business_unit, lineitems FROM distributor_orders
+          UNION ALL
+          SELECT ordernumber, customeremail, totalamount, createdat, business_unit, lineitems FROM digital_orders
+        ) o ON c.email = o.customeremail
         WHERE c.assignedto = ?
           AND o.createdat >= '2025-09-01'
           AND o.createdat < '2025-10-01'
@@ -173,7 +348,7 @@ export async function GET(request: NextRequest) {
       const bulkInquiries = await db.prepare(bulkInquiriesQuery).get(userEmail, sixtyDaysAgo.toISOString());
 
       return NextResponse.json({ 
-        personal: personalData, 
+        personal: personalDataFormatted, 
         monthlyPallets, 
         bulkInquiries: parseInt(bulkInquiries?.bulk_inquiries_count || '0') 
       });

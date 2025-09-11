@@ -2031,7 +2031,7 @@ export default function Home() {
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</span>
+                                <span className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                               </div>
                               <p className="text-gray-600 mt-1">{item.content || item.description || item.note || 'No description available'}</p>
                               {item.authorEmail && (

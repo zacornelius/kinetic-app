@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const source = searchParams.get('source') || '';
     const status = searchParams.get('status') || '';
     const assignedTo = searchParams.get('assignedTo') || '';
+    const businessUnit = searchParams.get('businessUnit') || '';
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -74,19 +75,44 @@ export async function GET(request: NextRequest) {
       params.push(assignedTo);
     }
 
+    if (businessUnit) {
+      whereConditions.push('business_unit = ?');
+      params.push(businessUnit);
+    }
+
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
-    // Get customers from unified table
+    // Get customers with calculated lifetime value from all order sources
     const query = `
       SELECT 
-        id, email, firstname as "firstName", lastname as "lastName", phone, companyname as "companyName",
-        billingaddress as "billingAddress", shippingaddress as "shippingAddress", 
-        createdat as "createdAt", updatedat as "updatedAt", lastcontactdate as "lastContactDate",
-        totalinquiries as "totalInquiries", totalorders as "totalOrders", totalspent as "totalSpent",
-        status, tags, notes, assignedto as "assignedTo", source
-      FROM customers 
+        c.id, c.email, c.firstname as "firstName", c.lastname as "lastName", c.phone, c.companyname as "companyName",
+        c.billingaddress as "billingAddress", c.shippingaddress as "shippingAddress", 
+        c.createdat as "createdAt", c.updatedat as "updatedAt", c.lastcontactdate as "lastContactDate",
+        c.totalinquiries as "totalInquiries", c.totalorders as "totalOrders", c.totalspent as "totalSpent",
+        c.status, c.tags, c.notes, c.assignedto as "assignedTo", c.source, c.business_unit as "businessUnit",
+        COALESCE(order_stats.total_spent, 0) as "calculatedTotalSpent",
+        COALESCE(order_stats.total_orders, 0) as "calculatedTotalOrders",
+        order_stats.first_order_date,
+        order_stats.last_order_date
+      FROM customers c
+      LEFT JOIN (
+        SELECT 
+          customeremail,
+          SUM(totalamount) as total_spent,
+          COUNT(DISTINCT ordernumber) as total_orders,
+          MIN(createdat) as first_order_date,
+          MAX(createdat) as last_order_date
+        FROM (
+          SELECT customeremail, totalamount, ordernumber, createdat::timestamp as createdat FROM shopify_orders
+          UNION ALL
+          SELECT customeremail, totalamount, ordernumber, createdat::timestamp as createdat FROM distributor_orders
+          UNION ALL
+          SELECT customeremail, totalamount, ordernumber, createdat as createdat FROM digital_orders
+        ) all_orders
+        GROUP BY customeremail
+      ) order_stats ON c.email = order_stats.customeremail
       ${whereClause}
-      ORDER BY updatedat DESC, createdat DESC
+      ORDER BY COALESCE(order_stats.total_spent, 0) DESC, c.updatedat DESC
       LIMIT ? OFFSET ?
     `;
     
@@ -110,13 +136,15 @@ export async function GET(request: NextRequest) {
             updatedAt: customer.updatedAt,
             lastContactDate: customer.lastContactDate || null,
             totalInquiries: parseInt(customer.totalInquiries) || 0,
-            totalOrders: parseInt(customer.totalOrders) || 0,
-            totalSpent: parseFloat(customer.totalSpent) || 0,
+            totalOrders: parseInt(customer.calculatedTotalOrders) || 0,
+            totalSpent: parseFloat(customer.calculatedTotalSpent) || 0,
+            lifetimeValue: parseFloat(customer.calculatedTotalSpent) || 0,
             status: customer.status,
             tags: customer.tags ? (customer.tags.startsWith('[') ? JSON.parse(customer.tags) : [customer.tags]) : [],
             notes: customer.notes ? (customer.notes.startsWith('[') ? JSON.parse(customer.notes) : [customer.notes]) : [],
             assignedTo: customer.assignedTo || null,
             source: customer.source || 'manual',
+            businessUnit: customer.businessUnit || 'pallet',
             // Set default values for missing CSV fields
             reason: null,
             customerType: null,
@@ -124,8 +152,10 @@ export async function GET(request: NextRequest) {
             assignedOwner: customer.assignedTo || null,
             inquiryStatus: null,
             countryCode: null,
-            firstInteractionDate: null,
-            lastInteractionDate: customer.lastContactDate || null,
+            firstInteractionDate: customer.first_order_date || null,
+            lastInteractionDate: customer.last_order_date || customer.lastContactDate || null,
+            firstOrderDate: customer.first_order_date || null,
+            lastOrderDate: customer.last_order_date || null,
             interactionCount: parseInt(customer.totalInquiries) || 0,
             isActiveInquiry: false,
             inquiryPriority: 'normal',
@@ -135,7 +165,21 @@ export async function GET(request: NextRequest) {
     }));
 
     // Get total count for pagination (use same params as main query, but without limit/offset)
-    const total = (await db.prepare(`SELECT COUNT(*) as total FROM customers ${whereClause}`).get(...params)).total;
+    const total = (await db.prepare(`
+      SELECT COUNT(*) as total 
+      FROM customers c
+      LEFT JOIN (
+        SELECT DISTINCT customeremail
+        FROM (
+          SELECT customeremail FROM shopify_orders
+          UNION ALL
+          SELECT customeremail FROM distributor_orders
+          UNION ALL
+          SELECT customeremail FROM digital_orders
+        ) all_orders
+      ) order_stats ON c.email = order_stats.customeremail
+      ${whereClause}
+    `).get(...params)).total;
 
     return NextResponse.json({
       customers,

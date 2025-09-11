@@ -17,8 +17,9 @@ type Order = {
   dueDate?: string;
   notes?: string;
   assignedOwner?: string; // Derived from customer record
-  source: "shopify" | "quickbooks" | "manual";
+  source: "shopify" | "quickbooks" | "manual" | "distributor" | "digital";
   sourceId: string;
+  businessUnit?: string;
 };
 
 function generateId() {
@@ -51,9 +52,16 @@ export async function GET(request: NextRequest) {
         o.owneremail as "ownerEmail",
         o.lineitems as "lineItems",
         c.assignedto as "assignedOwner",
-        'shopify' as source,
-        o.id as "sourceId"
-      FROM shopify_orders o
+        o.source,
+        o.sourceid as "sourceId",
+        o.business_unit as "businessUnit"
+      FROM (
+        SELECT id, createdat::timestamp as createdat, ordernumber, shopifyorderid, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail, lineitems, 'shopify' as source, id as sourceid, business_unit FROM shopify_orders
+        UNION ALL
+        SELECT id, createdat::timestamp as createdat, ordernumber, null as shopifyorderid, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail, lineitems, source, sourceid, business_unit FROM distributor_orders
+        UNION ALL
+        SELECT id, createdat as createdat, ordernumber, null as shopifyorderid, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail, lineitems, source, sourceid, business_unit FROM digital_orders
+      ) o
       LEFT JOIN customers c ON LOWER(o.customeremail) = LOWER(c.email)
       WHERE 1=1
     `;
