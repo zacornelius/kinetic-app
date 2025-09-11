@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (view === 'leaderboard') {
-      // Leaderboard view - show top customers across all sales team
+      // Leaderboard view - show top customers across all sales team (using shopify_orders only for now)
       const leaderboardQuery = `
         SELECT 
           c.email,
@@ -24,18 +24,24 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(o.totalamount), 0) as total_spent,
           MAX(o.createdat) as last_order_date
         FROM customers c
-        LEFT JOIN shopify_orders o ON c.email = o.customeremail
+        LEFT JOIN (
+          SELECT ordernumber, customeremail, totalamount, createdat::timestamp as createdat FROM shopify_orders
+          UNION ALL
+          SELECT ordernumber, customeremail, totalamount, createdat::timestamp as createdat FROM distributor_orders
+          UNION ALL
+          SELECT ordernumber, customeremail, totalamount, createdat::timestamp as createdat FROM digital_orders
+        ) o ON c.email = o.customeremail
         WHERE c.assignedto IN ('iand@kineticdogfood.com', 'ericb@kineticdogfood.com', 'Dave@kineticdogfood.com')
           AND o.ordernumber IS NOT NULL
         GROUP BY c.email, c.firstname, c.lastname, c.assignedto
         ORDER BY total_spent DESC
-        LIMIT ?
+        LIMIT $1
       `;
 
       const topCustomers = await db.prepare(leaderboardQuery).all(limit);
       return NextResponse.json({ topCustomers });
     } else {
-      // Personal view - show top customers for the logged-in user
+      // Personal view - show top customers for the logged-in user (using shopify_orders only for now)
       const personalQuery = `
         SELECT 
           c.email,
@@ -45,12 +51,18 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(o.totalamount), 0) as total_spent,
           MAX(o.createdat) as last_order_date
         FROM customers c
-        LEFT JOIN shopify_orders o ON c.email = o.customeremail
-        WHERE c.assignedto = ?
+        LEFT JOIN (
+          SELECT ordernumber, customeremail, totalamount, createdat::timestamp as createdat FROM shopify_orders
+          UNION ALL
+          SELECT ordernumber, customeremail, totalamount, createdat::timestamp as createdat FROM distributor_orders
+          UNION ALL
+          SELECT ordernumber, customeremail, totalamount, createdat::timestamp as createdat FROM digital_orders
+        ) o ON c.email = o.customeremail
+        WHERE c.assignedto = $1
           AND o.ordernumber IS NOT NULL
         GROUP BY c.email, c.firstname, c.lastname
         ORDER BY total_spent DESC
-        LIMIT ?
+        LIMIT $2
       `;
 
       const topCustomers = await db.prepare(personalQuery).all(userEmail, limit);

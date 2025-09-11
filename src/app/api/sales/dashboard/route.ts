@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     if (view === 'leaderboard') {
       // Leaderboard view - show all sales team members (including Lindsey for distributor/digital)
-      // Use line items data for consistent results
+      // Use line items data for consistent results - fix timestamp casting for UNION and avoid timezone issues
       const orders = await db.prepare(`
         SELECT 
           id,
@@ -168,32 +168,16 @@ export async function GET(request: NextRequest) {
         return a.month.localeCompare(b.month);
       });
 
-      // Get bulk inquiries from last 60 days for each team member
-      const bulkInquiriesQuery = `
-        SELECT 
-          c.assignedto as owner,
-          COUNT(i.id) as bulk_inquiries_count
-        FROM customers c
-        LEFT JOIN inquiries i ON c.email = i.customeremail
-        WHERE c.assignedto IN ('iand@kineticdogfood.com', 'ericb@kineticdogfood.com', 'Dave@kineticdogfood.com')
-          AND i.category = 'bulk'
-          AND i.createdat >= ?
-        GROUP BY c.assignedto
-      `;
-
-      const bulkInquiries = await db.prepare(bulkInquiriesQuery).all(sixtyDaysAgo.toISOString());
+      // For leaderboard, we'll calculate bags sold on the frontend
 
       return NextResponse.json({ 
         leaderboard, 
         monthlyPallets, 
-        bulkInquiries: bulkInquiries.map(b => ({
-          ...b,
-          bulk_inquiries_count: parseInt(b.bulk_inquiries_count)
-        }))
+        bagsSold: [] // Will be calculated on frontend
       });
     } else {
       // Personal view - show data for the logged-in user (including distributor/digital)
-      // Use the same approach as leaderboard but filter for specific user
+      // Use the same approach as leaderboard but filter for specific user - avoid timezone issues
       const orders = await db.prepare(`
         SELECT 
           id,
@@ -217,7 +201,7 @@ export async function GET(request: NextRequest) {
 
       // Get customer assignments for the specific user
       const customers = await db.prepare(`
-        SELECT email, assignedto FROM customers WHERE assignedto = ?
+        SELECT email, assignedto FROM customers WHERE assignedto = $1
       `).all(userEmail);
 
       const customerAssignments = {};
@@ -316,45 +300,23 @@ export async function GET(request: NextRequest) {
       console.log('Monthly pallets query result:', monthlyPallets);
       console.log('Query parameters:', { userEmail, twelveMonthsAgo: twelveMonthsAgo.toISOString() });
       
-      // Test query to see all orders in September (including distributor/digital)
-      const testQuery = `
-        SELECT o.ordernumber, o.createdat, o.lineitems, o.business_unit
-        FROM customers c
-        LEFT JOIN (
-          SELECT ordernumber, customeremail, totalamount, createdat, business_unit, lineitems FROM shopify_orders
-          UNION ALL
-          SELECT ordernumber, customeremail, totalamount, createdat, business_unit, lineitems FROM distributor_orders
-          UNION ALL
-          SELECT ordernumber, customeremail, totalamount, createdat, business_unit, lineitems FROM digital_orders
-        ) o ON c.email = o.customeremail
-        WHERE c.assignedto = ?
-          AND o.createdat >= '2025-09-01'
-          AND o.createdat < '2025-10-01'
-        ORDER BY o.createdat DESC
-      `;
-      const testResult = await db.prepare(testQuery).all(userEmail);
-      console.log('Ian\'s September orders:', testResult);
-
-      // Get bulk inquiries from last 60 days
-      const bulkInquiriesQuery = `
-        SELECT COUNT(*) as bulk_inquiries_count
-        FROM inquiries i
-        LEFT JOIN customers c ON i.customeremail = c.email
-        WHERE c.assignedto = ?
-          AND i.category = 'bulk'
-          AND i.createdat >= ?
-      `;
-
-      const bulkInquiries = await db.prepare(bulkInquiriesQuery).get(userEmail, sixtyDaysAgo.toISOString());
+      // Debug: Log successful completion of personal view
+      console.log('Personal view data loaded successfully for:', userEmail);
 
       return NextResponse.json({ 
         personal: personalDataFormatted, 
         monthlyPallets, 
-        bulkInquiries: parseInt(bulkInquiries?.bulk_inquiries_count || '0') 
+        bagsSold: 0 // Will be calculated on frontend
       });
     }
   } catch (error) {
     console.error('Sales dashboard API error:', error);
-    return NextResponse.json({ error: 'Failed to fetch sales data' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      userEmail: searchParams.get('userEmail'),
+      view: searchParams.get('view')
+    });
+    return NextResponse.json({ error: 'Failed to fetch sales data', details: error.message }, { status: 500 });
   }
 }

@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
         c.totalspent as "totalSpent",
         c.totalspent as lifetimeValue,
         c.createdat as lastOrderDate,
-        c.createdat as firstOrderDate
+        c.createdat as firstOrderDate,
+        c.assignedto as "assignedto"
       FROM customers c
       WHERE 1=1
     `;
@@ -106,12 +107,12 @@ export async function POST(request: NextRequest) {
     db.prepare(`
       INSERT INTO customers (
         id, email, firstname, lastname, phone, companyname, 
-        source, status, createdat, updatedat, totalorders, totalspent
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+        source, status, customertype, createdat, updatedat, totalorders, totalspent
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
     `).run(
       id, email, firstName || 'Unknown', lastName || 'Customer', 
       phone || null, companyName || null, source || 'manual', 
-      status || 'contact', now, now
+      status || 'contact', body.customertype || null, now, now
     );
 
     // Add to customer sources

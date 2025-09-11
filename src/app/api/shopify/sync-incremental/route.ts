@@ -3,17 +3,21 @@ import db from "@/lib/database";
 
 export async function POST(request: Request) {
   try {
-    const { shop, accessToken } = await request.json();
+    const { limit = 250, maxPages = 2 } = await request.json();
+
+    // Get environment variables (server-side only)
+    const shop = process.env.SHOPIFY_SHOP;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
 
     if (!shop || !accessToken) {
       return NextResponse.json(
-        { error: "Shop and access token are required" },
-        { status: 400 }
+        { error: "Shopify configuration not found in environment variables" },
+        { status: 500 }
       );
     }
 
     // Get the last synced order ID
-    const lastOrder = await db.prepare('SELECT shopifyOrderId FROM shopify_orders WHERE shopifyOrderId IS NOT NULL ORDER BY createdAt DESC LIMIT 1').get() as { shopifyOrderId: string } | undefined;
+    const lastOrder = await db.prepare('SELECT "shopifyorderid" FROM shopify_orders WHERE "shopifyorderid" IS NOT NULL ORDER BY "createdat" DESC LIMIT 1').get() as { shopifyorderid: string } | undefined;
     
     if (!lastOrder) {
       return NextResponse.json({
@@ -30,69 +34,27 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         shop,
         accessToken,
-        limit: 250,
-        sinceId: lastOrder.shopifyOrderId
+        limit,
+        maxPages,
+        sinceId: lastOrder.shopifyorderid
       })
     });
 
     const result = await syncResponse.json();
     
     if (syncResponse.ok) {
-      // Update customer records with new order data
-      const newOrders = await db.prepare(`
-        SELECT DISTINCT customerEmail, customerName, totalAmount, currency 
-        FROM shopify_orders 
-        WHERE createdAt > datetime('now', '-1 hour')
-      `).all();
-      
-      let customersUpdated = 0;
-      for (const order of newOrders) {
-        // Check if customer exists
-        const existingCustomer = await db.prepare('SELECT id FROM customers WHERE email = ?').get(order.customerEmail);
-        
-        if (!existingCustomer) {
-          // Create new customer
-          const customerId = `c_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          db.prepare(`
-            INSERT INTO customers (
-              id, email, firstName, lastName, phone, companyName,
-              billingAddress, shippingAddress, createdAt, updatedAt, lastContactDate,
-              totalInquiries, totalOrders, totalSpent,
-              status, tags, notes, assignedTo, source
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(
-            customerId,
-            order.customerEmail,
-            order.customerName?.split(' ')[0] || '',
-            order.customerName?.split(' ').slice(1).join(' ') || '',
-            '', '', '', '', 
-            new Date().toISOString(),
-            new Date().toISOString(),
-            new Date().toISOString(),
-            0, 1, order.totalAmount || 0,
-            'customer', '[]', '[]', null, 'shopify'
-          );
-          customersUpdated++;
-        } else {
-          // Update existing customer's order count and spending
-          db.prepare(`
-            UPDATE customers 
-            SET totalOrders = totalOrders + 1,
-                totalSpent = totalSpent + ?,
-                updatedAt = ?,
-                lastContactDate = ?
-            WHERE email = ?
-          `).run(order.totalAmount || 0, new Date().toISOString(), new Date().toISOString(), order.customerEmail);
-          customersUpdated++;
-        }
-      }
-      
+      // Return the same data structure as the main sync for consistency
       return NextResponse.json({
         success: true,
-        message: `Incremental sync completed. ${result.stats.inserted} new orders added. Updated ${customersUpdated} customer records.`,
+        message: `Incremental sync completed. ${result.stats.inserted} new orders added.`,
         stats: {
-          ...result.stats,
-          customersUpdated
+          total: result.stats.orders || 0,
+          inserted: result.stats.inserted || 0,
+          updated: result.stats.updated || 0,
+          orders: result.stats.orders || 0,
+          customers: result.stats.customers || 0,
+          products: result.stats.products || 0,
+          lineItems: result.stats.lineItems || 0
         }
       });
     } else {

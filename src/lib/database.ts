@@ -93,6 +93,13 @@ class PostgresDatabase {
     // PostgreSQL doesn't have pragmas, so we'll just log them
     console.log(`PostgreSQL pragma (ignored): ${setting}`);
   }
+
+  // Transaction method for PostgreSQL
+  transaction(callback: () => { insertedCount: number; updatedCount: number }) {
+    // Return the callback function to match SQLite better-sqlite3 API
+    // The callback will be called later with insertMany()
+    return callback;
+  }
 }
 
 // Create database instance

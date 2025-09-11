@@ -299,7 +299,7 @@ async function processShopifyOrders(shopifyOrders: ShopifyOrder[]) {
   return { customers, products, orders, lineItems };
 }
 
-async function fetchShopifyOrders(shop: string, accessToken: string, limit: number = 250, sinceId?: string, onProgress?: (progress: { fetched: number, page: number }) => void): Promise<ShopifyOrder[]> {
+async function fetchShopifyOrders(shop: string, accessToken: string, limit: number = 250, sinceId?: string, maxPages: number = 100, onProgress?: (progress: { fetched: number, page: number }) => void): Promise<ShopifyOrder[]> {
   const orders: ShopifyOrder[] = [];
   let pageInfo = '';
   let hasNextPage = true;
@@ -386,9 +386,15 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
       hasNextPage = false;
     }
 
-    // Safety limit to prevent infinite loops (increased for large stores)
-    if (pageCount > 100) {
-      console.log('Reached safety limit of 100 pages, stopping sync');
+    // Safety limit to prevent infinite loops
+    if (pageCount > maxPages) {
+      console.log(`Reached safety limit of ${maxPages} pages, stopping sync`);
+      hasNextPage = false;
+    }
+    
+    // For incremental syncs with sinceId, also limit by total orders fetched
+    if (sinceId && orders.length >= (limit * maxPages)) {
+      console.log(`Reached order limit for incremental sync (${orders.length} orders), stopping sync`);
       hasNextPage = false;
     }
   }
@@ -398,7 +404,7 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
 
 export async function POST(request: Request) {
   try {
-    const { shop, accessToken, limit, sinceId } = await request.json();
+    const { shop, accessToken, limit, sinceId, maxPages } = await request.json();
 
     if (!shop || !accessToken) {
       return NextResponse.json(
@@ -415,7 +421,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch orders from Shopify - all orders or incremental
-    const shopifyOrders = await fetchShopifyOrders(shop, accessToken, limit || 250, lastOrderId, (progress) => {
+    const shopifyOrders = await fetchShopifyOrders(shop, accessToken, limit || 250, lastOrderId, maxPages || 5, (progress) => {
       console.log(`Progress: Fetched ${progress.fetched} orders from ${progress.page} pages`);
     });
     
@@ -429,13 +435,22 @@ export async function POST(request: Request) {
 
       // Insert customers into shopify_customers table
       const customerStmt = db.prepare(`
-        INSERT OR REPLACE INTO shopify_customers (
+        INSERT INTO shopify_customers (
           id, email, firstName, lastName, phone, companyName, billingAddress, shippingAddress, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (id) DO UPDATE SET
+          email = EXCLUDED.email,
+          firstName = EXCLUDED.firstName,
+          lastName = EXCLUDED.lastName,
+          phone = EXCLUDED.phone,
+          companyName = EXCLUDED.companyName,
+          billingAddress = EXCLUDED.billingAddress,
+          shippingAddress = EXCLUDED.shippingAddress,
+          updatedAt = EXCLUDED.updatedAt
       `);
 
       for (const customer of processedData.customers) {
-        const existing = db.prepare('SELECT id FROM shopify_customers WHERE email = ?').get(customer.email);
+        const existing = db.prepare('SELECT id FROM shopify_customers WHERE email = $1').get(customer.email);
         if (!existing) {
           customerStmt.run(
             customer.id, customer.email, customer.firstName, customer.lastName,
@@ -447,13 +462,22 @@ export async function POST(request: Request) {
 
       // Insert products
       const productStmt = db.prepare(`
-        INSERT OR REPLACE INTO products (
+        INSERT INTO products (
           id, shopifyProductId, sku, title, vendor, productType, price, cost, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (id) DO UPDATE SET
+          shopifyProductId = EXCLUDED.shopifyProductId,
+          sku = EXCLUDED.sku,
+          title = EXCLUDED.title,
+          vendor = EXCLUDED.vendor,
+          productType = EXCLUDED.productType,
+          price = EXCLUDED.price,
+          cost = EXCLUDED.cost,
+          updatedAt = EXCLUDED.updatedAt
       `);
 
       for (const product of processedData.products) {
-        const existing = db.prepare('SELECT id FROM products WHERE sku = ? OR shopifyProductId = ?').get(product.sku, product.shopifyProductId);
+        const existing = db.prepare('SELECT id FROM products WHERE sku = $1 OR shopifyProductId = $2').get(product.sku, product.shopifyProductId);
         if (!existing) {
           productStmt.run(
             product.id, product.shopifyProductId, product.sku, product.title,
@@ -465,14 +489,27 @@ export async function POST(request: Request) {
 
       // Insert orders into shopify_orders table
       const orderStmt = db.prepare(`
-        INSERT OR REPLACE INTO shopify_orders (
+        INSERT INTO shopify_orders (
           id, createdAt, orderNumber, shopifyOrderId, customerEmail, customerName, 
           totalAmount, currency, status, shippingAddress, notes, ownerEmail, lineItems
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        ON CONFLICT (id) DO UPDATE SET
+          createdAt = EXCLUDED.createdAt,
+          orderNumber = EXCLUDED.orderNumber,
+          shopifyOrderId = EXCLUDED.shopifyOrderId,
+          customerEmail = EXCLUDED.customerEmail,
+          customerName = EXCLUDED.customerName,
+          totalAmount = EXCLUDED.totalAmount,
+          currency = EXCLUDED.currency,
+          status = EXCLUDED.status,
+          shippingAddress = EXCLUDED.shippingAddress,
+          notes = EXCLUDED.notes,
+          ownerEmail = EXCLUDED.ownerEmail,
+          lineItems = EXCLUDED.lineItems
       `);
 
       for (const order of processedData.orders) {
-        const existing = db.prepare('SELECT id FROM shopify_orders WHERE orderNumber = ?').get(order.orderNumber);
+        const existing = db.prepare('SELECT id FROM shopify_orders WHERE orderNumber = $1').get(order.orderNumber);
         
         if (existing) {
           updatedCount++;

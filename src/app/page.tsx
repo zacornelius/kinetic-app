@@ -144,8 +144,10 @@ export default function Home() {
   const [salesData, setSalesData] = useState<any>(null);
   const [topCustomers, setTopCustomers] = useState<any[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [leaderboardBagsData, setLeaderboardBagsData] = useState<any[]>([]);
   const [monthlyPalletsData, setMonthlyPalletsData] = useState<any[]>([]);
-  const [bulkInquiriesData, setBulkInquiriesData] = useState<any>(null);
+  const [bagsSoldData, setBagsSoldData] = useState<any>(null);
+  const [yearlyBreakdownData, setYearlyBreakdownData] = useState<any[]>([]);
   const [dashboardView, setDashboardView] = useState<'personal' | 'leaderboard'>('personal');
   const [salesLoading, setSalesLoading] = useState(false);
 
@@ -157,26 +159,206 @@ export default function Home() {
     try {
       setSalesLoading(true);
       
-      // Load sales data
-      const salesResponse = await fetch(`/api/sales/dashboard?userEmail=${user.email}&view=${dashboardView}&_t=${Date.now()}`);
-      if (salesResponse.ok) {
-        const salesResult = await salesResponse.json();
+      // Load sales data for personal view
+      const personalResponse = await fetch(`/api/sales/dashboard?userEmail=${user.email}&view=personal&_t=${Date.now()}`);
+      if (personalResponse.ok) {
+        const personalResult = await personalResponse.json();
+        setSalesData(personalResult.personal);
+        setMonthlyPalletsData(personalResult.monthlyPallets || []);
+      }
+      
+      // Load line items and customers to calculate everything
+      const [lineItemsResponse, customersResponse] = await Promise.all([
+        fetch(`/api/line-items?_t=${Date.now()}`),
+        fetch(`/api/customers?_t=${Date.now()}`)
+      ]);
+      
+      if (lineItemsResponse.ok && customersResponse.ok) {
+        const lineItems = await lineItemsResponse.json();
+        const customers = await customersResponse.json();
+        
         if (dashboardView === 'personal') {
-          setSalesData(salesResult.personal);
-          setMonthlyPalletsData(salesResult.monthlyPallets || []);
-          setBulkInquiriesData(typeof salesResult.bulkInquiries === 'number' ? salesResult.bulkInquiries : 0);
-        } else {
-          setLeaderboardData(salesResult.leaderboard);
-          setMonthlyPalletsData(salesResult.monthlyPallets || []);
-          setBulkInquiriesData(Array.isArray(salesResult.bulkInquiries) ? salesResult.bulkInquiries : []);
+          // Get Ian's customer emails
+          const customerEmails = await fetch(`/api/customers?_t=${Date.now()}`);
+          if (customerEmails.ok) {
+            const customerData = await customerEmails.json();
+            const ianCustomers = customerData.filter((c: any) => c.assignedto === user.email);
+            const customerEmailSet = new Set(ianCustomers.map((c: any) => c.email));
+            
+            // Filter line items for Ian's customers
+            const ianLineItems = lineItems.filter((item: any) => customerEmailSet.has(item.customerEmail));
+            
+            console.log('Ian customers:', ianCustomers.length);
+            console.log('Ian line items:', ianLineItems.length);
+            console.log('Sample line item:', ianLineItems[0]);
+            
+            // Calculate bags sold this month
+            const thisMonth = new Date();
+            const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
+            const thisMonthEnd = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 0);
+            
+            let bagsSoldThisMonth = 0;
+            let revenueThisMonth = 0;
+            let ordersThisMonth = new Set();
+            
+            ianLineItems.forEach((item: any) => {
+              const orderDate = new Date(item.createdAt);
+              if (orderDate >= thisMonthStart && orderDate <= thisMonthEnd) {
+                // Apply same logic as admin data explorer
+                let effectiveQuantity = 0;
+                if (item.title === 'Build a Pallet') {
+                  effectiveQuantity = item.quantity || 0;
+                } else if (item.title?.includes('Pallet')) {
+                  effectiveQuantity = (item.quantity || 0) * 50;
+                } else {
+                  effectiveQuantity = item.quantity || 0;
+                }
+                bagsSoldThisMonth += effectiveQuantity;
+                revenueThisMonth += item.totalPrice || 0;
+                ordersThisMonth.add(item.orderNumber);
+              }
+            });
+            
+            // Update sales data with calculated values
+            setSalesData(prev => ({
+              ...prev,
+              bagsSoldThisMonth: parseInt(bagsSoldThisMonth.toString()),
+              revenueThisMonth: parseInt(revenueThisMonth.toString()),
+              ordersThisMonth: ordersThisMonth.size
+            }));
+            
+            // Calculate yearly breakdown (12 months)
+            const yearlyBreakdown = [];
+            for (let i = 11; i >= 0; i--) {
+              const monthDate = new Date();
+              monthDate.setMonth(monthDate.getMonth() - i);
+              const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+              const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+              
+              let monthRevenue = 0;
+              let monthOrders = new Set();
+              let monthBags = 0;
+              
+              ianLineItems.forEach((item: any) => {
+                const orderDate = new Date(item.createdAt);
+                if (orderDate >= monthStart && orderDate <= monthEnd) {
+                  let effectiveQuantity = 0;
+                  if (item.title === 'Build a Pallet') {
+                    effectiveQuantity = item.quantity || 0;
+                  } else if (item.title?.includes('Pallet')) {
+                    effectiveQuantity = (item.quantity || 0) * 50;
+                  } else {
+                    effectiveQuantity = item.quantity || 0;
+                  }
+                  monthBags += effectiveQuantity;
+                  monthRevenue += item.totalPrice || 0;
+                  monthOrders.add(item.orderNumber);
+                }
+              });
+              
+              yearlyBreakdown.push({
+                month: monthDate.toISOString().slice(0, 7), // YYYY-MM format
+                revenue: monthRevenue,
+                orders: monthOrders.size,
+                bags: monthBags
+              });
+            }
+            
+            setYearlyBreakdownData(yearlyBreakdown);
+          }
         }
+        
+        // Calculate leaderboard from line items - simple approach (using already loaded data)
+        const thisMonth = new Date();
+        const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
+        const thisMonthEnd = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 0);
+        
+        // Get all unique owners from customers
+        const owners = [...new Set(customers.map((c: any) => c.assignedto).filter(Boolean))];
+        
+        // Get user profiles to map emails to names
+        const userProfilesResponse = await fetch(`/api/users?_t=${Date.now()}`);
+        let userProfiles: any[] = [];
+        if (userProfilesResponse.ok) {
+          userProfiles = await userProfilesResponse.json();
+          console.log('User profiles loaded:', userProfiles);
+        } else {
+          console.log('Failed to load user profiles:', userProfilesResponse.status);
+        }
+        
+        // Calculate stats for each owner
+        const ownerStats = owners.map(owner => {
+          // Get customers assigned to this owner
+          const ownerCustomers = customers.filter((c: any) => c.assignedto === owner);
+          const customerEmailSet = new Set(ownerCustomers.map((c: any) => c.email));
+          
+          // Filter line items for this owner's customers this month
+          const ownerLineItems = lineItems.filter((item: any) => {
+            const orderDate = new Date(item.createdAt);
+            return customerEmailSet.has(item.customerEmail) && 
+                   orderDate >= thisMonthStart && 
+                   orderDate <= thisMonthEnd;
+          });
+          
+          // Calculate bags, revenue, orders
+          let bagsSold = 0;
+          let revenue = 0;
+          const orderNumbers = new Set();
+          
+          ownerLineItems.forEach((item: any) => {
+            // Calculate effective quantity (bags)
+            let effectiveQuantity = 0;
+            if (item.title === 'Build a Pallet') {
+              effectiveQuantity = item.quantity || 0;
+            } else if (item.title?.includes('Pallet')) {
+              effectiveQuantity = (item.quantity || 0) * 50;
+            } else {
+              effectiveQuantity = item.quantity || 0;
+            }
+            
+            bagsSold += effectiveQuantity;
+            revenue += item.totalPrice || 0;
+            orderNumbers.add(item.orderNumber);
+          });
+          
+          // Find user profile for this owner
+          const userProfile = userProfiles.find((u: any) => u.email.toLowerCase() === owner.toLowerCase());
+          console.log(`Looking for owner: ${owner}, found profile:`, userProfile);
+          
+          let displayName;
+          if (userProfile) {
+            displayName = `${userProfile.firstname} ${userProfile.lastname}`.trim();
+            console.log(`Constructed display name for ${owner}: "${displayName}"`);
+          } else {
+            displayName = owner.split('@')[0];
+          }
+          
+          return {
+            owner,
+            displayName,
+            bagsSold,
+            revenue,
+            orders: orderNumbers.size
+          };
+        });
+        
+        // Sort by bags sold and take top 3
+        const top3 = ownerStats
+          .sort((a, b) => b.bagsSold - a.bagsSold)
+          .slice(0, 3);
+        
+        console.log('Top 3 leaders:', top3);
+        console.log('Dave\'s data in top3:', top3.find(m => m.owner.toLowerCase() === 'dave@kineticdogfood.com'));
+        console.log('Dave\'s displayName in top3:', top3.find(m => m.owner.toLowerCase() === 'dave@kineticdogfood.com')?.displayName);
+        setLeaderboardData(top3);
+        setLeaderboardBagsData(top3);
       }
       
       // Load top customers
-      const customersResponse = await fetch(`/api/sales/top-customers?userEmail=${user.email}&view=${dashboardView}&limit=50&_t=${Date.now()}`);
-      if (customersResponse.ok) {
-        const customersResult = await customersResponse.json();
-        setTopCustomers(customersResult.topCustomers || []);
+      const topCustomersResponse = await fetch(`/api/sales/top-customers?userEmail=${user.email}&view=${dashboardView}&limit=50&_t=${Date.now()}`);
+      if (topCustomersResponse.ok) {
+        const topCustomersResult = await topCustomersResponse.json();
+        setTopCustomers(topCustomersResult.topCustomers || []);
       }
     } catch (error) {
       console.error('Error loading sales data:', error);
@@ -721,17 +903,17 @@ export default function Home() {
 
   // Data filtering
   const unassignedInquiries = useMemo(() => 
-    inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)), [inquiries]);
+    Array.isArray(inquiries) ? inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)) : [], [inquiries]);
   
   const assignedInquiries = useMemo(() => 
-    inquiries.filter(q => q.assignedOwner === user?.email && q.status === "active"), [inquiries, user]);
+    Array.isArray(inquiries) ? inquiries.filter(q => q.assignedOwner === user?.email && q.status === "active") : [], [inquiries, user]);
 
   // Simplified inquiry filtering - use allInquiries for consistent counts
   const newInquiries = useMemo(() => 
-    allInquiries.filter(q => q.status === "new"), [allInquiries]);
+    Array.isArray(allInquiries) ? allInquiries.filter(q => q.status === "new") : [], [allInquiries]);
 
   const activeInquiries = useMemo(() => 
-    allInquiries.filter(q => q.status === "active" && q.assignedOwner === user?.email), [allInquiries, user]);
+    Array.isArray(allInquiries) ? allInquiries.filter(q => q.status === "active" && q.assignedOwner === user?.email) : [], [allInquiries, user]);
 
   const currentOrders = useMemo(() => 
     orders.filter(o => o.assignedOwner === user?.email && o.status !== "delivered" && o.status !== "cancelled"), [orders, user]);
@@ -762,15 +944,9 @@ export default function Home() {
   function renderHomeTab() {
     return (
       <div className="space-y-6">
-        {/* Header with Leaderboard Toggle */}
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex items-center">
           <h2 className="text-2xl font-bold text-white">Sales Dashboard</h2>
-          <button
-            onClick={() => setDashboardView(dashboardView === 'personal' ? 'leaderboard' : 'personal')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {dashboardView === 'personal' ? 'Leaderboard' : 'My Sales'}
-          </button>
         </div>
 
         {salesLoading ? (
@@ -783,84 +959,104 @@ export default function Home() {
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
-                <h3 className="text-xl font-bold text-gray-900">
-                  {dashboardView === 'personal' ? 'My Sales This Month' : 'Team Sales This Month'}
-                </h3>
+                <h3 className="text-xl font-bold text-gray-900">My Sales This Month</h3>
               </div>
-              {dashboardView === 'personal' ? (
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">${(salesData?.this_month_sales || 0).toLocaleString()}</div>
-                    <div className="text-xs text-gray-600">Revenue</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{salesData?.this_month_orders || 0}</div>
-                    <div className="text-xs text-gray-600">Orders</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{typeof bulkInquiriesData === 'number' ? bulkInquiriesData : 0}</div>
-                    <div className="text-xs text-gray-600">Bulk Inquiries</div>
-                    <div className="text-[10px] text-gray-500">Last 60 days</div>
-                  </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">${(salesData?.this_month_sales || 0).toLocaleString()}</div>
+                  <div className="text-xs text-gray-600">Revenue</div>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {leaderboardData.map((member, index) => {
-                    const memberBulkInquiries = bulkInquiriesData?.find((b: any) => b.owner === member.owner)?.bulk_inquiries_count || 0;
-                    return (
-                      <div key={member.owner} className="flex items-center justify-between bg-blue-500 bg-opacity-30 rounded-lg p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="text-lg font-bold">#{index + 1}</div>
-                          <div>
-                            <div className="font-semibold">
-                              {member.owner === 'iand@kineticdogfood.com' ? 'Ian' : 
-                               member.owner === 'ericb@kineticdogfood.com' ? 'Eric' : 
-                               member.owner === 'Dave@kineticdogfood.com' ? 'Dave' : member.owner}
-                            </div>
-                            <div className="text-sm opacity-90">{member.this_month_orders} orders</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xl font-bold">${member.this_month_sales.toLocaleString()}</div>
-                          <div className="text-xs opacity-75">{memberBulkInquiries} bulk inquiries</div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{salesData?.this_month_orders || 0}</div>
+                  <div className="text-xs text-gray-600">Orders</div>
                 </div>
-              )}
+                <div className="text-center">
+                  <div className="text-2xl font-bold" style={{color: '#915A9D'}}>{salesData?.bagsSoldThisMonth || 0}</div>
+                  <div className="text-xs text-gray-600">Bags Sold</div>
+                </div>
+              </div>
             </div>
 
-            {/* 12-Month Pallets Sold Trend */}
+            {/* Monthly Leaderboard */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
-                <h3 className="text-xl font-bold text-gray-900">
-                  {dashboardView === 'personal' ? 'My Sales Trend' : 'Team Sales Trend'}
-                </h3>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
+                <h3 className="text-xl font-bold text-gray-900">Monthly Leaderboard</h3>
               </div>
               
-              {monthlyPalletsData.length > 0 ? (
-                <div className="space-y-4">
-                  {/* Chart */}
-                  <div className="relative">
-                    <div className="h-40 flex items-end justify-between gap-1 px-2">
-                      {monthlyPalletsData.map((month, index) => {
-                        const maxPallets = Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold)));
-                        const height = maxPallets > 0 ? (parseInt(month.pallets_sold) / maxPallets) * 150 : 2;
-                        // Parse the month string directly to avoid timezone issues
-                        const monthStr = month.month; // e.g., "2024-10-01T00:00:00.000Z"
-                        const year = parseInt(monthStr.substring(0, 4));
-                        const monthNum = parseInt(monthStr.substring(5, 7)) - 1; // Convert to 0-based
-                        
+              <div className="space-y-3">
+                {console.log('Leaderboard data in render:', leaderboardData)}
+                {console.log('Dave in leaderboardData:', leaderboardData.find(m => m.owner.toLowerCase() === 'dave@kineticdogfood.com'))}
+                {console.log('All owners in leaderboard:', leaderboardData.map(m => m.owner))}
+                {leaderboardData.map((member, index) => {
+                  return (
+                    <div key={member.owner} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {(() => {
+                              console.log(`Rendering member ${member.owner}:`, {
+                                displayName: member.displayName,
+                                owner: member.owner,
+                                fullMemberObject: member
+                              });
+                              return member.displayName || member.owner.split('@')[0];
+                            })()}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {member.orders || 0} orders • ${(member.revenue || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold" style={{color: '#915A9D'}}>
+                          {member.bagsSold || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">bags</div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {leaderboardData.length === 0 && (
+                  <div className="text-center py-4 text-gray-500">No leaderboard data available</div>
+                )}
+              </div>
+            </div>
+
+            {/* My Sales Trends */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              {/* Title Section - Fixed at top */}
+              <div className="sticky top-0 bg-white rounded-t-xl px-4 pt-4 pb-2 z-20">
+                <div className="flex items-center gap-3">
+                  <div className="w-1 h-6 bg-gradient-to-b from-[#915A9D] to-[#915A9D] rounded-full"></div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {dashboardView === 'personal' ? 'My Sales Trends' : 'Sales Trends'}
+                  </h3>
+                </div>
+              </div>
+              
+              {/* Chart Content Section - Responsive */}
+              <div className="p-4">
+                {yearlyBreakdownData.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Bags Chart */}
+                    <div className="relative">
+                      <div className="h-32 flex items-end justify-between gap-1 px-2">
+                      {yearlyBreakdownData.map((month, index) => {
+                        const maxBags = Math.max(...yearlyBreakdownData.map(m => m.bags));
+                        const height = maxBags > 0 ? (month.bags / maxBags) * 120 : 2;
                         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const monthNum = parseInt(month.month.substring(5, 7)) - 1;
+                        const year = parseInt(month.month.substring(0, 4));
                         const monthName = monthNames[monthNum];
                         
-                        // Debug logging
-                        console.log(`Month data: ${month.month}, Year: ${year}, Month num: ${monthNum}, Month name: ${monthName}`);
-                        
-                        // Check if this is current month (September 2025)
-                        const isCurrentMonth = monthNum === 8 && year === 2025; // September 2025
+                        // Check if this is current month
+                        const currentDate = new Date();
+                        const isCurrentMonth = monthNum === currentDate.getMonth() && year === currentDate.getFullYear();
                         
                         return (
                           <div key={index} className="flex flex-col items-center flex-1 min-w-0">
@@ -871,55 +1067,50 @@ export default function Home() {
                                   : 'bg-gradient-to-t from-gray-400 to-gray-300'
                               }`}
                               style={{ height: `${height}px` }}
-                              title={`${monthName}: ${parseInt(month.pallets_sold)} pallets`}
+                              title={`${monthName}: ${month.bags} bags`}
                             />
                             <div className="text-xs text-gray-600 mt-2 text-center">
                               {monthName}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {parseInt(month.pallets_sold)}
+                              {month.bags}
                             </div>
                           </div>
                         );
                       })}
                     </div>
                     
-                    {/* Scale */}
-                    <div className="absolute left-0 top-0 h-40 flex flex-col justify-between text-xs text-gray-400 -ml-8">
-                      <span>{Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold)))}</span>
-                      <span>{Math.round(Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold))) / 2)}</span>
-                      <span>0</span>
-                    </div>
                   </div>
                   
-                  {/* Stats */}
+                  {/* Summary Stats */}
                   <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {monthlyPalletsData.reduce((sum, month) => sum + parseInt(month.pallets_sold), 0)}
-                      </div>
-                      <div className="text-sm text-gray-600">Total</div>
-                    </div>
-                    <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">
-                        {Math.round(monthlyPalletsData.reduce((sum, month) => sum + parseInt(month.pallets_sold), 0) / monthlyPalletsData.length)}
+                        ${yearlyBreakdownData.reduce((sum, month) => sum + month.revenue, 0).toLocaleString()}
                       </div>
-                      <div className="text-sm text-gray-600">Avg</div>
+                      <div className="text-sm text-gray-600">Total Revenue</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {Math.max(...monthlyPalletsData.map(m => parseInt(m.pallets_sold)))}
+                      <div className="text-2xl font-bold text-blue-600">
+                        {yearlyBreakdownData.reduce((sum, month) => sum + month.orders, 0)}
                       </div>
-                      <div className="text-sm text-gray-600">Best</div>
+                      <div className="text-sm text-gray-600">Total Orders</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold" style={{color: '#915A9D'}}>
+                        {yearlyBreakdownData.reduce((sum, month) => sum + month.bags, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Bags</div>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <div className="text-3xl mb-2">📊</div>
-                  <div className="text-sm">No sales data available</div>
+                  <div className="text-3xl mb-2">📈</div>
+                  <div className="text-sm">No yearly data available</div>
                 </div>
               )}
+              </div>
             </div>
 
             {/* Top Customers */}
@@ -1029,67 +1220,85 @@ export default function Home() {
 
 
 
-        {/* Inquiries based on category */}
+        {/* Inquiries Timeline View */}
         <div className="space-y-4">
           {category === "all" ? (
             <>
-          <h3 className="text-sm font-medium text-red-600">
+              <h3 className="text-sm font-medium text-red-600">
                 New Inquiries
-          </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)).map((q) => (
-            <div 
-              key={`unassigned-${q.id}`} 
-              onClick={() => loadInquiryDetails(q)}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">{q.customerName || q.customerEmail}</h3>
-                  <div className="text-sm text-gray-600 mb-2 overflow-hidden" style={{height: '4.5rem', lineHeight: '1.5rem'}}>
-                    <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
-                      {getFirstThreeLines(q.originalMessage)}
-                  </div>
-                </div>
-                  <p className="text-xs text-gray-400">
-                    {new Date(q.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <span className={`text-xs px-3 py-1 rounded-full font-medium ml-2 ${
-                  q.category === "issues" ? "bg-red-100 text-red-800" :
-                  q.category === "questions" ? "bg-blue-100 text-blue-800" :
-                  "bg-green-100 text-green-800"
-                }`}>
-                  {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
-                </span>
-              </div>
-              
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex gap-2 justify-start">
-                  {user && (
-                  <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        takeOwnership(q.id);
-                      }}
-                      className="px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
+              </h3>
+              <div className="space-y-3">
+                {Array.isArray(inquiries) ? inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)).map((q) => (
+                  <div 
+                    key={`unassigned-${q.id}`} 
+                    onClick={() => loadInquiryDetails(q)}
+                    className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all duration-200"
                   >
-                    Take
-                  </button>
+                    {/* Timeline dot */}
+                    <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${
+                      q.category === "issues" ? "bg-red-500" :
+                      q.category === "questions" ? "bg-blue-500" :
+                      "bg-green-500"
+                    }`}></div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium text-gray-900 mb-1">
+                            {q.customerName || q.customerEmail}
+                          </h4>
+                          <p className="text-xs text-gray-500 mb-2">
+                            {new Date(q.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ml-2 ${
+                          q.category === "issues" ? "bg-red-100 text-red-800" :
+                          q.category === "questions" ? "bg-blue-100 text-blue-800" :
+                          "bg-green-100 text-green-800"
+                        }`}>
+                          {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
+                        </span>
+                      </div>
+                      
+                      <div className="text-sm text-gray-700 mb-3">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
+                          {getFirstThreeLines(q.originalMessage)}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {user && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              takeOwnership(q.id);
+                            }}
+                            className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
+                          >
+                            Take
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markNotRelevant(q.id);
+                          }}
+                          className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
+                        >
+                          Not Relevant
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )) : null}
+                
+                {Array.isArray(inquiries) && inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-3xl mb-2">📬</div>
+                    <div className="text-sm">No new inquiries</div>
+                  </div>
                 )}
-                <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      markNotRelevant(q.id);
-                    }}
-                    className="px-2 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
-                >
-                  Not Relevant
-                </button>
-                </div>
-              </div>
-            </div>
-          ))}
               </div>
             </>
           ) : (
@@ -1097,39 +1306,57 @@ export default function Home() {
               <h3 className="text-sm font-medium text-blue-600">
                 {category === "bulk" ? "My Bulk Prospects" : category === "issues" ? "My Issues" : "My Questions"}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-3">
                 {assignedInquiries.filter(q => q.category === category).map((q) => (
-                <div 
-                  key={`assigned-${category}-${q.id}`} 
-                  onClick={() => loadInquiryDetails(q)}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200"
-                >
-                  <div className="flex items-start justify-between mb-3">
+                  <div 
+                    key={`assigned-${category}-${q.id}`} 
+                    onClick={() => loadInquiryDetails(q)}
+                    className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all duration-200"
+                  >
+                    {/* Timeline dot */}
+                    <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${
+                      q.category === "issues" ? "bg-red-500" :
+                      q.category === "questions" ? "bg-blue-500" :
+                      "bg-green-500"
+                    }`}></div>
+                    
+                    {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-900 mb-2">{q.customerName || q.customerEmail}</h3>
-                      <div className="text-sm text-gray-600 mb-2 overflow-hidden" style={{height: '4.5rem', lineHeight: '1.5rem'}}>
-                    <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
-                      {getFirstThreeLines(q.originalMessage)}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium text-gray-900 mb-1">
+                            {q.customerName || q.customerEmail}
+                          </h4>
+                          <p className="text-xs text-gray-500 mb-2">
+                            {new Date(q.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ml-2 ${
+                          q.category === "issues" ? "bg-red-100 text-red-800" :
+                          q.category === "questions" ? "bg-blue-100 text-blue-800" :
+                          "bg-green-100 text-green-800"
+                        }`}>
+                          {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
+                        </span>
+                      </div>
+                      
+                      <div className="text-sm text-gray-700 mb-2">
+                        <div style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
+                          {getFirstThreeLines(q.originalMessage)}
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-gray-500">Click to view details and manage</p>
                     </div>
                   </div>
-                      <p className="text-xs text-gray-400">
-                        {new Date(q.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium ml-2 ${
-                      q.category === "issues" ? "bg-red-100 text-red-800" :
-                      q.category === "questions" ? "bg-blue-100 text-blue-800" :
-                      "bg-green-100 text-green-800"
-                    }`}>
-                      {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
-                    </span>
+                ))}
+                
+                {assignedInquiries.filter(q => q.category === category).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-3xl mb-2">📋</div>
+                    <div className="text-sm">No {category === "bulk" ? "bulk prospects" : category === "issues" ? "issues" : "questions"} assigned to you</div>
                   </div>
-                  
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-500 text-center">Click to view details and manage</p>
-                  </div>
-                </div>
-              ))}
+                )}
               </div>
             </>
           )}
@@ -1874,175 +2101,154 @@ export default function Home() {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {inquiryCustomer?.firstName && inquiryCustomer?.lastName 
-                    ? `${inquiryCustomer.firstName} ${inquiryCustomer.lastName}`
-                    : selectedInquiry?.customerName || selectedInquiry?.customerEmail}
-                </h2>
-                <div className="flex items-center gap-2">
-                  {/* Action Buttons */}
-                  {(selectedInquiry.status === "new" || (selectedInquiry.status === "active" && !selectedInquiry.assignedOwner)) ? (
-                    // New inquiry or unassigned active inquiry - show Take and Not Relevant
-                    <>
-                      <button
-                        onClick={() => takeInquiry(selectedInquiry.id)}
-                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                      >
-                        Take Inquiry
-                      </button>
-                      <button
-                        onClick={() => markNotRelevant(selectedInquiry.id)}
-                        className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
-                      >
-                        Not Relevant
-                      </button>
-                    </>
-                  ) : selectedInquiry.status === "active" ? (
-                    // Active inquiry - show Add Note, Close
-                    <>
-                      <button
-                        onClick={() => {
-                          setNoteInquiryId(inquiryCustomerId);
-                          setNoteType('note');
-                          setShowNoteModal(true);
-                        }}
-                        className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-                      >
-                        Add Note
-                      </button>
-                      <button
-                        onClick={() => closeInquiry(selectedInquiry.id)}
-                        className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
-                      >
-                        Close
-                      </button>
-                    </>
-                  ) : null}
-                  <button
-                    onClick={closeInquiryModal}
-                    className="text-gray-400 hover:text-gray-600 text-2xl ml-2"
-                  >
-                    ×
-                  </button>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {inquiryCustomer?.firstName && inquiryCustomer?.lastName 
+                      ? `${inquiryCustomer.firstName} ${inquiryCustomer.lastName}`
+                      : selectedInquiry?.customerName || selectedInquiry?.customerEmail}
+                  </h2>
+                  
+                  {/* Status and Category Bubbles */}
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedInquiry.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                    }`}>
+                      {selectedInquiry.status}
+                    </span>
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedInquiry.category === "issues" ? "bg-red-100 text-red-800" :
+                      selectedInquiry.category === "questions" ? "bg-blue-100 text-blue-800" :
+                      "bg-green-100 text-green-800"
+                    }`}>
+                      {selectedInquiry.category === "issues" ? "Issue" : selectedInquiry.category === "questions" ? "Question" : selectedInquiry.category.charAt(0).toUpperCase() + selectedInquiry.category.slice(1)}
+                    </span>
+                    {inquiryCustomer?.status && (
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        inquiryCustomer.status === 'customer' ? 'bg-green-100 text-green-800' :
+                        inquiryCustomer.status === 'contact' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {inquiryCustomer.status}
+                      </span>
+                    )}
+                  </div>
                 </div>
+                <button
+                  onClick={closeInquiryModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
               </div>
             </div>
 
               {/* Modal Content */}
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 <div className="space-y-6">
-                  {/* Inquiry Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Inquiry Details</h3>
+                  {/* Customer Contact Information */}
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Customer Contact</h3>
+                    {inquiryCustomer ? (
                       <div className="space-y-2">
-                        <div><span className="font-medium">Category:</span> 
-                          <span className={`ml-2 inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedInquiry.category === "issues" ? "bg-red-100 text-red-800" :
-                            selectedInquiry.category === "questions" ? "bg-blue-100 text-blue-800" :
-                            "bg-green-100 text-green-800"
-                          }`}>
-                            {selectedInquiry.category === "issues" ? "Issue" : selectedInquiry.category === "questions" ? "Question" : selectedInquiry.category.charAt(0).toUpperCase() + selectedInquiry.category.slice(1)}
-                          </span>
-                        </div>
-                        <div><span className="font-medium">Status:</span> 
-                          <span className={`ml-2 inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedInquiry.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                          }`}>
-                            {selectedInquiry.status}
-                          </span>
-                        </div>
-                        <div><span className="font-medium">Created:</span> {new Date(selectedInquiry.createdAt).toLocaleString()}</div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Assigned To:</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">{selectedInquiry.assignedOwner || 'Unassigned'}</span>
-                            <button
-                              onClick={() => {
-                                const newOwner = prompt('Enter new owner email (or leave blank to unassign):', selectedInquiry.assignedOwner || '');
-                                if (newOwner !== null) {
-                                  reassignInquiry(selectedInquiry.id, newOwner);
-                                }
-                              }}
-                              className="text-xs text-blue-600 hover:text-blue-800 underline"
-                            >
-                              Change
-                            </button>
-                          </div>
+                        <div><span className="font-medium">Email:</span> {inquiryCustomer.email}</div>
+                        {inquiryCustomer.phone && (
+                          <div><span className="font-medium">Phone:</span> {inquiryCustomer.phone}</div>
+                        )}
+                        {inquiryCustomer.companyName && (
+                          <div><span className="font-medium">Company:</span> {inquiryCustomer.companyName}</div>
+                        )}
+                        {inquiryCustomer.numberOfDogs && (
+                          <div><span className="font-medium">Number of Dogs:</span> {inquiryCustomer.numberOfDogs}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div><span className="font-medium">Email:</span> {selectedInquiry?.customerEmail}</div>
+                        <div className="text-gray-500 text-sm mt-2">
+                          This is a new inquiry. Customer details will be captured when the inquiry is submitted.
                         </div>
                       </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Customer Information</h3>
-                      {inquiryCustomer ? (
-                        <div className="space-y-2">
-                          <div><span className="font-medium">Name:</span> {inquiryCustomer.firstName} {inquiryCustomer.lastName}</div>
-                          <div><span className="font-medium">Email:</span> {inquiryCustomer.email}</div>
-                          {inquiryCustomer.phone && (
-                            <div><span className="font-medium">Phone:</span> {inquiryCustomer.phone}</div>
-                          )}
-                          {inquiryCustomer.companyName && (
-                            <div><span className="font-medium">Company:</span> {inquiryCustomer.companyName}</div>
-                          )}
-                          {inquiryCustomer.customerType && (
-                            <div><span className="font-medium">Type:</span> {inquiryCustomer.customerType}</div>
-                          )}
-                          {inquiryCustomer.numberOfDogs && (
-                            <div><span className="font-medium">Number of Dogs:</span> {inquiryCustomer.numberOfDogs}</div>
-                          )}
-                          <div><span className="font-medium">Status:</span> 
-                            <span className={`ml-2 inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                              inquiryCustomer.status === 'customer' ? 'bg-green-100 text-green-800' :
-                              inquiryCustomer.status === 'contact' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {inquiryCustomer.status}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div><span className="font-medium">Name:</span> {selectedInquiry?.customerName || 'Not provided'}</div>
-                          <div><span className="font-medium">Email:</span> {selectedInquiry?.customerEmail}</div>
-                          <div className="text-gray-500 text-sm mt-2">
-                            This is a new inquiry. Customer name will be captured from the contact form when the inquiry is submitted.
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                    {(selectedInquiry.status === "new" || (selectedInquiry.status === "active" && !selectedInquiry.assignedOwner)) ? (
+                      // New inquiry or unassigned active inquiry - show Take and Not Relevant
+                      <>
+                        <button
+                          onClick={() => takeInquiry(selectedInquiry.id)}
+                          className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                        >
+                          Take Inquiry
+                        </button>
+                        <button
+                          onClick={() => markNotRelevant(selectedInquiry.id)}
+                          className="px-4 py-2 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                        >
+                          Not Relevant
+                        </button>
+                      </>
+                    ) : selectedInquiry.status === "active" ? (
+                      // Active inquiry - show Add Note, Close
+                      <>
+                        <button
+                          onClick={() => {
+                            setNoteInquiryId(inquiryCustomerId);
+                            setNoteType('note');
+                            setShowNoteModal(true);
+                          }}
+                          className="px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                        >
+                          Add Note
+                        </button>
+                        <button
+                          onClick={() => closeInquiry(selectedInquiry.id)}
+                          className="px-4 py-2 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                        >
+                          Close Inquiry
+                        </button>
+                      </>
+                    ) : null}
                   </div>
 
                   {/* Customer Timeline or Inquiry Message */}
                   {inquiryCustomer ? (
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Timeline</h3>
-                      <div className="space-y-4">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Activity Timeline</h3>
+                      <div className="space-y-3">
                         {inquiryCustomerTimeline.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item, index) => {
                           const isCurrentInquiry = item.id === selectedInquiry?.id;
                           return (
-                            <div key={item.id || index} className={`border-l-4 pl-4 ${isCurrentInquiry ? 'border-blue-500 bg-blue-50' : 'border-blue-200'}`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div key={item.id || index} className={`flex items-start gap-3 p-3 rounded-lg ${isCurrentInquiry ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                              {/* Timeline dot */}
+                              <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                isCurrentInquiry ? 'bg-blue-500' : 'bg-blue-500'
+                              }`}></div>
+                              
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between mb-1">
                                   <h4 className="font-medium text-gray-900">{item.subject || item.type}</h4>
-                                  {isCurrentInquiry && (
-                                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                      Current Inquiry
-                                    </span>
-                                  )}
+                                  <span className="text-xs text-gray-500">{new Date(item.createdAt).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                                 </div>
-                                <span className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
+                                <p className="text-sm text-gray-700 mb-1">{item.content || item.description || item.note || 'No description available'}</p>
+                                {(item.authorEmail || item.authorName) && (
+                                  <p className="text-xs text-gray-500">
+                                    by {item.authorEmail || item.authorName}
+                                  </p>
+                                )}
                               </div>
-                              <p className="text-gray-600 mt-1">{item.content || item.description || item.note || 'No description available'}</p>
-                              {item.authorEmail && (
-                                <p className="text-sm text-gray-500 mt-1">by {item.authorEmail}</p>
-                              )}
-                              {item.authorName && !item.authorEmail && (
-                                <p className="text-sm text-gray-500 mt-1">by {item.authorName}</p>
-                              )}
                             </div>
                           );
                         })}
+                        
+                        {inquiryCustomerTimeline.length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            <div className="text-3xl mb-2">📝</div>
+                            <div className="text-sm">No activity recorded yet</div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (

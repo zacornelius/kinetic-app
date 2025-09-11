@@ -17,16 +17,15 @@ export default function AdminDashboard() {
   async function syncShopifyOrders() {
     setIsSyncing(true);
     setSyncMessage("");
-    setSyncProgress("Starting sync...");
+    setSyncProgress("Starting full sync...");
     
     try {
-      const response = await fetch("/api/shopify/sync-orders", {
+      const response = await fetch("/api/shopify/sync-full", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          shop: "f184d9-2",
-          accessToken: "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",
-          limit: 250 // Shopify's maximum limit
+          limit: 250, // Shopify's maximum limit
+          maxPages: 10 // Limit to recent orders for full sync
         }),
       });
       
@@ -50,22 +49,22 @@ export default function AdminDashboard() {
   async function syncNewOrders() {
     setIsSyncing(true);
     setSyncMessage("");
-    setSyncProgress("Starting incremental sync and data explorer update...");
+    setSyncProgress("Starting incremental sync...");
     
     try {
       const response = await fetch("/api/shopify/sync-incremental", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          shop: "f184d9-2",
-          accessToken: "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"
+          limit: 250,
+          maxPages: 2 // Only get recent new orders
         }),
       });
       
       const result = await response.json();
       
       if (response.ok) {
-        setSyncMessage(`✅ ${result.message}`);
+        setSyncMessage(`✅ ${result.message} (${result.stats.inserted} new, ${result.stats.updated} updated)`);
         setSyncProgress("");
       } else {
         setSyncMessage(`❌ Error: ${result.error}`);
@@ -114,10 +113,10 @@ export default function AdminDashboard() {
               disabled={isSyncing}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {isSyncing ? "Syncing..." : "Fetch New Orders"}
+              {isSyncing ? "Syncing..." : "Sync New Orders (Incremental)"}
             </button>
             <div className="text-center text-sm text-gray-500">
-              Use Data Explorer to view and filter all data
+              Gets only new orders since last sync • Fast & efficient
             </div>
           </div>
           

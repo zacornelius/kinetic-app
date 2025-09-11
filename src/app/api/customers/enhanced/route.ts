@@ -301,7 +301,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, assignedOwner } = body;
+    const { id, assignedOwner, firstName, lastName, source, status } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -310,18 +310,56 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Update the customer's assignedOwner
-    const updateCustomer = db.prepare(`
-      UPDATE customers_new 
-      SET assignedOwner = ?, updatedAt = ?
-      WHERE id = ?
-    `);
+    // Build dynamic update query based on provided fields
+    const updateFields = [];
+    const params = [];
+    
+    if (assignedOwner !== undefined) {
+      updateFields.push('assignedOwner = $' + (params.length + 1));
+      params.push(assignedOwner || null);
+    }
+    
+    if (firstName !== undefined) {
+      updateFields.push('firstname = $' + (params.length + 1));
+      params.push(firstName);
+    }
+    
+    if (lastName !== undefined) {
+      updateFields.push('lastname = $' + (params.length + 1));
+      params.push(lastName);
+    }
+    
+    if (source !== undefined) {
+      updateFields.push('source = $' + (params.length + 1));
+      params.push(source);
+    }
+    
+    if (status !== undefined) {
+      updateFields.push('status = $' + (params.length + 1));
+      params.push(status);
+    }
+    
+    // Always update the updatedAt field
+    updateFields.push('updatedat = $' + (params.length + 1));
+    params.push(new Date().toISOString());
+    
+    // Add the ID parameter
+    params.push(id);
 
-    const result = updateCustomer.run(
-      assignedOwner || null,
-      new Date().toISOString(),
-      id
-    );
+    if (updateFields.length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
+    }
+
+    const updateQuery = `
+      UPDATE customers 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${params.length}
+    `;
+
+    const result = db.prepare(updateQuery).run(...params);
 
     if (result.changes === 0) {
       return NextResponse.json(
