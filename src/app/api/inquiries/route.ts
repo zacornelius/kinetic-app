@@ -13,6 +13,7 @@ type Inquiry = {
   originalMessage?: string;
   customerName?: string;
   assignedOwner?: string; // This will be derived from customer record
+  customerCategory?: string; // Customer category from CSV data (Active Dog Owner, Trainer, etc.)
 };
 
 function generateId() {
@@ -32,7 +33,8 @@ export async function GET(request: Request) {
                           WHEN i.message LIKE 'Name: %' THEN TRIM(SUBSTRING(i.message FROM 6 FOR POSITION(E'\n' IN i.message) - 6))
                           ELSE i.customeremail 
                         END) as "customerName",
-                      c.assignedto as "assignedOwner"
+                      c.assignedto as "assignedOwner",
+                      i.customercategory as "customerCategory"
                FROM inquiries i 
                LEFT JOIN customers c ON LOWER(i.customeremail) = LOWER(c.email)
                WHERE i.status != 'not_relevant' AND i.status != 'closed'
@@ -48,7 +50,8 @@ export async function GET(request: Request) {
                    WHEN i.message LIKE 'Name: %' THEN TRIM(SUBSTRING(i.message FROM 6 FOR POSITION(E'\n' IN i.message) - 6))
                    ELSE i.customeremail 
                  END) as "customerName",
-               c.assignedto as "assignedOwner"
+               c.assignedto as "assignedOwner",
+               i.customercategory as "customerCategory"
         FROM inquiries i 
         LEFT JOIN customers c ON LOWER(i.customeremail) = LOWER(c.email)
         WHERE i.category = ? AND i.status != 'not_relevant' AND i.status != 'closed'
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { category, customerEmail, message, firstName, lastName, name } = body;
+    const { category, customerEmail, message, firstName, lastName, name, customerCategory } = body;
     
     if (!category || !customerEmail) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders });
@@ -114,15 +117,15 @@ export async function POST(request: Request) {
     const createdAt = new Date().toISOString();
     
     const insertInquiry = db.prepare(`
-      INSERT INTO inquiries (id, createdat, category, customeremail, status, message)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO inquiries (id, createdat, category, customeremail, status, message, customercategory)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
     // Create a meaningful default message if none provided, and append customer name if available
     const baseMessage = message || `New ${category} inquiry from ${customerEmail}`;
     const customerName = firstName && lastName ? `${firstName} ${lastName}` : name;
     const enhancedMessage = customerName ? `Name: ${customerName}\n\n${baseMessage}` : baseMessage;
-    await insertInquiry.run(id, createdAt, category, customerEmail, status, enhancedMessage);
+    await insertInquiry.run(id, createdAt, category, customerEmail, status, enhancedMessage, customerCategory || null);
     
     const newInquiry: Inquiry = {
       id,
@@ -224,9 +227,9 @@ export async function PATCH(request: Request) {
         // Update their last contact date and increment inquiry count
         await db.prepare(`
           UPDATE customers
-          SET lastcontactdate = ?, totalinquiries = totalinquiries + 1, updatedat = ?, assignedto = ?
+          SET lastcontactdate = ?, totalinquiries = totalinquiries + 1, updatedat = ?, assignedto = ?, customercategory = COALESCE(?, customercategory)
           WHERE id = ?
-        `).run(new Date().toISOString(), new Date().toISOString(), salesPersonEmail, customerId);
+        `).run(new Date().toISOString(), new Date().toISOString(), salesPersonEmail, inquiry.customercategory || null, customerId);
         
         // Update customer status
         // updateCustomerStatus(customerId);
@@ -245,9 +248,9 @@ export async function PATCH(request: Request) {
             id, email, firstname, lastname, phone, companyname,
             billingaddress, shippingaddress, source, sourceid,
             createdat, updatedat, lastcontactdate, totalinquiries, totalorders, totalspent,
-            status, tags, notes, assignedto
-          ) VALUES (?, ?, ?, ?, '', '', '', '', 'website', ?, ?, ?, ?, 1, 0, 0, 'contact', '[]', '[]', ?)
-        `).run(customerId, inquiry.customeremail, firstName, lastName, customerId, now, now, now, salesPersonEmail);
+            status, tags, notes, assignedto, customertype, customercategory
+          ) VALUES (?, ?, ?, ?, '', '', '', '', 'website', ?, ?, ?, ?, 1, 0, 0, 'contact', '[]', '[]', ?, 'Contact', ?)
+        `).run(customerId, inquiry.customeremail, firstName, lastName, customerId, now, now, now, salesPersonEmail, inquiry.customercategory || null);
       }
       
       // Update inquiry status to active and assign owner

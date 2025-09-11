@@ -2154,6 +2154,9 @@ export default function Home() {
                         {inquiryCustomer.phone && (
                           <div><span className="font-medium">Phone:</span> {inquiryCustomer.phone}</div>
                         )}
+                        {selectedInquiry?.customerCategory && (
+                          <div><span className="font-medium">Type:</span> {selectedInquiry.customerCategory}</div>
+                        )}
                         {inquiryCustomer.companyName && (
                           <div><span className="font-medium">Company:</span> {inquiryCustomer.companyName}</div>
                         )}

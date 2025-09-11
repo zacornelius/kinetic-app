@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
         c.totalspent as lifetimeValue,
         c.createdat as lastOrderDate,
         c.createdat as firstOrderDate,
-        c.assignedto as "assignedto"
+        c.assignedto as "assignedto",
+        c.status,
+        c.customertype as "customerType",
+        c.customercategory as "customerCategory"
       FROM customers c
       WHERE 1=1
     `;
