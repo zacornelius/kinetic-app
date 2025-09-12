@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/database";
-import { getCustomerOwner } from "@/lib/customer-assignment";
+import { getCustomerOwner, updateCustomerStatus } from "@/lib/customer-assignment";
 
 type Order = {
   id: string;
@@ -145,6 +145,22 @@ export async function POST(request: Request) {
       notes || null, 
       ownerEmail || null
     );
+    
+    // Update customer record with order information
+    const customer = await db.prepare('SELECT id FROM customers WHERE email = $1').get(customerEmail) as { id: string } | undefined;
+    if (customer) {
+      // Update customer's order count and total spent
+      await db.prepare(`
+        UPDATE customers 
+        SET totalorders = totalorders + 1, 
+            totalspent = totalspent + COALESCE($1, 0),
+            updatedat = $2
+        WHERE id = $3
+      `).run(totalAmount || 0, createdAt, customer.id);
+      
+      // Update customer status and type
+      await updateCustomerStatus(customer.id);
+    }
     
     const newOrder: Order = {
       id,

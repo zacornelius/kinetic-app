@@ -66,8 +66,15 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      whereConditions.push('status = ?');
-      params.push(status);
+      // Map frontend status filter to database customertype field
+      if (status === 'customer' || status === 'contact') {
+        whereConditions.push('customertype = ?');
+        params.push(status.charAt(0).toUpperCase() + status.slice(1)); // Capitalize first letter
+      } else {
+        // For other status filters (like Active/Inactive), use the status field
+        whereConditions.push('status = ?');
+        params.push(status);
+      }
     }
 
     if (assignedTo) {
@@ -90,6 +97,7 @@ export async function GET(request: NextRequest) {
         c.createdat as "createdAt", c.updatedat as "updatedAt", c.lastcontactdate as "lastContactDate",
         c.totalinquiries as "totalInquiries", c.totalorders as "totalOrders", c.totalspent as "totalSpent",
         c.status, c.tags, c.notes, c.assignedto as "assignedTo", c.source, c.business_unit as "businessUnit",
+        c.customertype, c.customercategory,
         COALESCE(order_stats.total_spent, 0) as "calculatedTotalSpent",
         COALESCE(order_stats.total_orders, 0) as "calculatedTotalOrders",
         order_stats.first_order_date,
@@ -145,6 +153,8 @@ export async function GET(request: NextRequest) {
             assignedTo: customer.assignedTo || null,
             source: customer.source || 'manual',
             businessUnit: customer.businessUnit || 'pallet',
+            customertype: customer.customertype || null,
+            customercategory: customer.customercategory || null,
             // Set default values for missing CSV fields
             reason: null,
             customerType: null,

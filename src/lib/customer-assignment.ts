@@ -88,15 +88,28 @@ export function updateCustomerStatus(customerId: string): void {
   
   if (!customer) return;
 
+  // Check if customer has any open inquiries
+  const customerEmail = db.prepare('SELECT email FROM customers WHERE id = ?').get(customerId) as { email: string } | undefined;
+  if (!customerEmail) return;
+  
+  const openInquiries = db.prepare(`
+    SELECT COUNT(*) as count 
+    FROM inquiries 
+    WHERE customeremail = ? 
+    AND status IN ('new', 'active')
+  `).get(customerEmail.email) as { count: number };
+
   let newStatus: string;
+  let newCustomerType: string;
+  
   if (customer.totalOrders > 0) {
-    newStatus = 'customer';
-  } else if (customer.totalInquiries > 0) {
-    newStatus = 'contact';
+    newCustomerType = 'Customer';
+    newStatus = openInquiries.count > 0 ? 'Active' : 'Inactive';
   } else {
-    newStatus = 'prospect';
+    newCustomerType = 'Contact';
+    newStatus = openInquiries.count > 0 ? 'Active' : 'Inactive';
   }
 
-  db.prepare('UPDATE customers SET status = ?, updatedAt = ? WHERE id = ?')
-    .run(newStatus, new Date().toISOString(), customerId);
+  db.prepare('UPDATE customers SET status = $1, customertype = $2, updatedAt = $3 WHERE id = $4')
+    .run(newStatus, newCustomerType, new Date().toISOString(), customerId);
 }

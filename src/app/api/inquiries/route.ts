@@ -232,7 +232,7 @@ export async function PATCH(request: Request) {
         `).run(new Date().toISOString(), new Date().toISOString(), salesPersonEmail, inquiry.customercategory || null, customerId);
         
         // Update customer status
-        // updateCustomerStatus(customerId);
+        updateCustomerStatus(customerId);
       } else {
         // Create new customer record
         customerId = Math.random().toString(36).slice(2, 15);
@@ -249,7 +249,7 @@ export async function PATCH(request: Request) {
             billingaddress, shippingaddress, source, sourceid,
             createdat, updatedat, lastcontactdate, totalinquiries, totalorders, totalspent,
             status, tags, notes, assignedto, customertype, customercategory
-          ) VALUES (?, ?, ?, ?, '', '', '', '', 'website', ?, ?, ?, ?, 1, 0, 0, 'contact', '[]', '[]', ?, 'Contact', ?)
+          ) VALUES (?, ?, ?, ?, '', '', '', '', 'website', ?, ?, ?, ?, 1, 0, 0, 'Active', '[]', '[]', ?, 'Contact', ?)
         `).run(customerId, inquiry.customeremail, firstName, lastName, customerId, now, now, now, salesPersonEmail, inquiry.customercategory || null);
       }
       
@@ -268,6 +268,12 @@ export async function PATCH(request: Request) {
     } else if (status === "closed") {
       // Handle direct status update for closing inquiries
       await db.prepare('UPDATE inquiries SET status = ? WHERE id = ?').run("closed", id);
+      
+      // Update customer status after closing inquiry
+      const customer = await db.prepare('SELECT id FROM customers WHERE email = ?').get(inquiry.customeremail) as { id: string } | undefined;
+      if (customer) {
+        updateCustomerStatus(customer.id);
+      }
       
     } else {
       return NextResponse.json({ error: "Invalid action. Use 'take', 'not_relevant', or provide 'status'" }, { status: 400 });

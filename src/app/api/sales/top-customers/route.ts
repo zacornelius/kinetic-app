@@ -20,6 +20,11 @@ export async function GET(request: NextRequest) {
           c.firstname,
           c.lastname,
           c.assignedto as owner,
+          c.customertype,
+          c.customercategory,
+          c.status,
+          c.phone,
+          c.companyname,
           COUNT(DISTINCT o.ordernumber) as order_count,
           COALESCE(SUM(o.totalamount), 0) as total_spent,
           MAX(o.createdat) as last_order_date
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest) {
         ) o ON c.email = o.customeremail
         WHERE c.assignedto IN ('iand@kineticdogfood.com', 'ericb@kineticdogfood.com', 'Dave@kineticdogfood.com')
           AND o.ordernumber IS NOT NULL
-        GROUP BY c.email, c.firstname, c.lastname, c.assignedto
+        GROUP BY c.email, c.firstname, c.lastname, c.assignedto, c.customertype, c.customercategory, c.status, c.phone, c.companyname
         ORDER BY total_spent DESC
         LIMIT $1
       `;
@@ -47,6 +52,12 @@ export async function GET(request: NextRequest) {
           c.email,
           c.firstname,
           c.lastname,
+          c.assignedto,
+          c.customertype,
+          c.customercategory,
+          c.status,
+          c.phone,
+          c.companyname,
           COUNT(DISTINCT o.ordernumber) as order_count,
           COALESCE(SUM(o.totalamount), 0) as total_spent,
           MAX(o.createdat) as last_order_date
@@ -60,7 +71,7 @@ export async function GET(request: NextRequest) {
         ) o ON c.email = o.customeremail
         WHERE c.assignedto = $1
           AND o.ordernumber IS NOT NULL
-        GROUP BY c.email, c.firstname, c.lastname
+        GROUP BY c.email, c.firstname, c.lastname, c.assignedto, c.customertype, c.customercategory, c.status, c.phone, c.companyname
         ORDER BY total_spent DESC
         LIMIT $2
       `;

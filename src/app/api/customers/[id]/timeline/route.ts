@@ -38,8 +38,34 @@ export async function GET(
 
   // No need for customer inquiry data since we're using the actual inquiries table
 
-    // Get orders from shopify_orders table
+    // Get orders from all order tables (shopify, distributor, digital)
     const orders = await db.prepare(`
+      SELECT 
+        'order' as type,
+        id,
+        'Order #' || ordernumber as subject,
+        'Order #' || ordernumber as content,
+        createdat::timestamp as "createdAt",
+        ordernumber,
+        totalamount,
+        status,
+        'shopify' as source
+      FROM shopify_orders 
+      WHERE customeremail = ?
+      UNION ALL
+      SELECT 
+        'order' as type,
+        id,
+        'Order #' || ordernumber as subject,
+        'Order #' || ordernumber as content,
+        createdat::timestamp as "createdAt",
+        ordernumber,
+        totalamount,
+        status,
+        'distributor' as source
+      FROM distributor_orders 
+      WHERE customeremail = ?
+      UNION ALL
       SELECT 
         'order' as type,
         id,
@@ -48,11 +74,12 @@ export async function GET(
         createdat as "createdAt",
         ordernumber,
         totalamount,
-        status
-      FROM shopify_orders 
+        status,
+        'digital' as source
+      FROM digital_orders 
       WHERE customeremail = ?
-      ORDER BY createdat DESC
-    `).all(customerEmail);
+      ORDER BY "createdAt" DESC
+    `).all(customerEmail, customerEmail, customerEmail);
 
     // Get notes
     const notes = await db.prepare(`
@@ -68,6 +95,24 @@ export async function GET(
       FROM customer_notes 
       WHERE customerid = ?
       ORDER BY createdat DESC
+    `).all(customerId);
+
+    // Get quotes
+    const quotes = await db.prepare(`
+      SELECT 
+        'quote' as type,
+        id,
+        'Quote ' || quote_id as subject,
+        'Quote ' || quote_id as content,
+        created_at as "createdAt",
+        quote_id,
+        total_amount,
+        status,
+        po_number,
+        invoice_email
+      FROM quotes 
+      WHERE customer_id = ?
+      ORDER BY created_at DESC
     `).all(customerId);
 
   // Format all interactions
@@ -88,7 +133,16 @@ export async function GET(
       content: o.content,
       authorEmail: customer.assignedto || 'system',
       createdAt: o.createdAt,
-      metadata: { orderNumber: o.orderNumber, totalAmount: o.totalAmount, status: o.status }
+      metadata: { orderNumber: o.orderNumber, totalAmount: parseFloat(o.totalAmount), status: o.status, source: o.source }
+    })),
+    ...quotes.map(q => ({
+      id: q.id,
+      type: q.type,
+      subject: q.subject,
+      content: q.content,
+      authorEmail: customer.assignedto || 'system',
+      createdAt: q.createdAt,
+      metadata: { quoteId: q.quote_id, totalAmount: parseFloat(q.total_amount), status: q.status, poNumber: q.po_number, invoiceEmail: q.invoice_email }
     })),
     ...notes.map(n => ({
       id: n.id,

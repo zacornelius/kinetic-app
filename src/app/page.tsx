@@ -34,6 +34,26 @@ type Order = {
   assignedOwner?: string; // Derived from customer record
 };
 
+type Quote = {
+  id: string;
+  quoteId: string;
+  shopifyDraftOrderId: string;
+  customerId: string;
+  customerEmail: string;
+  invoiceEmail?: string;
+  poNumber?: string;
+  status: "quoted" | "pending" | "processing";
+  totalAmount: string | number; // Can be string from database or number from API
+  palletItems: Array<[string, number]>;
+  customMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+  customerFirstName: string;
+  customerLastName: string;
+  customerPhone?: string;
+  customerCompany?: string;
+};
+
 type User = {
   id: string;
   email: string;
@@ -84,6 +104,7 @@ export default function Home() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [allInquiries, setAllInquiries] = useState<Inquiry[]>([]); // For counting purposes
   const [orders, setOrders] = useState<Order[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [category, setCategory] = useState<"all" | Category>("all");
@@ -136,6 +157,13 @@ export default function Home() {
   // Inquiry detail modal state
   const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
   const [showInquiryModal, setShowInquiryModal] = useState(false);
+  
+  // Quote detail modal state
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [poNumber, setPONumber] = useState('');
+  const [invoiceEmail, setInvoiceEmail] = useState('');
+  const [ordersTab, setOrdersTab] = useState<'quotes' | 'pending' | 'processing'>('quotes');
   const [inquiryCustomer, setInquiryCustomer] = useState<any>(null);
   const [inquiryCustomerId, setInquiryCustomerId] = useState<string | null>(null);
   const [inquiryCustomerTimeline, setInquiryCustomerTimeline] = useState<any[]>([]);
@@ -151,6 +179,185 @@ export default function Home() {
   const [dashboardView, setDashboardView] = useState<'personal' | 'leaderboard'>('personal');
   const [salesLoading, setSalesLoading] = useState(false);
 
+  // Invoice creation state
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [quoteForm, setQuoteForm] = useState({
+    customerEmail: '',
+    customerName: '',
+    billingAddress: {
+      firstName: '',
+      lastName: '',
+      address1: '',
+      city: '',
+      province: '',
+      country: 'United States',
+      zip: '',
+      phone: ''
+    },
+    palletItems: {
+      'Vital-24K': 0,
+      'Active-26K': 0,
+      'Puppy-28K': 0,
+      'Power-30K': 0,
+      'Ultra-32K': 0
+    },
+    customMessage: '',
+    existingCustomerId: '',
+    assignedTo: user?.email || ''
+  });
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteMessage, setQuoteMessage] = useState('');
+  const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  // Quote creation functions
+  const handleCreateQuote = async () => {
+    try {
+      setQuoteLoading(true);
+      setQuoteMessage('');
+
+      // Validate form
+      if (!quoteForm.customerEmail || !quoteForm.billingAddress.firstName || !quoteForm.billingAddress.lastName) {
+        setQuoteMessage('Please fill in customer email and billing name');
+        return;
+      }
+
+      const hasPalletItems = Object.values(quoteForm.palletItems).some(qty => qty > 0);
+      if (!hasPalletItems) {
+        setQuoteMessage('Please add at least one pallet item with quantity greater than 0');
+        return;
+      }
+
+      const response = await fetch('/api/shopify/create-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quoteForm)
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setQuoteMessage(`✅ Quote sent successfully to ${result.customerEmail}! Quote ID: ${result.quoteId}`);
+        // Reset form
+        setQuoteForm({
+          customerEmail: '',
+          customerName: '',
+          billingAddress: {
+            firstName: '',
+            lastName: '',
+            address1: '',
+            city: '',
+            province: '',
+            country: 'United States',
+            zip: '',
+            phone: ''
+          },
+          palletItems: {
+            'Vital-24K': 0,
+            'Active-26K': 0,
+            'Puppy-28K': 0,
+            'Power-30K': 0,
+            'Ultra-32K': 0
+          },
+          customMessage: '',
+          existingCustomerId: '',
+          assignedTo: user?.email || ''
+        });
+        setCustomerSearchQuery('');
+        setShowCustomerSearch(false);
+        setCustomerSearchResults([]);
+        setTimeout(() => setShowQuoteForm(false), 3000);
+      } else {
+        setQuoteMessage(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      setQuoteMessage(`❌ Error: ${error instanceof Error ? error.message : 'Failed to create quote'}`);
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
+  // Customer search functions
+  const searchCustomers = async (query: string) => {
+    if (!query || query.length < 2) {
+      setCustomerSearchResults([]);
+      setShowCustomerSearch(false);
+      return;
+    }
+
+    try {
+      setCustomerSearchLoading(true);
+      const response = await fetch(`/api/customers/lookup?email=${encodeURIComponent(query)}&phone=${encodeURIComponent(query)}&name=${encodeURIComponent(query)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCustomerSearchResults(data.customers || []);
+        setShowCustomerSearch(true);
+      }
+    } catch (error) {
+      console.error('Error searching customers:', error);
+      setCustomerSearchResults([]);
+    } finally {
+      setCustomerSearchLoading(false);
+    }
+  };
+
+  const selectCustomer = (customer: any) => {
+    // Parse shipping address if available
+    let parsedAddress = {
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || '',
+      phone: customer.phone || '',
+      address1: '',
+      city: '',
+      province: '',
+      country: 'United States',
+      zip: ''
+    };
+
+    if (customer.shippingAddress) {
+      // Parse the shipping address format: "Street, City, State, Country, Zip"
+      const addressParts = customer.shippingAddress.split(',').map((part: string) => part.trim());
+      if (addressParts.length >= 5) {
+        parsedAddress = {
+          firstName: customer.firstName || '',
+          lastName: customer.lastName || '',
+          phone: customer.phone || '',
+          address1: addressParts[0] || '',
+          city: addressParts[1] || '',
+          province: addressParts[2] || '',
+          country: addressParts[3] || 'United States',
+          zip: addressParts[4] || ''
+        };
+      }
+    }
+
+    setQuoteForm(prev => ({
+      ...prev,
+      customerEmail: customer.email,
+      customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
+      billingAddress: parsedAddress,
+      existingCustomerId: customer.id
+    }));
+    setShowCustomerSearch(false);
+    setCustomerSearchResults([]);
+    setCustomerSearchQuery('');
+  };
+
+  const updatePalletItem = (sku: string, quantity: number) => {
+    setQuoteForm(prev => ({
+      ...prev,
+      palletItems: { ...prev.palletItems, [sku]: Math.max(0, quantity) }
+    }));
+  };
+
+  const updateBillingAddress = (field: string, value: string) => {
+    setQuoteForm(prev => ({
+      ...prev,
+      billingAddress: { ...prev.billingAddress, [field]: value }
+    }));
+  };
 
   // Load sales dashboard data
   const loadSalesData = async () => {
@@ -661,6 +868,11 @@ export default function Home() {
     setInquiries(inquiriesData);
     setOrders(ordersData);
     
+    // Load quotes for current user (only if user is loaded)
+    if (user?.email) {
+      await loadQuotes();
+    }
+    
     // Only load all inquiries if we don't have them yet or if category is "all"
     if (category === "all" || allInquiries.length === 0) {
       const allInquiriesRes = await fetch(`/api/inquiries?_t=${Date.now()}`);
@@ -675,10 +887,65 @@ export default function Home() {
     setUsers(data);
   }
 
+  async function loadQuotes() {
+    if (!user?.email) return;
+    
+    try {
+      const res = await fetch(`/api/quotes?assignedTo=${encodeURIComponent(user.email)}`);
+      const data = await res.json();
+      setQuotes(data);
+    } catch (error) {
+      console.error('Error loading quotes:', error);
+    }
+  }
+
+  async function convertQuoteToOrder(quoteId: string, poNumber: string, invoiceEmail: string) {
+    try {
+      const response = await fetch('/api/quotes/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId, poNumber, invoiceEmail })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Update local quotes state
+        setQuotes(quotes.map(q => 
+          q.quoteId === quoteId 
+            ? { ...q, status: 'pending' as const, poNumber, invoiceEmail }
+            : q
+        ));
+        setShowQuoteModal(false);
+        // Refresh orders to show the new order
+        await refresh();
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error converting quote:', error);
+      alert('Failed to convert quote to order');
+    }
+  }
+
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category]);
+
+  // Load quotes when user becomes available
+  useEffect(() => {
+    if (user?.email) {
+      loadQuotes();
+    }
+  }, [user?.email]);
+
+  // Update assignedTo when user changes
+  useEffect(() => {
+    if (user?.email) {
+      setQuoteForm(prev => ({ ...prev, assignedTo: user.email }));
+    }
+  }, [user?.email]);
 
   useEffect(() => {
     loadUsers();
@@ -917,6 +1184,12 @@ export default function Home() {
 
   const currentOrders = useMemo(() => 
     orders.filter(o => o.assignedOwner === user?.email && o.status !== "delivered" && o.status !== "cancelled"), [orders, user]);
+
+  const pendingOrders = useMemo(() => 
+    currentOrders.filter(o => o.status === "pending"), [currentOrders]);
+
+  const processingOrders = useMemo(() => 
+    currentOrders.filter(o => o.status === "processing"), [currentOrders]);
 
   const allCustomerOrders = useMemo(() => {
     const customerMap = new Map();
@@ -1368,61 +1641,100 @@ export default function Home() {
   function renderActionsTab() {
     return (
       <div className="space-y-4">
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-green-600">
-            My Assigned Inquiries ({assignedInquiries.length})
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {assignedInquiries.map((q) => (
-                <div 
-                  key={`my-inquiries-${q.id}`} 
-                  onClick={() => loadInquiryDetails(q)}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-900 mb-2">{q.customerName || q.customerEmail}</h3>
-                      <div className="text-sm text-gray-600 mb-2 overflow-hidden" style={{height: '4.5rem', lineHeight: '1.5rem'}}>
-                    <div style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
-                      {getFirstThreeLines(q.originalMessage)}
-                  </div>
-                  </div>
-                      <p className="text-xs text-gray-400">
-                        {new Date(q.createdAt).toLocaleString()}
-                      </p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                    {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
-                  </span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-600">
-                    {q.status}
-                  </span>
-                </div>
+        {/* Compact Header */}
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+          <p className="text-xs text-gray-600 mt-1">Common tasks and workflows</p>
+        </div>
+
+        {/* Compact Action Buttons */}
+        <div className="space-y-3">
+          {/* Create Quote */}
+          <button 
+            onClick={() => setShowQuoteForm(true)}
+            className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-[#3B83BE] transition-all duration-200 group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: '#3B83BE20' }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#3B83BE' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-              
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-500">Click to view details</p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-600">{q.assignedOwner || 'Unassigned'}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const newOwner = prompt('Enter new owner email (or leave blank to unassign):', q.assignedOwner || '');
-                        if (newOwner !== null) {
-                          reassignInquiry(q.id, newOwner);
-                        }
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-800 underline"
-                    >
-                      Change
-                    </button>
-                  </div>
-                </div>
+              <div className="flex-1 text-left">
+                <h3 className="font-medium text-gray-900">Build a Pallet</h3>
+                <p className="text-xs text-gray-600 mt-0.5">Create pallet quote</p>
+              </div>
+              <div style={{ color: '#3B83BE' }} className="group-hover:opacity-80">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </div>
-          ))}
+          </button>
+
+          {/* Log Issue */}
+          <button 
+            onClick={() => {
+              // TODO: Implement log issue functionality
+              alert('Log Issue functionality coming soon!');
+            }}
+            className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-[#C43C37] transition-all duration-200 group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: '#C43C3720' }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#C43C37' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="font-medium text-gray-900">Log Issue</h3>
+                <p className="text-xs text-gray-600 mt-0.5">Report customer issues</p>
+              </div>
+              <div style={{ color: '#C43C37' }} className="group-hover:opacity-80">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </button>
+
+          {/* Send Trial */}
+          <button 
+            onClick={() => {
+              // TODO: Implement send trial functionality
+              alert('Send Trial functionality coming soon!');
+            }}
+            className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-[#5BAB56] transition-all duration-200 group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: '#5BAB5620' }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#5BAB56' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="font-medium text-gray-900">Send Trial</h3>
+                <p className="text-xs text-gray-600 mt-0.5">Initiate product trials</p>
+              </div>
+              <div style={{ color: '#5BAB56' }} className="group-hover:opacity-80">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Compact Recent Activity */}
+        <div className="bg-white rounded-lg shadow-sm">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900">Recent Activity</h3>
+          </div>
+          <div className="p-4">
+            <div className="text-center py-6 text-gray-500">
+              <div className="text-2xl mb-2">📋</div>
+              <div className="text-xs">No recent activity</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1430,49 +1742,150 @@ export default function Home() {
   }
 
   function renderOrdersTab() {
+    const quotedQuotes = quotes.filter(q => q.status === 'quoted');
+    const pendingQuotes = quotes.filter(q => q.status === 'pending');
+    
+    const renderTabButton = (tab: 'quotes' | 'pending' | 'processing', label: string, count: number) => (
+      <button
+        onClick={() => setOrdersTab(tab)}
+        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+          ordersTab === tab
+            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+        }`}
+      >
+        {label} ({count})
+      </button>
+    );
+
+    const renderQuoteCard = (quote: Quote) => (
+      <div 
+        key={quote.id} 
+        className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => {
+          setSelectedQuote(quote);
+          setPONumber(quote.poNumber || '');
+          setInvoiceEmail(quote.invoiceEmail || '');
+          setShowQuoteModal(true);
+        }}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <div className="text-sm font-medium text-gray-900 mb-1">
+              {quote.quoteId}
+            </div>
+            <div className="text-xs text-gray-500 mb-1">
+              {quote.customerFirstName} {quote.customerLastName}
+            </div>
+            <div className="text-xs text-gray-400">{quote.customerEmail}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-medium text-gray-900 mb-1">
+              ${parseFloat(quote.totalAmount).toFixed(2)}
+            </div>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              quote.status === "quoted" ? "bg-blue-100 text-blue-600" :
+              quote.status === "pending" ? "bg-yellow-100 text-yellow-600" :
+              "bg-green-100 text-green-600"
+            }`}>
+              {quote.status}
+            </span>
+          </div>
+        </div>
+        <div className="text-xs text-gray-400">
+          {new Date(quote.createdAt).toLocaleString()}
+        </div>
+      </div>
+    );
+
+    const renderOrderCard = (order: any) => (
+      <div key={order.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <div className="text-sm font-medium text-gray-900 mb-1">
+              {order.orderNumber}
+            </div>
+            <div className="text-xs text-gray-500 mb-1">
+              {order.customerName || order.customerEmail}
+            </div>
+            {order.companyName && (
+              <div className="text-xs text-gray-400">{order.companyName}</div>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-medium text-gray-900 mb-1">
+              ${order.totalAmount?.toFixed(2) || "N/A"}
+            </div>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              order.status === "pending" ? "bg-yellow-100 text-yellow-600" :
+              order.status === "processing" ? "bg-[#3B83BE]/10 text-[#3B83BE]" :
+              order.status === "shipped" ? "bg-purple-100 text-purple-600" :
+              "bg-gray-100 text-gray-600"
+            }`}>
+              {order.status}
+            </span>
+          </div>
+        </div>
+        {order.trackingNumber && (
+          <div className="text-xs text-gray-500 mb-2">
+            Tracking: {order.trackingNumber}
+          </div>
+        )}
+        <div className="text-xs text-gray-400">
+          {new Date(order.createdAt).toLocaleString()}
+        </div>
+      </div>
+    );
+    
     return (
       <div className="space-y-4">
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-4 border-b">
-            <h3 className="text-sm font-medium text-blue-600">
-              Current Orders ({currentOrders.length})
-            </h3>
-          </div>
-          <div className="divide-y">
-            {currentOrders.map((order) => (
-              <div key={order.id} className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900 mb-1">
-                      {order.orderNumber}
-                    </div>
-                    <div className="text-xs text-gray-500">{order.customerName || order.customerEmail}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900">
-                      ${order.totalAmount?.toFixed(2) || "N/A"}
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      order.status === "pending" ? "bg-yellow-100 text-yellow-600" :
-                      order.status === "processing" ? "bg-[#3B83BE]/10 text-[#3B83BE]" :
-                      order.status === "shipped" ? "bg-purple-100 text-purple-600" :
-                      "bg-gray-100 text-gray-600"
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
+        {/* Tab Buttons */}
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+          {renderTabButton('quotes', 'Quotes', quotedQuotes.length)}
+          {renderTabButton('pending', 'Pending Orders', pendingOrders.length)}
+          {renderTabButton('processing', 'Processing Orders', processingOrders.length)}
+        </div>
+
+        {/* Tab Content */}
+        <div className="space-y-3">
+          {ordersTab === 'quotes' && (
+            <>
+              {quotedQuotes.length > 0 ? (
+                quotedQuotes.map(renderQuoteCard)
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                  <div className="text-gray-500 text-sm">No quotes found</div>
+                  <div className="text-gray-400 text-xs mt-1">Create quotes from the Actions tab</div>
                 </div>
-                {order.trackingNumber && (
-                  <div className="text-xs text-gray-500 mb-2">
-                    Tracking: {order.trackingNumber}
-                  </div>
-                )}
-                <div className="text-xs text-gray-400">
-                  {new Date(order.createdAt).toLocaleString()}
+              )}
+            </>
+          )}
+
+          {ordersTab === 'pending' && (
+            <>
+              {pendingOrders.length > 0 ? (
+                pendingOrders.map(renderOrderCard)
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                  <div className="text-gray-500 text-sm">No pending orders</div>
+                  <div className="text-gray-400 text-xs mt-1">Orders waiting for payment will appear here</div>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </>
+          )}
+
+          {ordersTab === 'processing' && (
+            <>
+              {processingOrders.length > 0 ? (
+                processingOrders.map(renderOrderCard)
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                  <div className="text-gray-500 text-sm">No processing orders</div>
+                  <div className="text-gray-400 text-xs mt-1">Paid orders ready to ship will appear here</div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
@@ -1586,11 +1999,11 @@ export default function Home() {
                     )}
           </div>
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                    customer.status === 'customer' ? 'bg-green-100 text-green-800' :
-                    customer.status === 'prospect' ? 'bg-yellow-100 text-yellow-800' :
+                    customer.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
+                    customer.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
-                    {customer.status}
+                    {customer.customertype || 'Unknown'}
                   </span>
                     </div>
                 
@@ -1767,19 +2180,31 @@ export default function Home() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
               {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {selectedCustomer.firstName} {selectedCustomer.lastName}
-                  </h2>
-                  <p className="text-sm text-gray-600">{selectedCustomer.email}</p>
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {selectedCustomer.firstName} {selectedCustomer.lastName}
+                    </h2>
+                    
+                    {/* Customer Type Bubble */}
+                    {selectedCustomer.customertype && (
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedCustomer.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
+                        selectedCustomer.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedCustomer.customertype}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={closeCustomerModal}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  onClick={closeCustomerModal}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
-                >
-                  ×
-                </button>
               </div>
 
               {/* Modal Content */}
@@ -1815,48 +2240,26 @@ export default function Home() {
                           <span className="font-medium">{selectedCustomer.phone || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Company:</span>
-                          <span className="font-medium">{selectedCustomer.companyName || 'Not provided'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Type:</span>
-                          <span className="font-medium">{selectedCustomer.customerType || 'Not specified'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Number of Dogs:</span>
-                          <span className="font-medium">{selectedCustomer.numberOfDogs || 'Not specified'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Status:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedCustomer.status === 'customer' ? 'bg-green-100 text-green-800' :
-                            selectedCustomer.status === 'prospect' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {selectedCustomer.status || 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Source:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            selectedCustomer.source === 'shopify' ? 'bg-green-100 text-green-800' :
-                            selectedCustomer.source === 'quickbooks' ? 'bg-blue-100 text-blue-800' :
-                            selectedCustomer.source === 'website' ? 'bg-purple-100 text-purple-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {selectedCustomer.source || 'Unknown'}
-                          </span>
+                          <span className="text-gray-600">Category:</span>
+                          <span className="font-medium">{selectedCustomer.customercategory || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Assigned To:</span>
                           <span className="font-medium">{selectedCustomer.assignedOwner || selectedCustomer.assignedTo || 'Unassigned'}</span>
                         </div>
-                        {selectedCustomer.reason && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Inquiry Reason:</span>
-                            <span className="font-medium">{selectedCustomer.reason}</span>
-                          </div>
-                        )}
+                      </div>
+                      
+                      {/* Add Note Button */}
+                      <div className="pt-4">
+                        <button
+                          onClick={() => {
+                            closeCustomerModal();
+                            openNoteModal(selectedCustomer.id, 'note');
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                        >
+                          Add Note
+                        </button>
                       </div>
                     </div>
 
@@ -1888,6 +2291,9 @@ export default function Home() {
                                   {item.type === 'order' && item.metadata.totalAmount && (
                                     <span>Amount: ${item.metadata.totalAmount.toFixed(2)} | Status: {item.metadata.status}</span>
                                   )}
+                                  {item.type === 'quote' && item.metadata.totalAmount && (
+                                    <span>Amount: ${item.metadata.totalAmount.toFixed(2)} | Status: {item.metadata.status}</span>
+                                  )}
                                   {item.type === 'customer_inquiry' && item.metadata.reason && (
                                     <span>Reason: {item.metadata.reason} | Type: {item.metadata.customerType}</span>
                                   )}
@@ -1908,24 +2314,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Modal Footer */}
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-                <button
-                  onClick={closeCustomerModal}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    closeCustomerModal();
-                    openNoteModal(selectedCustomer.id, 'note');
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-                >
-                  Add Note
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -1934,32 +2322,31 @@ export default function Home() {
         {topCustomersModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-              {/* Modal Header with Buttons */}
+              {/* Modal Header */}
               <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-gray-900">
                       {topCustomersModal.firstname} {topCustomersModal.lastname}
                     </h2>
-                    <p className="text-sm text-gray-600">{topCustomersModal.email}</p>
+                    
+                    {/* Customer Type Bubble */}
+                    {topCustomersModal.customertype && (
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        topCustomersModal.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
+                        topCustomersModal.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {topCustomersModal.customertype}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        setTopCustomersModal(null);
-                        openNoteModal(topCustomersModal.id, 'note');
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-                    >
-                      Add Note
-                    </button>
-                    <button
-                      onClick={() => setTopCustomersModal(null)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
-                    >
-                      Close
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setTopCustomersModal(null)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
 
@@ -1975,11 +2362,11 @@ export default function Home() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <div className="text-2xl font-bold text-blue-600">${topCustomersModal.total_spent?.toLocaleString() || '0'}</div>
-                        <div className="text-sm text-gray-600">Lifetime Value</div>
+                        <div className="text-sm text-gray-600">Total Spent</div>
                       </div>
                       <div className="bg-green-50 p-4 rounded-lg">
                         <div className="text-2xl font-bold text-green-600">{topCustomersModal.order_count || 0}</div>
-                        <div className="text-sm text-gray-600">Purchase History</div>
+                        <div className="text-sm text-gray-600">Total Orders</div>
                       </div>
                     </div>
 
@@ -1996,29 +2383,33 @@ export default function Home() {
                           <span className="font-medium">{topCustomersModal.phone || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Company:</span>
-                          <span className="font-medium">{topCustomersModal.company || 'Not provided'}</span>
+                          <span className="text-gray-600">Category:</span>
+                          <span className="font-medium">{topCustomersModal.customercategory || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Status:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            topCustomersModal.status === 'active' ? 'bg-green-100 text-green-800' :
-                            topCustomersModal.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {topCustomersModal.status || 'Unknown'}
+                          <span className="text-gray-600">Assigned To:</span>
+                          <span className="font-medium">
+                            {dashboardView === 'leaderboard' 
+                              ? (topCustomersModal.owner === 'iand@kineticdogfood.com' ? 'Ian' : 
+                                 topCustomersModal.owner === 'ericb@kineticdogfood.com' ? 'Eric' : 
+                                 topCustomersModal.owner === 'Dave@kineticdogfood.com' ? 'Dave' : topCustomersModal.owner)
+                              : (topCustomersModal.assignedto || 'Unassigned')
+                            }
                           </span>
                         </div>
-                        {dashboardView === 'leaderboard' && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Owner:</span>
-                            <span className="font-medium">
-                              {topCustomersModal.owner === 'iand@kineticdogfood.com' ? 'Ian' : 
-                               topCustomersModal.owner === 'ericb@kineticdogfood.com' ? 'Eric' : 
-                               topCustomersModal.owner === 'Dave@kineticdogfood.com' ? 'Dave' : topCustomersModal.owner}
-                            </span>
-                          </div>
-                        )}
+                      </div>
+                      
+                      {/* Add Note Button */}
+                      <div className="pt-4">
+                        <button
+                          onClick={() => {
+                            setTopCustomersModal(null);
+                            openNoteModal(topCustomersModal.id, 'note');
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                        >
+                          Add Note
+                        </button>
                       </div>
                     </div>
 
@@ -2068,6 +2459,9 @@ export default function Home() {
                               {item.metadata && (
                                 <div className="mt-1 text-xs text-gray-500">
                                   {item.type === 'order' && item.metadata.totalAmount && (
+                                    <span>Amount: ${item.metadata.totalAmount.toFixed(2)} | Status: {item.metadata.status}</span>
+                                  )}
+                                  {item.type === 'quote' && item.metadata.totalAmount && (
                                     <span>Amount: ${item.metadata.totalAmount.toFixed(2)} | Status: {item.metadata.status}</span>
                                   )}
                                   {item.type === 'customer_inquiry' && item.metadata.reason && (
@@ -2122,13 +2516,13 @@ export default function Home() {
                     }`}>
                       {selectedInquiry.category === "issues" ? "Issue" : selectedInquiry.category === "questions" ? "Question" : selectedInquiry.category.charAt(0).toUpperCase() + selectedInquiry.category.slice(1)}
                     </span>
-                    {inquiryCustomer?.status && (
+                    {inquiryCustomer?.customertype && (
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        inquiryCustomer.status === 'customer' ? 'bg-green-100 text-green-800' :
-                        inquiryCustomer.status === 'contact' ? 'bg-blue-100 text-blue-800' :
+                        inquiryCustomer.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
+                        inquiryCustomer.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {inquiryCustomer.status}
+                        {inquiryCustomer.customertype}
                       </span>
                     )}
                   </div>
@@ -2150,23 +2544,23 @@ export default function Home() {
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Customer Contact</h3>
                     {inquiryCustomer ? (
                       <div className="space-y-2">
-                        <div><span className="font-medium">Email:</span> {inquiryCustomer.email}</div>
+                        <div><span className="text-gray-600">Email:</span> <span className="font-medium">{inquiryCustomer.email}</span></div>
                         {inquiryCustomer.phone && (
-                          <div><span className="font-medium">Phone:</span> {inquiryCustomer.phone}</div>
+                          <div><span className="text-gray-600">Phone:</span> <span className="font-medium">{inquiryCustomer.phone}</span></div>
                         )}
                         {selectedInquiry?.customerCategory && (
-                          <div><span className="font-medium">Type:</span> {selectedInquiry.customerCategory}</div>
+                          <div><span className="text-gray-600">Category:</span> <span className="font-medium">{selectedInquiry.customerCategory}</span></div>
                         )}
                         {inquiryCustomer.companyName && (
-                          <div><span className="font-medium">Company:</span> {inquiryCustomer.companyName}</div>
+                          <div><span className="text-gray-600">Company:</span> <span className="font-medium">{inquiryCustomer.companyName}</span></div>
                         )}
                         {inquiryCustomer.numberOfDogs && (
-                          <div><span className="font-medium">Number of Dogs:</span> {inquiryCustomer.numberOfDogs}</div>
+                          <div><span className="text-gray-600">Number of Dogs:</span> <span className="font-medium">{inquiryCustomer.numberOfDogs}</span></div>
                         )}
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <div><span className="font-medium">Email:</span> {selectedInquiry?.customerEmail}</div>
+                        <div><span className="text-gray-600">Email:</span> <span className="font-medium">{selectedInquiry?.customerEmail}</span></div>
                         <div className="text-gray-500 text-sm mt-2">
                           This is a new inquiry. Customer details will be captured when the inquiry is submitted.
                         </div>
@@ -2271,6 +2665,151 @@ export default function Home() {
           </div>
         )}
 
+        {/* Quote Detail Modal */}
+        {showQuoteModal && selectedQuote && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Quote {selectedQuote.quoteId}
+                    </h2>
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedQuote.status === "quoted" ? "bg-blue-100 text-blue-800" :
+                      selectedQuote.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                      "bg-green-100 text-green-800"
+                    }`}>
+                      {selectedQuote.status}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowQuoteModal(false)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {/* Customer Info */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Customer Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div><span className="text-gray-600">Name:</span> <span className="font-medium">{selectedQuote.customerFirstName} {selectedQuote.customerLastName}</span></div>
+                    <div><span className="text-gray-600">Email:</span> <span className="font-medium">{selectedQuote.customerEmail}</span></div>
+                    {selectedQuote.customerPhone && (
+                      <div><span className="text-gray-600">Phone:</span> <span className="font-medium">{selectedQuote.customerPhone}</span></div>
+                    )}
+                    {selectedQuote.customerCompany && (
+                      <div><span className="text-gray-600">Company:</span> <span className="font-medium">{selectedQuote.customerCompany}</span></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quote Details */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Quote Details</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div><span className="text-gray-600">Total Amount:</span> <span className="font-medium">${parseFloat(selectedQuote.totalAmount).toFixed(2)}</span></div>
+                      <div><span className="text-gray-600">Created:</span> <span className="font-medium">{new Date(selectedQuote.createdAt).toLocaleString()}</span></div>
+                    </div>
+                    
+                    {/* Pallet Items */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Pallet Items</h4>
+                      <div className="space-y-1">
+                        {selectedQuote.palletItems.map(([sku, qty]) => (
+                          <div key={sku} className="flex justify-between text-sm">
+                            <span>{sku}</span>
+                            <span className="font-medium">{qty}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {selectedQuote.customMessage && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Custom Message</h4>
+                        <p className="text-sm text-gray-600 bg-white p-3 rounded border">{selectedQuote.customMessage}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* PO Capture Form (only show if status is 'quoted') */}
+                {selectedQuote.status === 'quoted' && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">Convert to Order</h3>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          PO Number *
+                        </label>
+                        <input
+                          type="text"
+                          value={poNumber}
+                          onChange={(e) => setPONumber(e.target.value)}
+                          placeholder="Enter purchase order number"
+                          className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Invoice Email *
+                        </label>
+                        <input
+                          type="email"
+                          value={invoiceEmail}
+                          onChange={(e) => setInvoiceEmail(e.target.value)}
+                          placeholder="Enter procurement email address"
+                          className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => convertQuoteToOrder(selectedQuote.quoteId, poNumber, invoiceEmail)}
+                          disabled={!poNumber.trim() || !invoiceEmail.trim()}
+                          className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          Submit Order
+                        </button>
+                        <button
+                          onClick={() => setShowQuoteModal(false)}
+                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show PO info if already captured */}
+                {(selectedQuote.poNumber || selectedQuote.invoiceEmail) && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">Order Information</h3>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+                      {selectedQuote.poNumber && (
+                        <div><span className="text-gray-600">PO Number:</span> <span className="font-medium">{selectedQuote.poNumber}</span></div>
+                      )}
+                      {selectedQuote.invoiceEmail && (
+                        <div><span className="text-gray-600">Invoice Email:</span> <span className="font-medium">{selectedQuote.invoiceEmail}</span></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Note Modal */}
         {showNoteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2313,8 +2852,302 @@ export default function Home() {
         </div>
       )}
 
+      {/* Quote Creation Modal */}
+      {showQuoteForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Build a Pallet Quote</h2>
+                  <p className="text-sm text-gray-600 mt-1">Create and send a pallet quote through Shopify</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowQuoteForm(false);
+                    setCustomerSearchQuery('');
+                    setShowCustomerSearch(false);
+                    setCustomerSearchResults([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {quoteMessage && (
+                <div className={`p-3 rounded text-sm mb-4 ${
+                  quoteMessage.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {quoteMessage}
+                </div>
+              )}
+
+              <form onSubmit={(e) => { e.preventDefault(); handleCreateQuote(); }} className="space-y-6">
+                {/* Customer Information */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Customer Information</h3>
+                  
+                  {/* Customer Search */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Search Existing Customer</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search by email, phone, or name..."
+                        value={customerSearchQuery}
+                        onChange={(e) => {
+                          const query = e.target.value;
+                          setCustomerSearchQuery(query);
+                          if (query.length >= 2) {
+                            searchCustomers(query);
+                          } else {
+                            setShowCustomerSearch(false);
+                            setCustomerSearchResults([]);
+                          }
+                        }}
+                        onBlur={() => {
+                          // Delay hiding to allow click on results
+                          setTimeout(() => setShowCustomerSearch(false), 200);
+                        }}
+                        onFocus={() => {
+                          if (customerSearchQuery.length >= 2 && customerSearchResults.length > 0) {
+                            setShowCustomerSearch(true);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                      />
+                      {customerSearchLoading && (
+                        <div className="absolute right-3 top-2">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#3B83BE]"></div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Customer Search Results */}
+                    {showCustomerSearch && customerSearchResults.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {customerSearchResults.map((customer) => (
+                          <div
+                            key={customer.id}
+                            onClick={() => selectCustomer(customer)}
+                            className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="font-medium text-gray-900">
+                              {customer.firstName} {customer.lastName}
+                            </div>
+                            <div className="text-sm text-gray-600">{customer.email}</div>
+                            {customer.phone && (
+                              <div className="text-sm text-gray-500">{customer.phone}</div>
+                            )}
+                            <div className="text-xs text-gray-400 mt-1">
+                              {customer.customerType} • {customer.totalOrders > 0 ? `${customer.totalOrders} orders` : 'No orders'} • {customer.source || 'Unknown source'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* No results message */}
+                    {showCustomerSearch && customerSearchResults.length === 0 && !customerSearchLoading && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-3 text-sm text-gray-500">
+                        No customers found
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={quoteForm.customerEmail}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, customerEmail: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="customer@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                      <input
+                        type="text"
+                        value={quoteForm.customerName}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, customerName: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="Customer Name"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Billing Address */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Billing Address</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={quoteForm.billingAddress.firstName}
+                        onChange={(e) => updateBillingAddress('firstName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="John"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={quoteForm.billingAddress.lastName}
+                        onChange={(e) => updateBillingAddress('lastName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="Doe"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                      <input
+                        type="text"
+                        required
+                        value={quoteForm.billingAddress.address1}
+                        onChange={(e) => updateBillingAddress('address1', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="123 Main St"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                      <input
+                        type="text"
+                        required
+                        value={quoteForm.billingAddress.city}
+                        onChange={(e) => updateBillingAddress('city', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="New York"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                      <input
+                        type="text"
+                        required
+                        value={quoteForm.billingAddress.province}
+                        onChange={(e) => updateBillingAddress('province', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="NY"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code *</label>
+                      <input
+                        type="text"
+                        required
+                        value={quoteForm.billingAddress.zip}
+                        onChange={(e) => updateBillingAddress('zip', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="10001"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <input
+                        type="tel"
+                        value={quoteForm.billingAddress.phone}
+                        onChange={(e) => updateBillingAddress('phone', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="+1234567890"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pallet Items */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Build a Pallet - Product Quantities</h3>
+                  <div className="space-y-3">
+                    {Object.entries(quoteForm.palletItems).map(([sku, quantity]) => (
+                      <div key={sku} className="flex items-center gap-4 p-3 border border-gray-200 rounded-md">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{sku}</label>
+                          <div className="text-xs text-gray-500">
+                            {sku === 'Vital-24K' && 'Vital 24K - Adult Maintenance'}
+                            {sku === 'Active-26K' && 'Active 26K - High Energy Dogs'}
+                            {sku === 'Puppy-28K' && 'Puppy 28K - Puppy Growth'}
+                            {sku === 'Power-30K' && 'Power 30K - Working Dogs'}
+                            {sku === 'Ultra-32K' && 'Ultra 32K - Performance Dogs'}
+                          </div>
+                        </div>
+                        <div className="w-24">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={quantity}
+                            onChange={(e) => updatePalletItem(sku, parseInt(e.target.value) || 0)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent text-center"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 p-3 bg-blue-50 rounded-md">
+                    <div className="text-sm text-blue-800">
+                      <strong>Total Items:</strong> {Object.values(quoteForm.palletItems).reduce((sum, qty) => sum + qty, 0)} bags
+                    </div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      Each pallet typically contains 50 bags. Quantities entered are individual bags.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Custom Message */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Custom Message</label>
+                  <textarea
+                    value={quoteForm.customMessage}
+                    onChange={(e) => setQuoteForm(prev => ({ ...prev, customMessage: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                    placeholder="Thank you for your business! Please review and complete your payment."
+                  />
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowQuoteForm(false);
+                      setCustomerSearchQuery('');
+                      setShowCustomerSearch(false);
+                      setCustomerSearchResults([]);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={quoteLoading}
+                    className="px-4 py-2 bg-[#3B83BE] text-white rounded-md hover:bg-[#2d6ba3] disabled:opacity-50"
+                  >
+                    {quoteLoading ? 'Creating Pallet Quote...' : 'Create & Send Pallet Quote'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
     </ProtectedRoute>
   );
 }
+
 
