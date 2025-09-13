@@ -1,0 +1,228 @@
+2025-09-13 21:33:41 - === Starting Kinetic App Database Backup ===
+2025-09-13 21:33:41 - Starting database backup...
+pg_dump: error: connection to server at "localhost" (127.0.0.1), port 5432 failed: fe_sendauth: no password supplied
+2025-09-13 21:33:41 - ERROR: Database backup failed
+2025-09-13 21:33:41 - ERROR: Backup creation failed
+2025-09-13 21:33:53 - === Starting Kinetic App Database Backup ===
+2025-09-13 21:33:53 - Starting database backup...
+pg_dump: last built-in OID is 16383
+pg_dump: reading extensions
+pg_dump: identifying extension members
+pg_dump: reading schemas
+pg_dump: reading user-defined tables
+pg_dump: reading user-defined functions
+pg_dump: reading user-defined types
+pg_dump: reading procedural languages
+pg_dump: reading user-defined aggregate functions
+pg_dump: reading user-defined operators
+pg_dump: reading user-defined access methods
+pg_dump: reading user-defined operator classes
+pg_dump: reading user-defined operator families
+pg_dump: reading user-defined text search parsers
+pg_dump: reading user-defined text search templates
+pg_dump: reading user-defined text search dictionaries
+pg_dump: reading user-defined text search configurations
+pg_dump: reading user-defined foreign-data wrappers
+pg_dump: reading user-defined foreign servers
+pg_dump: reading default privileges
+pg_dump: reading user-defined collations
+pg_dump: reading user-defined conversions
+pg_dump: reading type casts
+pg_dump: reading transforms
+pg_dump: reading table inheritance information
+pg_dump: reading event triggers
+pg_dump: finding extension tables
+pg_dump: finding inheritance relationships
+pg_dump: reading column info for interesting tables
+pg_dump: finding table default expressions
+pg_dump: finding table check constraints
+pg_dump: flagging inherited columns in subtables
+pg_dump: reading partitioning data
+pg_dump: reading indexes
+pg_dump: flagging indexes in partitioned tables
+pg_dump: reading extended statistics
+pg_dump: reading constraints
+pg_dump: reading triggers
+pg_dump: reading rewrite rules
+pg_dump: reading policies
+pg_dump: reading row-level security policies
+pg_dump: reading publications
+pg_dump: reading publication membership of tables
+pg_dump: reading publication membership of schemas
+pg_dump: reading subscriptions
+pg_dump: reading large objects
+pg_dump: reading dependency data
+pg_dump: saving encoding = UTF8
+pg_dump: saving standard_conforming_strings = on
+pg_dump: saving search_path = 
+pg_dump: creating TABLE "public.all_customers"
+pg_dump: creating TABLE "public.all_orders"
+pg_dump: creating TABLE "public.customer_inquiries"
+pg_dump: creating TABLE "public.customer_interactions"
+pg_dump: creating TABLE "public.customer_notes"
+pg_dump: creating TABLE "public.customer_profiles"
+pg_dump: creating TABLE "public.customer_sources"
+pg_dump: creating TABLE "public.customers"
+pg_dump: creating TABLE "public.customers_new"
+pg_dump: creating TABLE "public.digital_orders"
+pg_dump: creating TABLE "public.distributor_orders"
+pg_dump: creating TABLE "public.inquiries"
+pg_dump: creating TABLE "public.products"
+pg_dump: creating TABLE "public.push_subscriptions"
+pg_dump: creating SEQUENCE "public.push_subscriptions_id_seq"
+pg_dump: creating SEQUENCE OWNED BY "public.push_subscriptions_id_seq"
+pg_dump: creating TABLE "public.quickbooks_customers"
+pg_dump: creating TABLE "public.quickbooks_orders"
+pg_dump: creating TABLE "public.quotes"
+pg_dump: creating SEQUENCE "public.quotes_id_seq"
+pg_dump: creating SEQUENCE OWNED BY "public.quotes_id_seq"
+pg_dump: creating TABLE "public.shopify_customers"
+pg_dump: creating TABLE "public.shopify_orders"
+pg_dump: creating TABLE "public.users"
+pg_dump: creating DEFAULT "public.push_subscriptions id"
+pg_dump: creating DEFAULT "public.quotes id"
+pg_dump: processing data for table "public.all_customers"
+pg_dump: dumping contents of table "public.all_customers"
+pg_dump: processing data for table "public.all_orders"
+pg_dump: dumping contents of table "public.all_orders"
+pg_dump: processing data for table "public.customer_inquiries"
+pg_dump: dumping contents of table "public.customer_inquiries"
+pg_dump: processing data for table "public.customer_interactions"
+pg_dump: dumping contents of table "public.customer_interactions"
+pg_dump: processing data for table "public.customer_notes"
+pg_dump: dumping contents of table "public.customer_notes"
+pg_dump: processing data for table "public.customer_profiles"
+pg_dump: dumping contents of table "public.customer_profiles"
+pg_dump: processing data for table "public.customer_sources"
+pg_dump: dumping contents of table "public.customer_sources"
+pg_dump: processing data for table "public.customers"
+pg_dump: dumping contents of table "public.customers"
+pg_dump: processing data for table "public.customers_new"
+pg_dump: dumping contents of table "public.customers_new"
+pg_dump: processing data for table "public.digital_orders"
+pg_dump: dumping contents of table "public.digital_orders"
+pg_dump: processing data for table "public.distributor_orders"
+pg_dump: dumping contents of table "public.distributor_orders"
+pg_dump: processing data for table "public.inquiries"
+pg_dump: dumping contents of table "public.inquiries"
+pg_dump: processing data for table "public.products"
+pg_dump: dumping contents of table "public.products"
+pg_dump: processing data for table "public.push_subscriptions"
+pg_dump: dumping contents of table "public.push_subscriptions"
+pg_dump: processing data for table "public.quickbooks_customers"
+pg_dump: dumping contents of table "public.quickbooks_customers"
+pg_dump: processing data for table "public.quickbooks_orders"
+pg_dump: dumping contents of table "public.quickbooks_orders"
+pg_dump: processing data for table "public.quotes"
+pg_dump: dumping contents of table "public.quotes"
+pg_dump: processing data for table "public.shopify_customers"
+pg_dump: dumping contents of table "public.shopify_customers"
+pg_dump: processing data for table "public.shopify_orders"
+pg_dump: dumping contents of table "public.shopify_orders"
+pg_dump: processing data for table "public.users"
+pg_dump: dumping contents of table "public.users"
+pg_dump: executing SEQUENCE SET push_subscriptions_id_seq
+pg_dump: executing SEQUENCE SET quotes_id_seq
+pg_dump: creating CONSTRAINT "public.all_customers all_customers_email_key"
+pg_dump: creating CONSTRAINT "public.all_customers all_customers_pkey"
+pg_dump: creating CONSTRAINT "public.all_orders all_orders_ordernumber_key"
+pg_dump: creating CONSTRAINT "public.all_orders all_orders_pkey"
+pg_dump: creating CONSTRAINT "public.customer_inquiries customer_inquiries_pkey"
+pg_dump: creating CONSTRAINT "public.customer_interactions customer_interactions_pkey"
+pg_dump: creating CONSTRAINT "public.customer_notes customer_notes_pkey"
+pg_dump: creating CONSTRAINT "public.customer_profiles customer_profiles_email_key"
+pg_dump: creating CONSTRAINT "public.customer_profiles customer_profiles_pkey"
+pg_dump: creating CONSTRAINT "public.customer_sources customer_sources_pkey"
+pg_dump: creating CONSTRAINT "public.customers customers_email_key"
+pg_dump: creating CONSTRAINT "public.customers_new customers_new_email_key"
+pg_dump: creating CONSTRAINT "public.customers_new customers_new_pkey"
+pg_dump: creating CONSTRAINT "public.customers customers_pkey"
+pg_dump: creating CONSTRAINT "public.digital_orders digital_orders_ordernumber_key"
+pg_dump: creating CONSTRAINT "public.digital_orders digital_orders_pkey"
+pg_dump: creating CONSTRAINT "public.distributor_orders distributor_orders_ordernumber_key"
+pg_dump: creating CONSTRAINT "public.distributor_orders distributor_orders_pkey"
+pg_dump: creating CONSTRAINT "public.inquiries inquiries_pkey"
+pg_dump: creating CONSTRAINT "public.products products_pkey"
+pg_dump: creating CONSTRAINT "public.products products_shopifyproductid_key"
+pg_dump: creating CONSTRAINT "public.products products_sku_key"
+pg_dump: creating CONSTRAINT "public.push_subscriptions push_subscriptions_endpoint_key"
+pg_dump: creating CONSTRAINT "public.push_subscriptions push_subscriptions_pkey"
+pg_dump: creating CONSTRAINT "public.quickbooks_customers quickbooks_customers_pkey"
+pg_dump: creating CONSTRAINT "public.quickbooks_customers quickbooks_customers_quickbooksid_key"
+pg_dump: creating CONSTRAINT "public.quickbooks_orders quickbooks_orders_ordernumber_key"
+pg_dump: creating CONSTRAINT "public.quickbooks_orders quickbooks_orders_pkey"
+pg_dump: creating CONSTRAINT "public.quickbooks_orders quickbooks_orders_quickbooksinvoiceid_key"
+pg_dump: creating CONSTRAINT "public.quotes quotes_pkey"
+pg_dump: creating CONSTRAINT "public.quotes quotes_quote_id_key"
+pg_dump: creating CONSTRAINT "public.shopify_customers shopify_customers_email_key"
+pg_dump: creating CONSTRAINT "public.shopify_customers shopify_customers_pkey"
+pg_dump: creating CONSTRAINT "public.shopify_orders shopify_orders_ordernumber_key"
+pg_dump: creating CONSTRAINT "public.shopify_orders shopify_orders_pkey"
+pg_dump: creating CONSTRAINT "public.users users_email_key"
+pg_dump: creating CONSTRAINT "public.users users_pkey"
+pg_dump: creating INDEX "public.idx_all_customers_email"
+pg_dump: creating INDEX "public.idx_all_customers_source"
+pg_dump: creating INDEX "public.idx_all_customers_source_id"
+pg_dump: creating INDEX "public.idx_all_orders_number"
+pg_dump: creating INDEX "public.idx_all_orders_source"
+pg_dump: creating INDEX "public.idx_all_orders_source_id"
+pg_dump: creating INDEX "public.idx_all_orders_status"
+pg_dump: creating INDEX "public.idx_customer_inquiries_customer"
+pg_dump: creating INDEX "public.idx_customer_interactions_customerid"
+pg_dump: creating INDEX "public.idx_customer_interactions_type"
+pg_dump: creating INDEX "public.idx_customer_notes_author"
+pg_dump: creating INDEX "public.idx_customer_notes_customer"
+pg_dump: creating INDEX "public.idx_customer_profiles_assigned"
+pg_dump: creating INDEX "public.idx_customer_profiles_email"
+pg_dump: creating INDEX "public.idx_customer_profiles_source"
+pg_dump: creating INDEX "public.idx_customer_profiles_status"
+pg_dump: creating INDEX "public.idx_customer_sources_customerid"
+pg_dump: creating INDEX "public.idx_customer_sources_source"
+pg_dump: creating INDEX "public.idx_customers_active"
+pg_dump: creating INDEX "public.idx_customers_assignedto"
+pg_dump: creating INDEX "public.idx_customers_email"
+pg_dump: creating INDEX "public.idx_customers_first_interaction"
+pg_dump: creating INDEX "public.idx_customers_followup"
+pg_dump: creating INDEX "public.idx_customers_new_assignedto"
+pg_dump: creating INDEX "public.idx_customers_new_email"
+pg_dump: creating INDEX "public.idx_customers_new_status"
+pg_dump: creating INDEX "public.idx_customers_owner"
+pg_dump: creating INDEX "public.idx_customers_priority"
+pg_dump: creating INDEX "public.idx_customers_reason"
+pg_dump: creating INDEX "public.idx_customers_status"
+pg_dump: creating INDEX "public.idx_customers_type"
+pg_dump: creating INDEX "public.idx_distributor_orders_business_unit"
+pg_dump: creating INDEX "public.idx_distributor_orders_number"
+pg_dump: creating INDEX "public.idx_distributor_orders_owner"
+pg_dump: creating INDEX "public.idx_distributor_orders_status"
+pg_dump: creating INDEX "public.idx_inquiries_category"
+pg_dump: creating INDEX "public.idx_inquiries_status"
+pg_dump: creating INDEX "public.idx_products_shopify_id"
+pg_dump: creating INDEX "public.idx_products_sku"
+pg_dump: creating INDEX "public.idx_quickbooks_customers_email"
+pg_dump: creating INDEX "public.idx_quickbooks_customers_qb_id"
+pg_dump: creating INDEX "public.idx_quickbooks_orders_number"
+pg_dump: creating INDEX "public.idx_quickbooks_orders_owner"
+pg_dump: creating INDEX "public.idx_quickbooks_orders_qb_id"
+pg_dump: creating INDEX "public.idx_quickbooks_orders_status"
+pg_dump: creating INDEX "public.idx_quotes_customer_id"
+pg_dump: creating INDEX "public.idx_quotes_quote_id"
+pg_dump: creating INDEX "public.idx_quotes_status"
+pg_dump: creating INDEX "public.idx_shopify_customers_email"
+pg_dump: creating INDEX "public.idx_shopify_orders_number"
+pg_dump: creating INDEX "public.idx_shopify_orders_owner"
+pg_dump: creating INDEX "public.idx_shopify_orders_shopify_id"
+pg_dump: creating INDEX "public.idx_shopify_orders_status"
+pg_dump: creating INDEX "public.idx_users_email"
+pg_dump: creating FK CONSTRAINT "public.customer_inquiries fk_customer_inquiries_customer"
+pg_dump: creating FK CONSTRAINT "public.customer_inquiries fk_customer_inquiries_inquiry"
+pg_dump: creating FK CONSTRAINT "public.customer_notes fk_customer_notes_customer"
+pg_dump: creating FK CONSTRAINT "public.customer_sources fk_customer_sources_customer"
+pg_dump: creating FK CONSTRAINT "public.quotes quotes_customer_id_fkey"
+2025-09-13 21:33:53 - Backup created successfully: /home/ubuntu/kinetic-app/backups/kinetic_backup_20250913_213353.sql.gz
+2025-09-13 21:33:53 - Backup size: 1.2M
+2025-09-13 21:33:53 - Backup verification successful
+2025-09-13 21:33:53 - Backup completed successfully
+2025-09-13 21:33:53 - Cleaning up backups older than 7 days...
+2025-09-13 21:33:53 - Cleanup completed
+2025-09-13 21:33:53 - === Backup Process Completed ===

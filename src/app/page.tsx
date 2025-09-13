@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import PWAInstaller from "@/components/PWAInstaller";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import ProfileDropdown from "@/components/ProfileDropdown";
+import { VirtualList } from "@/components/VirtualList";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 
 type Category = "bulk" | "issues" | "questions";
 
@@ -110,6 +112,41 @@ export default function Home() {
   const [category, setCategory] = useState<"all" | Category>("all");
 
   const [customerEmail, setCustomerEmail] = useState("");
+
+  // Cache for API responses
+  const [apiCache, setApiCache] = useState<Map<string, { data: any; timestamp: number }>>(new Map());
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes for better performance
+
+  const getCachedData = useCallback((key: string) => {
+    const cached = apiCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+    return null;
+  }, [apiCache]);
+
+  const setCachedData = useCallback((key: string, data: any) => {
+    setApiCache(prev => new Map(prev).set(key, { data, timestamp: Date.now() }));
+  }, []);
+
+  // Cache invalidation function
+  const invalidateCache = useCallback((pattern?: string) => {
+    if (pattern) {
+      setApiCache(prev => {
+        const newCache = new Map();
+        for (const [key, value] of prev) {
+          if (!key.includes(pattern)) {
+            newCache.set(key, value);
+          }
+        }
+        return newCache;
+      });
+    } else {
+      setApiCache(new Map());
+    }
+  }, []);
+
+
 
   // Helper function to get first 3 lines of message
   const getFirstThreeLines = (message: string | undefined | null) => {
@@ -368,161 +405,72 @@ export default function Home() {
     }));
   };
 
-  // Load sales dashboard data
+  // Load sales dashboard data with caching
   const loadSalesData = async () => {
     if (!user?.email) return;
     
-    try {
-      setSalesLoading(true);
-      
-      // Load sales data for personal view
-      const personalResponse = await fetch(`/api/sales/dashboard?userEmail=${user.email}&view=personal&_t=${Date.now()}`);
-      if (personalResponse.ok) {
-        const personalResult = await personalResponse.json();
-        setSalesData(personalResult.personal);
-        setMonthlyPalletsData(personalResult.monthlyPallets || []);
-      }
-      
-      // Load line items and customers to calculate everything
+    const cacheKey = `sales-${user.email}`;
+    const cachedSalesData = getCachedData(cacheKey);
+    
+    // Always load line items and customers for monthly calculations
+    const lineItemsCacheKey = 'line-items';
+    const customersCacheKey = 'customers';
+    
+    const cachedLineItems = getCachedData(lineItemsCacheKey);
+    const cachedCustomers = getCachedData(customersCacheKey);
+    
+    let lineItems, customers;
+    
+    if (cachedLineItems && cachedCustomers) {
+      lineItems = cachedLineItems;
+      customers = cachedCustomers;
+    } else {
       const [lineItemsResponse, customersResponse] = await Promise.all([
         fetch(`/api/line-items?_t=${Date.now()}`),
         fetch(`/api/customers?_t=${Date.now()}`)
       ]);
       
       if (lineItemsResponse.ok && customersResponse.ok) {
-        const lineItems = await lineItemsResponse.json();
-        const customers = await customersResponse.json();
+        lineItems = await lineItemsResponse.json();
+        customers = await customersResponse.json();
         
-        if (dashboardView === 'personal') {
-          // Get Ian's customer emails
-          const customerEmails = await fetch(`/api/customers?_t=${Date.now()}`);
-          if (customerEmails.ok) {
-            const customerData = await customerEmails.json();
-            const ianCustomers = customerData.filter((c: any) => c.assignedto === user.email);
-            const customerEmailSet = new Set(ianCustomers.map((c: any) => c.email));
-            
-            // Filter line items for Ian's customers
-            const ianLineItems = lineItems.filter((item: any) => customerEmailSet.has(item.customerEmail));
-            
-            console.log('Ian customers:', ianCustomers.length);
-            console.log('Ian line items:', ianLineItems.length);
-            console.log('Sample line item:', ianLineItems[0]);
-            
-            // Calculate bags sold this month
-            const thisMonth = new Date();
-            const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
-            const thisMonthEnd = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 0);
-            
-            let bagsSoldThisMonth = 0;
-            let revenueThisMonth = 0;
-            let ordersThisMonth = new Set();
-            
-            ianLineItems.forEach((item: any) => {
-              const orderDate = new Date(item.createdAt);
-              if (orderDate >= thisMonthStart && orderDate <= thisMonthEnd) {
-                // Apply same logic as admin data explorer
-                let effectiveQuantity = 0;
-                if (item.title === 'Build a Pallet') {
-                  effectiveQuantity = item.quantity || 0;
-                } else if (item.title?.includes('Pallet')) {
-                  effectiveQuantity = (item.quantity || 0) * 50;
-                } else {
-                  effectiveQuantity = item.quantity || 0;
-                }
-                bagsSoldThisMonth += effectiveQuantity;
-                revenueThisMonth += item.totalPrice || 0;
-                ordersThisMonth.add(item.orderNumber);
-              }
-            });
-            
-            // Update sales data with calculated values
-            setSalesData(prev => ({
-              ...prev,
-              bagsSoldThisMonth: parseInt(bagsSoldThisMonth.toString()),
-              revenueThisMonth: parseInt(revenueThisMonth.toString()),
-              ordersThisMonth: ordersThisMonth.size
-            }));
-            
-            // Calculate yearly breakdown (12 months)
-            const yearlyBreakdown = [];
-            for (let i = 11; i >= 0; i--) {
-              const monthDate = new Date();
-              monthDate.setMonth(monthDate.getMonth() - i);
-              const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-              const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-              
-              let monthRevenue = 0;
-              let monthOrders = new Set();
-              let monthBags = 0;
-              
-              ianLineItems.forEach((item: any) => {
-                const orderDate = new Date(item.createdAt);
-                if (orderDate >= monthStart && orderDate <= monthEnd) {
-                  let effectiveQuantity = 0;
-                  if (item.title === 'Build a Pallet') {
-                    effectiveQuantity = item.quantity || 0;
-                  } else if (item.title?.includes('Pallet')) {
-                    effectiveQuantity = (item.quantity || 0) * 50;
-                  } else {
-                    effectiveQuantity = item.quantity || 0;
-                  }
-                  monthBags += effectiveQuantity;
-                  monthRevenue += item.totalPrice || 0;
-                  monthOrders.add(item.orderNumber);
-                }
-              });
-              
-              yearlyBreakdown.push({
-                month: monthDate.toISOString().slice(0, 7), // YYYY-MM format
-                revenue: monthRevenue,
-                orders: monthOrders.size,
-                bags: monthBags
-              });
-            }
-            
-            setYearlyBreakdownData(yearlyBreakdown);
-          }
-        }
+        // Cache the data
+        setCachedData(lineItemsCacheKey, lineItems);
+        setCachedData(customersCacheKey, customers);
+      } else {
+        return; // Exit if API calls failed
+      }
+    }
+    
+    // If we have cached sales data, use it but still calculate monthly values
+    if (cachedSalesData) {
+      setSalesData(cachedSalesData.personal);
+      setMonthlyPalletsData(cachedSalesData.monthlyPallets || []);
+      setLeaderboardData(cachedSalesData.leaderboard || []);
+      setYearlyBreakdownData(cachedSalesData.yearlyBreakdown || []);
+      
+      // Still calculate monthly values even with cached data
+      if (dashboardView === 'personal') {
+        // Get Ian's customer emails
+        const ianCustomers = customers.filter((c: any) => c.assignedto === user.email);
+        const customerEmailSet = new Set(ianCustomers.map((c: any) => c.email));
         
-        // Calculate leaderboard from line items - simple approach (using already loaded data)
+        // Filter line items for Ian's customers
+        const ianLineItems = lineItems.filter((item: any) => customerEmailSet.has(item.customerEmail));
+        
+        // Calculate bags sold this month
         const thisMonth = new Date();
         const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
         const thisMonthEnd = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 0);
         
-        // Get all unique owners from customers
-        const owners = [...new Set(customers.map((c: any) => c.assignedto).filter(Boolean))];
+        let bagsSoldThisMonth = 0;
+        let revenueThisMonth = 0;
+        let ordersThisMonth = new Set();
         
-        // Get user profiles to map emails to names
-        const userProfilesResponse = await fetch(`/api/users?_t=${Date.now()}`);
-        let userProfiles: any[] = [];
-        if (userProfilesResponse.ok) {
-          userProfiles = await userProfilesResponse.json();
-          console.log('User profiles loaded:', userProfiles);
-        } else {
-          console.log('Failed to load user profiles:', userProfilesResponse.status);
-        }
-        
-        // Calculate stats for each owner
-        const ownerStats = owners.map(owner => {
-          // Get customers assigned to this owner
-          const ownerCustomers = customers.filter((c: any) => c.assignedto === owner);
-          const customerEmailSet = new Set(ownerCustomers.map((c: any) => c.email));
-          
-          // Filter line items for this owner's customers this month
-          const ownerLineItems = lineItems.filter((item: any) => {
-            const orderDate = new Date(item.createdAt);
-            return customerEmailSet.has(item.customerEmail) && 
-                   orderDate >= thisMonthStart && 
-                   orderDate <= thisMonthEnd;
-          });
-          
-          // Calculate bags, revenue, orders
-          let bagsSold = 0;
-          let revenue = 0;
-          const orderNumbers = new Set();
-          
-          ownerLineItems.forEach((item: any) => {
-            // Calculate effective quantity (bags)
+        ianLineItems.forEach((item: any) => {
+          const orderDate = new Date(item.createdAt);
+          if (orderDate >= thisMonthStart && orderDate <= thisMonthEnd) {
+            // Apply same logic as admin data explorer
             let effectiveQuantity = 0;
             if (item.title === 'Build a Pallet') {
               effectiveQuantity = item.quantity || 0;
@@ -531,51 +479,227 @@ export default function Home() {
             } else {
               effectiveQuantity = item.quantity || 0;
             }
-            
-            bagsSold += effectiveQuantity;
-            revenue += item.totalPrice || 0;
-            orderNumbers.add(item.orderNumber);
-          });
-          
-          // Find user profile for this owner
-          const userProfile = userProfiles.find((u: any) => u.email.toLowerCase() === owner.toLowerCase());
-          console.log(`Looking for owner: ${owner}, found profile:`, userProfile);
-          
-          let displayName;
-          if (userProfile) {
-            displayName = `${userProfile.firstname} ${userProfile.lastname}`.trim();
-            console.log(`Constructed display name for ${owner}: "${displayName}"`);
-          } else {
-            displayName = owner.split('@')[0];
+            bagsSoldThisMonth += effectiveQuantity;
+            revenueThisMonth += item.totalPrice || 0;
+            ordersThisMonth.add(item.orderNumber);
           }
-          
-          return {
-            owner,
-            displayName,
-            bagsSold,
-            revenue,
-            orders: orderNumbers.size
-          };
         });
         
-        // Sort by bags sold and take top 3
-        const top3 = ownerStats
-          .sort((a, b) => b.bagsSold - a.bagsSold)
-          .slice(0, 3);
+        // Update sales data with calculated values
+        setSalesData(prev => ({
+          ...prev,
+          bagsSoldThisMonth: parseInt(bagsSoldThisMonth.toString()),
+          revenueThisMonth: parseInt(revenueThisMonth.toString()),
+          ordersThisMonth: ordersThisMonth.size
+        }));
+      }
+      return;
+    }
+    
+    try {
+      setSalesLoading(true);
+      
+      // Initialize variables for caching
+      let yearlyBreakdownData = [];
+      let top3 = [];
+      let salesData = null;
+      let monthlyPalletsData = [];
+      
+      // Load sales data for personal view
+      const personalResponse = await fetch(`/api/sales/dashboard?userEmail=${user.email}&view=personal&_t=${Date.now()}`);
+      if (personalResponse.ok) {
+        const personalResult = await personalResponse.json();
+        salesData = personalResult.personal;
+        monthlyPalletsData = personalResult.monthlyPallets || [];
         
-        console.log('Top 3 leaders:', top3);
-        console.log('Dave\'s data in top3:', top3.find(m => m.owner.toLowerCase() === 'dave@kineticdogfood.com'));
-        console.log('Dave\'s displayName in top3:', top3.find(m => m.owner.toLowerCase() === 'dave@kineticdogfood.com')?.displayName);
-        setLeaderboardData(top3);
-        setLeaderboardBagsData(top3);
+        setSalesData(salesData);
+        setMonthlyPalletsData(monthlyPalletsData);
       }
       
-      // Load top customers
-      const topCustomersResponse = await fetch(`/api/sales/top-customers?userEmail=${user.email}&view=${dashboardView}&limit=50&_t=${Date.now()}`);
-      if (topCustomersResponse.ok) {
-        const topCustomersResult = await topCustomersResponse.json();
-        setTopCustomers(topCustomersResult.topCustomers || []);
+      // Calculate monthly sales data for personal view
+      if (dashboardView === 'personal') {
+        // Get Ian's customer emails
+        const ianCustomers = customers.filter((c: any) => c.assignedto === user.email);
+        const customerEmailSet = new Set(ianCustomers.map((c: any) => c.email));
+        
+        // Filter line items for Ian's customers
+        const ianLineItems = lineItems.filter((item: any) => customerEmailSet.has(item.customerEmail));
+        
+        // Calculate bags sold this month
+        const thisMonth = new Date();
+        const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
+        const thisMonthEnd = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 0);
+        
+        let bagsSoldThisMonth = 0;
+        let revenueThisMonth = 0;
+        let ordersThisMonth = new Set();
+        
+        ianLineItems.forEach((item: any) => {
+          const orderDate = new Date(item.createdAt);
+          if (orderDate >= thisMonthStart && orderDate <= thisMonthEnd) {
+            let effectiveQuantity = 0;
+            if (item.title === 'Build a Pallet') {
+              effectiveQuantity = item.quantity || 0;
+            } else if (item.title?.includes('Pallet')) {
+              effectiveQuantity = (item.quantity || 0) * 50;
+            } else {
+              effectiveQuantity = item.quantity || 0;
+            }
+            bagsSoldThisMonth += effectiveQuantity;
+            revenueThisMonth += item.totalPrice || 0;
+            ordersThisMonth.add(item.orderNumber);
+          }
+        });
+        
+        // Update sales data with calculated values
+        const updatedSalesData = {
+          ...salesData,
+          bagsSoldThisMonth: parseInt(bagsSoldThisMonth.toString()),
+          revenueThisMonth: parseInt(revenueThisMonth.toString()),
+          ordersThisMonth: ordersThisMonth.size
+        };
+        setSalesData(updatedSalesData);
+        salesData = updatedSalesData; // Update for caching
+        
+        // Calculate yearly breakdown (12 months)
+        const yearlyBreakdown = [];
+        for (let i = 11; i >= 0; i--) {
+          const monthDate = new Date();
+          monthDate.setMonth(monthDate.getMonth() - i);
+          const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+          const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+          
+          let monthRevenue = 0;
+          let monthOrders = new Set();
+          let monthBags = 0;
+          
+          ianLineItems.forEach((item: any) => {
+            const orderDate = new Date(item.createdAt);
+            if (orderDate >= monthStart && orderDate <= monthEnd) {
+              let effectiveQuantity = 0;
+              if (item.title === 'Build a Pallet') {
+                effectiveQuantity = item.quantity || 0;
+              } else if (item.title?.includes('Pallet')) {
+                effectiveQuantity = (item.quantity || 0) * 50;
+              } else {
+                effectiveQuantity = item.quantity || 0;
+              }
+              monthBags += effectiveQuantity;
+              monthRevenue += item.totalPrice || 0;
+              monthOrders.add(item.orderNumber);
+            }
+          });
+          
+          yearlyBreakdown.push({
+            month: monthDate.toISOString().slice(0, 7),
+            revenue: monthRevenue,
+            orders: monthOrders.size,
+            bags: monthBags
+          });
+        }
+        
+        setYearlyBreakdownData(yearlyBreakdown);
+        
+        // Store yearly breakdown for caching
+        yearlyBreakdownData = yearlyBreakdown;
       }
+      
+      // Calculate leaderboard from line items
+      const thisMonth = new Date();
+      const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
+      const thisMonthEnd = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 0);
+      
+      // Get all unique owners from customers
+      const owners = [...new Set(customers.map((c: any) => c.assignedto).filter(Boolean))];
+      
+      // Get user profiles to map emails to names
+      const userProfilesResponse = await fetch(`/api/users?_t=${Date.now()}`);
+      let userProfiles: any[] = [];
+      if (userProfilesResponse.ok) {
+        userProfiles = await userProfilesResponse.json();
+      }
+      
+      // Calculate stats for each owner
+      const ownerStats = owners.map(owner => {
+        // Get customers assigned to this owner
+        const ownerCustomers = customers.filter((c: any) => c.assignedto === owner);
+        const customerEmailSet = new Set(ownerCustomers.map((c: any) => c.email));
+        
+        // Filter line items for this owner's customers this month
+        const ownerLineItems = lineItems.filter((item: any) => {
+          const orderDate = new Date(item.createdAt);
+          return customerEmailSet.has(item.customerEmail) && 
+                 orderDate >= thisMonthStart && 
+                 orderDate <= thisMonthEnd;
+        });
+        
+        // Calculate bags, revenue, orders
+        let bagsSold = 0;
+        let revenue = 0;
+        const orderNumbers = new Set();
+        
+        ownerLineItems.forEach((item: any) => {
+          let effectiveQuantity = 0;
+          if (item.title === 'Build a Pallet') {
+            effectiveQuantity = item.quantity || 0;
+          } else if (item.title?.includes('Pallet')) {
+            effectiveQuantity = (item.quantity || 0) * 50;
+          } else {
+            effectiveQuantity = item.quantity || 0;
+          }
+          
+          bagsSold += effectiveQuantity;
+          revenue += item.totalPrice || 0;
+          orderNumbers.add(item.orderNumber);
+        });
+        
+        // Find user profile for this owner
+        const userProfile = userProfiles.find((u: any) => u.email.toLowerCase() === owner.toLowerCase());
+        const displayName = userProfile 
+          ? `${userProfile.firstname} ${userProfile.lastname}`.trim()
+          : owner.split('@')[0];
+        
+        return {
+          owner,
+          displayName,
+          bagsSold,
+          revenue,
+          orders: orderNumbers.size
+        };
+      });
+      
+      // Sort by bags sold and take top 3
+      top3 = ownerStats
+        .sort((a, b) => b.bagsSold - a.bagsSold)
+        .slice(0, 3);
+      
+      setLeaderboardData(top3);
+      setLeaderboardBagsData(top3);
+      
+      // Load top customers (with caching)
+      const topCustomersCacheKey = `top-customers-${user.email}-${dashboardView}`;
+      const cachedTopCustomers = getCachedData(topCustomersCacheKey);
+      
+      if (cachedTopCustomers) {
+        setTopCustomers(cachedTopCustomers);
+      } else {
+        const topCustomersResponse = await fetch(`/api/sales/top-customers?userEmail=${user.email}&view=${dashboardView}&limit=50&_t=${Date.now()}`);
+        if (topCustomersResponse.ok) {
+          const topCustomersResult = await topCustomersResponse.json();
+          const topCustomers = topCustomersResult.topCustomers || [];
+          setCachedData(topCustomersCacheKey, topCustomers);
+          setTopCustomers(topCustomers);
+        }
+      }
+      
+      // Cache all the calculated data
+      setCachedData(cacheKey, { 
+        personal: salesData, 
+        monthlyPallets: monthlyPalletsData,
+        leaderboard: top3,
+        yearlyBreakdown: yearlyBreakdownData
+      });
+      
     } catch (error) {
       console.error('Error loading sales data:', error);
     } finally {
@@ -586,6 +710,16 @@ export default function Home() {
   const loadCustomers = async () => {
     try {
       setCustomerLoading(true);
+      
+      // Create cache key based on search parameters
+      const cacheKey = `customers-${customerSearch}-${customerStatusFilter}-${customerAssignedFilter}-${customerCurrentPage}-${customerLimit}`;
+      const cachedCustomers = getCachedData(cacheKey);
+      
+      if (cachedCustomers) {
+        setCustomers(cachedCustomers.customers || []);
+        setCustomerTotalCustomers(cachedCustomers.total || 0);
+        return;
+      }
       
       // Use enhanced customer API with better search functionality
       const params = new URLSearchParams();
@@ -610,6 +744,8 @@ export default function Home() {
       const data = await response.json();
       
       if (response.ok && data.customers) {
+        // Cache the customer data
+        setCachedData(cacheKey, { customers: data.customers, total: data.pagination?.total || 0 });
         setCustomers(data.customers);
         setCustomerTotalCustomers(data.pagination?.total || 0);
       } else {
@@ -625,6 +761,19 @@ export default function Home() {
       setCustomerLoading(false);
     }
   };
+
+  // Manual refresh function that clears cache
+  const refreshAllData = useCallback(async () => {
+    invalidateCache();
+    await refresh();
+    if (user?.email) {
+      await loadSalesData();
+      await loadQuotes();
+    }
+    if (activeTab === 'customers') {
+      await loadCustomers();
+    }
+  }, [invalidateCache, refresh, user?.email, loadSalesData, loadQuotes, activeTab, loadCustomers]);
 
 
 
@@ -846,6 +995,57 @@ export default function Home() {
     setInquiryCustomerTimeline([]);
   };
 
+  // Memoized inquiry renderer for virtual scrolling
+  const renderInquiry = useCallback((inquiry: Inquiry, index: number) => (
+    <div 
+      key={`inquiry-${inquiry.id}`} 
+      onClick={() => loadInquiryDetails(inquiry)}
+      className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all duration-200"
+    >
+      {/* Timeline dot */}
+      <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${
+        inquiry.category === "issues" ? "bg-red-500" :
+        inquiry.category === "questions" ? "bg-blue-500" :
+        "bg-green-500"
+      }`}></div>
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-gray-900 mb-1">
+              {inquiry.customerName || inquiry.customerEmail}
+            </h4>
+            <p className="text-xs text-gray-500 mb-2">
+              {new Date(inquiry.createdAt).toLocaleString()}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 ml-2">
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              inquiry.category === "issues" ? "bg-red-100 text-red-800" :
+              inquiry.category === "questions" ? "bg-blue-100 text-blue-800" :
+              "bg-green-100 text-green-800"
+            }`}>
+              {inquiry.category}
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              inquiry.status === "new" ? "bg-green-100 text-green-800" :
+              inquiry.status === "active" ? "bg-blue-100 text-blue-800" :
+              inquiry.status === "assigned" ? "bg-purple-100 text-purple-800" :
+              "bg-gray-100 text-gray-800"
+            }`}>
+              {inquiry.status}
+            </span>
+          </div>
+        </div>
+        
+        <p className="text-sm text-gray-700 leading-relaxed">
+          {getFirstThreeLines(inquiry.originalMessage)}
+        </p>
+      </div>
+    </div>
+  ), [loadInquiryDetails]);
+
   const closeAllModals = () => {
     setShowInquiryModal(false);
     setShowCustomerModal(false);
@@ -868,10 +1068,37 @@ export default function Home() {
   const handleTabChange = (tab: TabType) => {
     closeAllModals();
     setActiveTab(tab);
+    
+    // Force scroll to top when switching tabs
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Also scroll the main content area to top
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent) {
+        mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      
+      // Force scroll on mobile devices
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }, 100);
   };
 
   async function refresh() {
     const params = category === "all" ? `?_t=${Date.now()}` : `?category=${category}&_t=${Date.now()}`;
+    const cacheKey = `inquiries-${category}`;
+    
+    // Check cache first
+    const cachedInquiries = getCachedData(cacheKey);
+    const cachedOrders = getCachedData('orders');
+    
+    if (cachedInquiries && cachedOrders) {
+      setInquiries(cachedInquiries);
+      setOrders(cachedOrders);
+      return;
+    }
+
     const [inquiriesRes, ordersRes] = await Promise.all([
       fetch(`/api/inquiries${params}`, { 
         cache: "no-store"
@@ -880,6 +1107,11 @@ export default function Home() {
     ]);
     const inquiriesData = await inquiriesRes.json();
     const ordersData = await ordersRes.json();
+    
+    // Cache the results
+    setCachedData(cacheKey, inquiriesData);
+    setCachedData('orders', ordersData);
+    
     setInquiries(inquiriesData);
     setOrders(ordersData);
     
@@ -897,17 +1129,32 @@ export default function Home() {
   }
 
   async function loadUsers() {
+    const cachedUsers = getCachedData('users');
+    if (cachedUsers) {
+      setUsers(cachedUsers);
+      return;
+    }
+
     const res = await fetch("/api/users");
     const data = await res.json();
+    setCachedData('users', data);
     setUsers(data);
   }
 
   async function loadQuotes() {
     if (!user?.email) return;
     
+    const cacheKey = `quotes-${user.email}`;
+    const cachedQuotes = getCachedData(cacheKey);
+    if (cachedQuotes) {
+      setQuotes(cachedQuotes);
+      return;
+    }
+    
     try {
       const res = await fetch(`/api/quotes?assignedTo=${encodeURIComponent(user.email)}`);
       const data = await res.json();
+      setCachedData(cacheKey, data);
       setQuotes(data);
     } catch (error) {
       console.error('Error loading quotes:', error);
@@ -1015,6 +1262,19 @@ export default function Home() {
     if (activeTab === "home") {
       loadSalesData();
     }
+    
+    // Force scroll to top when tab changes
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent) {
+        mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      
+      // Force scroll on mobile devices
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }, 100);
   }, [activeTab, dashboardView, user?.email]);
 
 
@@ -2087,12 +2347,14 @@ export default function Home() {
         {/* Fixed Team Kinetic Header */}
         <div className="fixed top-0 left-0 right-0 bg-black z-[9999] border-b border-gray-800">
           <div className="px-4 py-2">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <h1 className="text-xl kinetic-title text-white">Team Kinetic</h1>
-              <ProfileDropdown />
+              <div className="flex items-center gap-2">
+                <ProfileDropdown />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
         {/* Fixed Bottom Navigation */}
         <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 z-[9997] bottom-nav">
@@ -2182,7 +2444,7 @@ export default function Home() {
 
         {/* Scrollable White Content Area */}
         <div 
-          className="fixed left-0 right-0 bg-white z-10 overflow-y-auto"
+          className="fixed left-0 right-0 bg-white z-10 overflow-y-auto main-content"
           style={{
             top: '3rem', // Below header
             bottom: '5rem', // Above bottom nav
@@ -3386,6 +3648,7 @@ export default function Home() {
       )}
 
     </div>
+    <PerformanceMonitor />
     </ProtectedRoute>
   );
 }
