@@ -20,6 +20,8 @@ type Order = {
   source: "shopify" | "quickbooks" | "manual" | "distributor" | "digital";
   sourceId: string;
   businessUnit?: string;
+  poNumber?: string; // Extracted from notes for quote-converted orders
+  invoiceEmail?: string; // Extracted from notes for quote-converted orders
 };
 
 function generateId() {
@@ -54,7 +56,17 @@ export async function GET(request: NextRequest) {
         c.assignedto as "assignedOwner",
         o.source,
         o.sourceid as "sourceId",
-        o.business_unit as "businessUnit"
+        o.business_unit as "businessUnit",
+        CASE 
+          WHEN o.notes LIKE '%PO Number:%' THEN 
+            TRIM(SUBSTRING(o.notes FROM 'PO Number: ([^\n]+)'))
+          ELSE NULL 
+        END as "poNumber",
+        CASE 
+          WHEN o.notes LIKE '%Invoice Email:%' THEN 
+            TRIM(SUBSTRING(o.notes FROM 'Invoice Email: ([^\n]+)'))
+          ELSE NULL 
+        END as "invoiceEmail"
       FROM (
         SELECT id, createdat::timestamp as createdat, ordernumber, shopifyorderid, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail, lineitems, 'shopify' as source, id as sourceid, business_unit FROM shopify_orders
         UNION ALL
@@ -85,7 +97,14 @@ export async function GET(request: NextRequest) {
     query += ' ORDER BY o.createdat DESC';
     
     const data = await db.prepare(query).all(...params) as Order[];
-    return NextResponse.json(data);
+    
+    // Parse lineItems JSON strings
+    const processedData = data.map(order => ({
+      ...order,
+      lineItems: order.lineItems ? JSON.parse(order.lineItems as string) : null
+    }));
+    
+    return NextResponse.json(processedData);
   } catch (error) {
     console.error('Error fetching orders:', error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

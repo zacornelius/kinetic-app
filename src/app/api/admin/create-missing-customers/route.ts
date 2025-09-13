@@ -5,28 +5,65 @@ export async function POST() {
   try {
     console.log('Creating missing customers from orders...');
 
-    // Find orders where customer doesn't exist in customers table
+    // Find orders where customer doesn't exist in customers table from ALL sources
     const missingCustomersQuery = `
       SELECT DISTINCT
-        so.customeremail as email,
-        so.customername as name,
-        MIN(so.createdat) as first_order_date,
-        COUNT(*) as order_count,
-        SUM(so.totalamount) as total_spent
-      FROM shopify_orders so
+        email,
+        name,
+        source,
+        MIN(first_order_date) as first_order_date,
+        SUM(order_count) as order_count,
+        SUM(total_spent) as total_spent
+      FROM (
+        SELECT 
+          customeremail as email,
+          customername as name,
+          'shopify' as source,
+          MIN(createdat::timestamp) as first_order_date,
+          COUNT(*) as order_count,
+          SUM(totalamount) as total_spent
+        FROM shopify_orders
+        WHERE customeremail IS NOT NULL AND customeremail != ''
+        GROUP BY customeremail, customername
+        
+        UNION ALL
+        
+        SELECT 
+          customeremail as email,
+          customername as name,
+          'distributor' as source,
+          MIN(createdat::timestamp) as first_order_date,
+          COUNT(*) as order_count,
+          SUM(totalamount) as total_spent
+        FROM distributor_orders
+        WHERE customeremail IS NOT NULL AND customeremail != ''
+        GROUP BY customeremail, customername
+        
+        UNION ALL
+        
+        SELECT 
+          customeremail as email,
+          customername as name,
+          'digital' as source,
+          MIN(createdat::timestamp) as first_order_date,
+          COUNT(*) as order_count,
+          SUM(totalamount) as total_spent
+        FROM digital_orders
+        WHERE customeremail IS NOT NULL AND customeremail != ''
+        GROUP BY customeremail, customername
+      ) all_orders
       WHERE NOT EXISTS (
         SELECT 1 FROM customers c 
-        WHERE LOWER(c.email) = LOWER(so.customeremail)
+        WHERE LOWER(c.email) = LOWER(all_orders.email)
       )
-      AND so.customeremail IS NOT NULL
-      AND so.customeremail != ''
-      GROUP BY so.customeremail, so.customername
+      GROUP BY email, name, source
       ORDER BY first_order_date DESC
     `;
 
     const missingCustomers = await db.prepare(missingCustomersQuery).all() as Array<{
       email: string;
       name: string;
+      source: string;
       first_order_date: string;
       order_count: number;
       total_spent: number;
@@ -76,7 +113,7 @@ export async function POST() {
           null, // billingaddress
           customer.first_order_date,
           new Date().toISOString(),
-          'shopify',
+          customer.source,
           null, // assignedto
           'Active',
           'Customer',

@@ -266,6 +266,11 @@ async function processShopifyOrders(shopifyOrders: ShopifyOrder[]) {
   const productMap = new Map<string, string>(); // sku -> productId
 
   for (const shopifyOrder of shopifyOrders) {
+    // Skip cancelled orders
+    if (shopifyOrder.financial_status === 'voided' || shopifyOrder.financial_status === 'refunded') {
+      console.log(`Skipping cancelled/voided order: ${shopifyOrder.order_number}`);
+      continue;
+    }
     // Process customer
     const customer = mapShopifyOrderToCustomer(shopifyOrder);
     if (!customerMap.has(customer.email)) {
@@ -321,8 +326,8 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
       // For incremental sync, get orders created after the last synced order
       url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=${limit}&since_id=${sinceId}`;
     } else {
-      // Full sync - get all orders from the end (newest first)
-      url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=${limit}&status=any&order=created_at+desc`;
+      // Full sync - get all orders from the beginning (oldest first) to get historical data
+      url = `https://${cleanShop}.myshopify.com/admin/api/2023-10/orders.json?limit=${limit}&status=any&financial_status=any&fulfillment_status=any&order=created_at+asc`;
     }
     
     console.log('Making request to:', url);
@@ -372,13 +377,14 @@ async function fetchShopifyOrders(shop: string, accessToken: string, limit: numb
         const newPageInfo = nextMatch[1];
         // Prevent infinite loops by checking if we've seen this page before
         if (seenPageInfos.has(newPageInfo)) {
-          console.log('Detected pagination loop, but continuing to get all orders');
-          // Don't stop, just continue to get all orders
+          console.log('Detected pagination loop, stopping sync');
+          hasNextPage = false;
+        } else {
+          seenPageInfos.add(newPageInfo);
+          pageInfo = newPageInfo;
+          // Add minimal delay between requests to respect rate limits
+          await delay(100);
         }
-        seenPageInfos.add(newPageInfo);
-        pageInfo = newPageInfo;
-        // Add minimal delay between requests to respect rate limits
-        await delay(100); // Reduced to 100ms for faster sync
       } else {
         hasNextPage = false;
       }
@@ -429,7 +435,7 @@ export async function POST(request: Request) {
     const processedData = await processShopifyOrders(shopifyOrders);
 
     // Use transaction for better performance
-    const insertMany = db.transaction(() => {
+    const insertMany = await db.transaction(async () => {
       let insertedCount = 0;
       let updatedCount = 0;
 
@@ -450,9 +456,9 @@ export async function POST(request: Request) {
       `);
 
       for (const customer of processedData.customers) {
-        const existing = db.prepare('SELECT id FROM shopify_customers WHERE email = $1').get(customer.email);
+        const existing = await db.prepare('SELECT id FROM shopify_customers WHERE email = $1').get(customer.email);
         if (!existing) {
-          customerStmt.run(
+          await customerStmt.run(
             customer.id, customer.email, customer.firstName, customer.lastName,
             customer.phone, customer.companyName, customer.billingAddress, customer.shippingAddress,
             customer.createdAt, customer.updatedAt
@@ -477,9 +483,9 @@ export async function POST(request: Request) {
       `);
 
       for (const product of processedData.products) {
-        const existing = db.prepare('SELECT id FROM products WHERE sku = $1 OR shopifyProductId = $2').get(product.sku, product.shopifyProductId);
+        const existing = await db.prepare('SELECT id FROM products WHERE sku = $1 OR shopifyProductId = $2').get(product.sku, product.shopifyProductId);
         if (!existing) {
-          productStmt.run(
+          await productStmt.run(
             product.id, product.shopifyProductId, product.sku, product.title,
             product.vendor, product.productType, product.price, product.cost,
             product.createdAt, product.updatedAt
@@ -493,9 +499,8 @@ export async function POST(request: Request) {
           id, createdAt, orderNumber, shopifyOrderId, customerEmail, customerName, 
           totalAmount, currency, status, shippingAddress, notes, ownerEmail, lineItems
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        ON CONFLICT (id) DO UPDATE SET
+        ON CONFLICT (orderNumber) DO UPDATE SET
           createdAt = EXCLUDED.createdAt,
-          orderNumber = EXCLUDED.orderNumber,
           shopifyOrderId = EXCLUDED.shopifyOrderId,
           customerEmail = EXCLUDED.customerEmail,
           customerName = EXCLUDED.customerName,
@@ -509,16 +514,18 @@ export async function POST(request: Request) {
       `);
 
       for (const order of processedData.orders) {
-        const existing = db.prepare('SELECT id FROM shopify_orders WHERE orderNumber = $1').get(order.orderNumber);
+        const existing = await db.prepare('SELECT id FROM shopify_orders WHERE orderNumber = $1').get(order.orderNumber);
         
+        let orderId = order.id;
         if (existing) {
+          orderId = existing.id; // Use existing ID to avoid conflicts
           updatedCount++;
         } else {
           insertedCount++;
         }
 
-        orderStmt.run(
-          order.id, order.createdAt, order.orderNumber, order.shopifyOrderId,
+        await orderStmt.run(
+          orderId, order.createdAt, order.orderNumber, order.shopifyOrderId,
           order.customerEmail, order.customerName, order.totalAmount, 
           order.currency, order.status, order.shippingAddress, order.notes, order.ownerEmail, order.lineItems
         );
@@ -530,7 +537,7 @@ export async function POST(request: Request) {
       return { insertedCount, updatedCount };
     });
 
-    const { insertedCount, updatedCount } = insertMany();
+    const { insertedCount, updatedCount } = insertMany;
 
     return NextResponse.json({
       success: true,

@@ -25,7 +25,7 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           limit: 250, // Shopify's maximum limit
-          maxPages: 10 // Limit to recent orders for full sync
+          maxPages: 10 // Should get all ~690 orders
         }),
       });
       
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          limit: 250,
+          limit: 100,
           maxPages: 2 // Only get recent new orders
         }),
       });
@@ -108,6 +108,17 @@ export default function AdminDashboard() {
             </ul>
           </div>
           <div className="space-y-3">
+            <button
+              onClick={syncShopifyOrders}
+              disabled={isSyncing}
+              className="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+            >
+              {isSyncing ? "Syncing..." : "Full Sync (All Orders)"}
+            </button>
+            <div className="text-center text-sm text-gray-500">
+              Syncs all orders from Shopify • Use when starting fresh
+            </div>
+            
             <button
               onClick={syncNewOrders}
               disabled={isSyncing}

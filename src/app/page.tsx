@@ -163,6 +163,12 @@ export default function Home() {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [poNumber, setPONumber] = useState('');
   const [invoiceEmail, setInvoiceEmail] = useState('');
+  
+  // Order detail modal state
+  const [selectedPendingOrder, setSelectedPendingOrder] = useState<any>(null);
+  const [showPendingOrderModal, setShowPendingOrderModal] = useState(false);
+  const [selectedProcessingOrder, setSelectedProcessingOrder] = useState<any>(null);
+  const [showProcessingOrderModal, setShowProcessingOrderModal] = useState(false);
   const [ordersTab, setOrdersTab] = useState<'quotes' | 'pending' | 'processing'>('quotes');
   const [inquiryCustomer, setInquiryCustomer] = useState<any>(null);
   const [inquiryCustomerId, setInquiryCustomerId] = useState<string | null>(null);
@@ -183,8 +189,7 @@ export default function Home() {
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [quoteForm, setQuoteForm] = useState({
     customerEmail: '',
-    customerName: '',
-    billingAddress: {
+    shippingAddress: {
       firstName: '',
       lastName: '',
       address1: '',
@@ -219,8 +224,8 @@ export default function Home() {
       setQuoteMessage('');
 
       // Validate form
-      if (!quoteForm.customerEmail || !quoteForm.billingAddress.firstName || !quoteForm.billingAddress.lastName) {
-        setQuoteMessage('Please fill in customer email and billing name');
+      if (!quoteForm.customerEmail || !quoteForm.shippingAddress.firstName || !quoteForm.shippingAddress.lastName) {
+        setQuoteMessage('Please fill in customer email and shipping name');
         return;
       }
 
@@ -240,35 +245,39 @@ export default function Home() {
 
       if (response.ok) {
         setQuoteMessage(`✅ Quote sent successfully to ${result.customerEmail}! Quote ID: ${result.quoteId}`);
-        // Reset form
-        setQuoteForm({
-          customerEmail: '',
-          customerName: '',
-          billingAddress: {
-            firstName: '',
-            lastName: '',
-            address1: '',
-            city: '',
-            province: '',
-            country: 'United States',
-            zip: '',
-            phone: ''
-          },
-          palletItems: {
-            'Vital-24K': 0,
-            'Active-26K': 0,
-            'Puppy-28K': 0,
-            'Power-30K': 0,
-            'Ultra-32K': 0
-          },
-          customMessage: '',
-          existingCustomerId: '',
-          assignedTo: user?.email || ''
-        });
-        setCustomerSearchQuery('');
-        setShowCustomerSearch(false);
-        setCustomerSearchResults([]);
-        setTimeout(() => setShowQuoteForm(false), 3000);
+        
+        // Show success message briefly, then close form
+        setTimeout(() => {
+          // Reset form
+          setQuoteForm({
+            customerEmail: '',
+            shippingAddress: {
+              firstName: '',
+              lastName: '',
+              address1: '',
+              city: '',
+              province: '',
+              country: 'United States',
+              zip: '',
+              phone: ''
+            },
+            palletItems: {
+              'Vital-24K': 0,
+              'Active-26K': 0,
+              'Puppy-28K': 0,
+              'Power-30K': 0,
+              'Ultra-32K': 0
+            },
+            customMessage: '',
+            existingCustomerId: '',
+            assignedTo: user?.email || ''
+          });
+          setCustomerSearchQuery('');
+          setShowCustomerSearch(false);
+          setCustomerSearchResults([]);
+          setQuoteMessage('');
+          setShowQuoteForm(false);
+        }, 2000);
       } else {
         setQuoteMessage(`❌ Error: ${result.error}`);
       }
@@ -336,10 +345,10 @@ export default function Home() {
     setQuoteForm(prev => ({
       ...prev,
       customerEmail: customer.email,
-      customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
-      billingAddress: parsedAddress,
+      shippingAddress: parsedAddress,
       existingCustomerId: customer.id
     }));
+    // Immediately hide dropdown and clear search
     setShowCustomerSearch(false);
     setCustomerSearchResults([]);
     setCustomerSearchQuery('');
@@ -352,10 +361,10 @@ export default function Home() {
     }));
   };
 
-  const updateBillingAddress = (field: string, value: string) => {
+  const updateShippingAddress = (field: string, value: string) => {
     setQuoteForm(prev => ({
       ...prev,
-      billingAddress: { ...prev.billingAddress, [field]: value }
+      shippingAddress: { ...prev.shippingAddress, [field]: value }
     }));
   };
 
@@ -841,8 +850,14 @@ export default function Home() {
     setShowInquiryModal(false);
     setShowCustomerModal(false);
     setShowNoteModal(false);
+    setShowQuoteModal(false);
+    setShowPendingOrderModal(false);
+    setShowProcessingOrderModal(false);
     setSelectedInquiry(null);
     setSelectedCustomer(null);
+    setSelectedQuote(null);
+    setSelectedPendingOrder(null);
+    setSelectedProcessingOrder(null);
     setInquiryCustomer(null);
     setInquiryCustomerId(null);
     setInquiryCustomerTimeline([]);
@@ -946,6 +961,25 @@ export default function Home() {
       setQuoteForm(prev => ({ ...prev, assignedTo: user.email }));
     }
   }, [user?.email]);
+
+  // Hide customer search dropdown when email is manually typed
+  useEffect(() => {
+    if (quoteForm.customerEmail && !customerSearchQuery) {
+      setShowCustomerSearch(false);
+      setCustomerSearchResults([]);
+    }
+  }, [quoteForm.customerEmail, customerSearchQuery]);
+
+  // Close quote form when switching tabs
+  useEffect(() => {
+    if (showQuoteForm) {
+      setShowQuoteForm(false);
+      setCustomerSearchQuery('');
+      setShowCustomerSearch(false);
+      setCustomerSearchResults([]);
+      setQuoteMessage('');
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     loadUsers();
@@ -1172,8 +1206,11 @@ export default function Home() {
   const unassignedInquiries = useMemo(() => 
     Array.isArray(inquiries) ? inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)) : [], [inquiries]);
   
-  const assignedInquiries = useMemo(() => 
-    Array.isArray(inquiries) ? inquiries.filter(q => q.assignedOwner === user?.email && q.status === "active") : [], [inquiries, user]);
+  const assignedInquiries = useMemo(() => {
+    // Use allInquiries instead of inquiries to get all assigned inquiries regardless of category filter
+    const sourceData = Array.isArray(allInquiries) && allInquiries.length > 0 ? allInquiries : inquiries;
+    return Array.isArray(sourceData) ? sourceData.filter(q => q.assignedOwner === user?.email && q.status === "active") : [];
+  }, [inquiries, allInquiries, user]);
 
   // Simplified inquiry filtering - use allInquiries for consistent counts
   const newInquiries = useMemo(() => 
@@ -1216,11 +1253,7 @@ export default function Home() {
   // Tab content
   function renderHomeTab() {
     return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center">
-          <h2 className="text-2xl font-bold text-white">Sales Dashboard</h2>
-        </div>
+      <div className="space-y-4">
 
         {salesLoading ? (
           <div className="text-center py-8">
@@ -1464,29 +1497,23 @@ export default function Home() {
     return (
       <div className="space-y-4">
         {/* Category Filter */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {(["all", "bulk", "issues", "questions"] as const).map((c) => {
-            // "New" tab shows new inquiries, other tabs show active inquiries
-            const count = c === "all" ? newInquiries.length : activeInquiries.filter(q => q.category === c).length;
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+          {(["all", "assigned"] as const).map((c) => {
+            const count = c === "all" ? newInquiries.length : activeInquiries.length;
+            const label = c === "all" ? "New" : "Assigned";
+            
             return (
-            <button
-              key={c}
-              onClick={() => setCategory(c as any)}
-                className={`px-3 py-1 rounded-full text-sm whitespace-nowrap relative ${
-                category === c 
-                    ? "bg-[#3B83BE] text-white" 
-                  : "bg-white text-gray-600 border"
-              }`}
-            >
-                <div className="flex items-center gap-1">
-                  {c === "all" ? "New" : c === "bulk" ? "Bulk" : c === "issues" ? "Issue" : "Question"}
-                  {count > 0 && (
-                    <span className="bg-red-500 text-white rounded-full h-4 w-4 flex items-center justify-center font-bold text-[10px]">
-                      {count}
-                    </span>
-                  )}
-                </div>
-            </button>
+              <button
+                key={c}
+                onClick={() => setCategory(c as any)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  category === c
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                {label} ({count})
+              </button>
             );
           })}
         </div>
@@ -1497,9 +1524,6 @@ export default function Home() {
         <div className="space-y-4">
           {category === "all" ? (
             <>
-              <h3 className="text-sm font-medium text-red-600">
-                New Inquiries
-              </h3>
               <div className="space-y-3">
                 {Array.isArray(inquiries) ? inquiries.filter(q => q.status === "new" || (q.status === "active" && !q.assignedOwner)).map((q) => (
                   <div 
@@ -1525,43 +1549,38 @@ export default function Home() {
                             {new Date(q.createdAt).toLocaleString()}
                           </p>
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ml-2 ${
-                          q.category === "issues" ? "bg-red-100 text-red-800" :
-                          q.category === "questions" ? "bg-blue-100 text-blue-800" :
-                          "bg-green-100 text-green-800"
-                        }`}>
-                          {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
-                        </span>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            q.category === "issues" ? "bg-red-100 text-red-800" :
+                            q.category === "questions" ? "bg-blue-100 text-blue-800" :
+                            "bg-green-100 text-green-800"
+                          }`}>
+                            {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
+                          </span>
+                          {q.customerType && (
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              q.customerType === 'Customer' ? 'bg-green-100 text-green-800' :
+                              q.customerType === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {q.customerType}
+                            </span>
+                          )}
+                          {q.customerCategory && (
+                            <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              {q.customerCategory}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="text-sm text-gray-700 mb-3">
+                      <div className="text-sm text-gray-700 mb-2">
                         <div style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
                           {getFirstThreeLines(q.originalMessage)}
                         </div>
                       </div>
                       
-                      <div className="flex gap-2">
-                        {user && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              takeOwnership(q.id);
-                            }}
-                            className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
-                          >
-                            Take
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markNotRelevant(q.id);
-                          }}
-                          className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
-                        >
-                          Not Relevant
-                        </button>
-                      </div>
+                      <p className="text-xs text-gray-500">Click to view details and manage</p>
                     </div>
                   </div>
                 )) : null}
@@ -1576,13 +1595,10 @@ export default function Home() {
             </>
           ) : (
             <>
-              <h3 className="text-sm font-medium text-blue-600">
-                {category === "bulk" ? "My Bulk Prospects" : category === "issues" ? "My Issues" : "My Questions"}
-              </h3>
               <div className="space-y-3">
-                {assignedInquiries.filter(q => q.category === category).map((q) => (
+                {assignedInquiries.map((q) => (
                   <div 
-                    key={`assigned-${category}-${q.id}`} 
+                    key={`assigned-${q.id}`} 
                     onClick={() => loadInquiryDetails(q)}
                     className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all duration-200"
                   >
@@ -1604,13 +1620,29 @@ export default function Home() {
                             {new Date(q.createdAt).toLocaleString()}
                           </p>
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ml-2 ${
-                          q.category === "issues" ? "bg-red-100 text-red-800" :
-                          q.category === "questions" ? "bg-blue-100 text-blue-800" :
-                          "bg-green-100 text-green-800"
-                        }`}>
-                          {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
-                        </span>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            q.category === "issues" ? "bg-red-100 text-red-800" :
+                            q.category === "questions" ? "bg-blue-100 text-blue-800" :
+                            "bg-green-100 text-green-800"
+                          }`}>
+                            {q.category === "issues" ? "Issue" : q.category === "questions" ? "Question" : q.category.charAt(0).toUpperCase() + q.category.slice(1)}
+                          </span>
+                          {q.customerType && (
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              q.customerType === 'Customer' ? 'bg-green-100 text-green-800' :
+                              q.customerType === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {q.customerType}
+                            </span>
+                          )}
+                          {q.customerCategory && (
+                            <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              {q.customerCategory}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="text-sm text-gray-700 mb-2">
@@ -1624,10 +1656,10 @@ export default function Home() {
                   </div>
                 ))}
                 
-                {assignedInquiries.filter(q => q.category === category).length === 0 && (
+                {assignedInquiries.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <div className="text-3xl mb-2">📋</div>
-                    <div className="text-sm">No {category === "bulk" ? "bulk prospects" : category === "issues" ? "issues" : "questions"} assigned to you</div>
+                    <div className="text-sm">No inquiries assigned to you</div>
                   </div>
                 )}
               </div>
@@ -1799,7 +1831,19 @@ export default function Home() {
     );
 
     const renderOrderCard = (order: any) => (
-      <div key={order.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div 
+        key={order.id} 
+        className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all duration-200"
+        onClick={() => {
+          if (order.status === 'pending') {
+            setSelectedPendingOrder(order);
+            setShowPendingOrderModal(true);
+          } else if (order.status === 'processing') {
+            setSelectedProcessingOrder(order);
+            setShowProcessingOrderModal(true);
+          }
+        }}
+      >
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="text-sm font-medium text-gray-900 mb-1">
@@ -1831,9 +1875,10 @@ export default function Home() {
             Tracking: {order.trackingNumber}
           </div>
         )}
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-gray-400 mb-1">
           {new Date(order.createdAt).toLocaleString()}
         </div>
+        <div className="text-xs text-gray-500">Click to view details</div>
       </div>
     );
     
@@ -1988,26 +2033,33 @@ export default function Home() {
                 onClick={() => loadCustomerDetails(customer.id)}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200"
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                    <h3 className="text-base font-semibold text-gray-900 truncate mb-1">
                       {customer.firstName} {customer.lastName}
-            </h3>
+                    </h3>
                     <p className="text-sm text-gray-500 truncate">{customer.email}</p>
                     {customer.companyName && (
                       <p className="text-xs text-gray-400 truncate">{customer.companyName}</p>
                     )}
-          </div>
-                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                    customer.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
-                    customer.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {customer.customertype || 'Unknown'}
-                  </span>
-                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-2">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      customer.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
+                      customer.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {customer.customertype || 'Unknown'}
+                    </span>
+                    {customer.customercategory && (
+                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {customer.customercategory}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 
-                <div className="space-y-2 text-sm">
+                <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Orders:</span>
                     <span className="font-medium">{customer.totalOrders}</span>
@@ -2015,35 +2067,12 @@ export default function Home() {
                   <div className="flex justify-between">
                     <span className="text-gray-500">Revenue:</span>
                     <span className="font-medium">${customer.totalSpent.toFixed(2)}</span>
-                    </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Assigned:</span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium truncate text-xs">{customer.assignedTo || customer.assignedOwner || 'Unassigned'}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Show a simple prompt for now, could be enhanced with a modal later
-                          const newOwner = prompt('Enter new owner email (or leave blank to unassign):', customer.assignedTo || customer.assignedOwner || '');
-                          if (newOwner !== null) {
-                            reassignCustomer(customer.id, newOwner);
-                          }
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-800 underline"
-                      >
-                        Change
-                      </button>
-                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Source:</span>
-                    <span className="font-medium capitalize">{customer.source}</span>
-                </div>
                 </div>
                 
-                <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="mt-2 pt-2 border-t border-gray-100">
                   <p className="text-xs text-gray-500 text-center">Click to view details</p>
-              </div>
+                </div>
           </div>
             ))
           )}
@@ -2104,21 +2133,6 @@ export default function Home() {
               </div>
             </button>
           <button
-            onClick={() => handleTabChange("actions")}
-              className={`flex-1 py-3 px-2 text-center ${
-                activeTab === "actions"
-                  ? "text-white"
-                  : "text-gray-400"
-              }`}
-            >
-              <div className="flex flex-col items-center">
-                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-            <span className="text-xs">Actions</span>
-              </div>
-          </button>
-          <button
             onClick={() => handleTabChange("orders")}
               className={`flex-1 py-3 px-2 text-center ${
                 activeTab === "orders"
@@ -2131,6 +2145,21 @@ export default function Home() {
                   <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
             </svg>
             <span className="text-xs">Orders</span>
+              </div>
+          </button>
+          <button
+            onClick={() => handleTabChange("actions")}
+              className={`flex-1 py-3 px-2 text-center ${
+                activeTab === "actions"
+                  ? "text-white"
+                  : "text-gray-400"
+              }`}
+            >
+              <div className="flex flex-col items-center">
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+            <span className="text-xs">Actions</span>
               </div>
           </button>
           <button
@@ -2160,13 +2189,8 @@ export default function Home() {
             height: 'calc(100vh - 3rem - 5rem)' // Full height minus header and nav
           }}
         >
-          {/* PWA Installer */}
-          <div className="px-4 py-2">
-            <PWAInstaller />
-          </div>
-
           {/* Content */}
-          <div className="px-4 py-4">
+          <div className="px-4 pt-4 pb-4">
             {activeTab === "home" && renderHomeTab()}
             {activeTab === "queue" && renderQueueTab()}
             {activeTab === "actions" && renderActionsTab()}
@@ -2504,11 +2528,11 @@ export default function Home() {
                   
                   {/* Status and Category Bubbles */}
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedInquiry.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                    }`}>
-                      {selectedInquiry.status}
-                    </span>
+                    {selectedInquiry.status === "new" && (
+                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        {selectedInquiry.status}
+                      </span>
+                    )}
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       selectedInquiry.category === "issues" ? "bg-red-100 text-red-800" :
                       selectedInquiry.category === "questions" ? "bg-blue-100 text-blue-800" :
@@ -2523,6 +2547,11 @@ export default function Home() {
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {inquiryCustomer.customertype}
+                      </span>
+                    )}
+                    {selectedInquiry?.customerCategory && (
+                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {selectedInquiry.customerCategory}
                       </span>
                     )}
                   </div>
@@ -2855,9 +2884,9 @@ export default function Home() {
       {/* Quote Creation Modal */}
       {showQuoteForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh]">
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">Build a Pallet Quote</h2>
                   <p className="text-sm text-gray-600 mt-1">Create and send a pallet quote through Shopify</p>
@@ -2878,21 +2907,30 @@ export default function Home() {
               </div>
 
               {quoteMessage && (
-                <div className={`p-3 rounded text-sm mb-4 ${
-                  quoteMessage.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                <div className={`p-4 rounded-lg text-sm mb-4 border ${
+                  quoteMessage.includes('✅') 
+                    ? 'bg-green-50 text-green-800 border-green-200' 
+                    : 'bg-red-50 text-red-800 border-red-200'
                 }`}>
-                  {quoteMessage}
+                  <div className="flex items-center">
+                    {quoteMessage.includes('✅') && (
+                      <svg className="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    <span className="font-medium">{quoteMessage}</span>
+                  </div>
                 </div>
               )}
+            </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); handleCreateQuote(); }} className="space-y-6">
-                {/* Customer Information */}
+            <div className="px-6 pb-8 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <form onSubmit={(e) => { e.preventDefault(); handleCreateQuote(); }} className="space-y-6">
+                {/* Search Existing Customer */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Customer Information</h3>
-                  
-                  {/* Customer Search */}
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Search Existing Customer</h3>
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Search Existing Customer</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Search by email, phone, or name</label>
                     <div className="relative">
                       <input
                         type="text"
@@ -2909,8 +2947,8 @@ export default function Home() {
                           }
                         }}
                         onBlur={() => {
-                          // Delay hiding to allow click on results
-                          setTimeout(() => setShowCustomerSearch(false), 200);
+                          // Hide dropdown when losing focus
+                          setTimeout(() => setShowCustomerSearch(false), 150);
                         }}
                         onFocus={() => {
                           if (customerSearchQuery.length >= 2 && customerSearchResults.length > 0) {
@@ -2957,43 +2995,19 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                      <input
-                        type="email"
-                        required
-                        value={quoteForm.customerEmail}
-                        onChange={(e) => setQuoteForm(prev => ({ ...prev, customerEmail: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
-                        placeholder="customer@example.com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={quoteForm.customerName}
-                        onChange={(e) => setQuoteForm(prev => ({ ...prev, customerName: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
-                        placeholder="Customer Name"
-                      />
-                    </div>
-                  </div>
                 </div>
 
-                {/* Billing Address */}
+                {/* Customer Information */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Billing Address</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Customer Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                       <input
                         type="text"
                         required
-                        value={quoteForm.billingAddress.firstName}
-                        onChange={(e) => updateBillingAddress('firstName', e.target.value)}
+                        value={quoteForm.shippingAddress.firstName}
+                        onChange={(e) => updateShippingAddress('firstName', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
                         placeholder="John"
                       />
@@ -3003,19 +3017,51 @@ export default function Home() {
                       <input
                         type="text"
                         required
-                        value={quoteForm.billingAddress.lastName}
-                        onChange={(e) => updateBillingAddress('lastName', e.target.value)}
+                        value={quoteForm.shippingAddress.lastName}
+                        onChange={(e) => updateShippingAddress('lastName', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
                         placeholder="Doe"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={quoteForm.customerEmail}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, customerEmail: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="customer@example.com"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <input
+                        type="tel"
+                        value={quoteForm.shippingAddress.phone}
+                        onChange={(e) => updateShippingAddress('phone', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
+                        placeholder="+1234567890"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shipping Address */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Shipping Address</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
                       <input
                         type="text"
                         required
-                        value={quoteForm.billingAddress.address1}
-                        onChange={(e) => updateBillingAddress('address1', e.target.value)}
+                        value={quoteForm.shippingAddress.address1}
+                        onChange={(e) => updateShippingAddress('address1', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
                         placeholder="123 Main St"
                       />
@@ -3025,8 +3071,8 @@ export default function Home() {
                       <input
                         type="text"
                         required
-                        value={quoteForm.billingAddress.city}
-                        onChange={(e) => updateBillingAddress('city', e.target.value)}
+                        value={quoteForm.shippingAddress.city}
+                        onChange={(e) => updateShippingAddress('city', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
                         placeholder="New York"
                       />
@@ -3036,8 +3082,8 @@ export default function Home() {
                       <input
                         type="text"
                         required
-                        value={quoteForm.billingAddress.province}
-                        onChange={(e) => updateBillingAddress('province', e.target.value)}
+                        value={quoteForm.shippingAddress.province}
+                        onChange={(e) => updateShippingAddress('province', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
                         placeholder="NY"
                       />
@@ -3047,8 +3093,8 @@ export default function Home() {
                       <input
                         type="text"
                         required
-                        value={quoteForm.billingAddress.zip}
-                        onChange={(e) => updateBillingAddress('zip', e.target.value)}
+                        value={quoteForm.shippingAddress.zip}
+                        onChange={(e) => updateShippingAddress('zip', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
                         placeholder="10001"
                       />
@@ -3057,8 +3103,8 @@ export default function Home() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                       <input
                         type="tel"
-                        value={quoteForm.billingAddress.phone}
-                        onChange={(e) => updateBillingAddress('phone', e.target.value)}
+                        value={quoteForm.shippingAddress.phone}
+                        onChange={(e) => updateShippingAddress('phone', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B83BE] focus:border-transparent"
                         placeholder="+1234567890"
                       />
@@ -3117,8 +3163,8 @@ export default function Home() {
                   />
                 </div>
 
-                {/* Form Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t">
+                {/* Action Buttons */}
+                <div className="flex gap-3 justify-end pt-2 pb-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -3127,19 +3173,213 @@ export default function Home() {
                       setShowCustomerSearch(false);
                       setCustomerSearchResults([]);
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={quoteLoading}
-                    className="px-4 py-2 bg-[#3B83BE] text-white rounded-md hover:bg-[#2d6ba3] disabled:opacity-50"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
                   >
                     {quoteLoading ? 'Creating Pallet Quote...' : 'Create & Send Pallet Quote'}
                   </button>
                 </div>
-              </form>
+                </form>
+            </div>
+            </div>
+        </div>
+      )}
+
+      {/* Pending Order Detail Modal */}
+      {showPendingOrderModal && selectedPendingOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Order Details - {selectedPendingOrder.orderNumber}
+                  </h2>
+                  <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    Pending
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPendingOrderModal(false);
+                    setSelectedPendingOrder(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="space-y-6">
+                {/* Customer Information */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Customer Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div><span className="text-gray-600">Customer:</span> <span className="font-medium">{selectedPendingOrder.customerName || selectedPendingOrder.customerEmail}</span></div>
+                    <div><span className="text-gray-600">Email:</span> <span className="font-medium">{selectedPendingOrder.customerEmail}</span></div>
+                    <div><span className="text-gray-600">Total Amount:</span> <span className="font-medium">${selectedPendingOrder.totalAmount?.toFixed(2) || "N/A"}</span></div>
+                  </div>
+                </div>
+
+                {/* Shipping Address */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Shipping Address</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    {selectedPendingOrder.shippingAddress ? (
+                      <div className="whitespace-pre-line">{selectedPendingOrder.shippingAddress}</div>
+                    ) : (
+                      <div className="text-gray-500 italic">No shipping address provided</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Order Items */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Order Items</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    {selectedPendingOrder.lineItems && Array.isArray(selectedPendingOrder.lineItems) && selectedPendingOrder.lineItems.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedPendingOrder.lineItems.map((item: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                            <div>
+                              <div className="font-medium">{item.name || item.title}</div>
+                              <div className="text-sm text-gray-600">SKU: {item.sku}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">Qty: {item.quantity}</div>
+                              <div className="text-sm text-gray-600">${item.price ? (parseFloat(item.price) * item.quantity).toFixed(2) : "N/A" || "N/A"}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-center py-4">
+                        {selectedPendingOrder.lineItems ? 'No items available' : 'Line items not loaded'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* PO and Invoice Information */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Order Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div><span className="text-gray-600">PO Number:</span> <span className="font-medium">{selectedPendingOrder.poNumber || 'Not provided'}</span></div>
+                    <div><span className="text-gray-600">Invoice Email:</span> <span className="font-medium">{selectedPendingOrder.invoiceEmail || 'Not provided'}</span></div>
+                    <div><span className="text-gray-600">Order Number:</span> <span className="font-medium">{selectedPendingOrder.orderNumber}</span></div>
+                    <div><span className="text-gray-600">Created:</span> <span className="font-medium">{new Date(selectedPendingOrder.createdAt).toLocaleString()}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Processing Order Detail Modal */}
+      {showProcessingOrderModal && selectedProcessingOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Order Details - {selectedProcessingOrder.orderNumber}
+                  </h2>
+                  <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Processing
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowProcessingOrderModal(false);
+                    setSelectedProcessingOrder(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="space-y-6">
+                {/* Customer Information */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Customer Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div><span className="text-gray-600">Customer:</span> <span className="font-medium">{selectedProcessingOrder.customerName || selectedProcessingOrder.customerEmail}</span></div>
+                    <div><span className="text-gray-600">Email:</span> <span className="font-medium">{selectedProcessingOrder.customerEmail}</span></div>
+                    <div><span className="text-gray-600">Total Amount:</span> <span className="font-medium">${selectedProcessingOrder.totalAmount?.toFixed(2) || "N/A"}</span></div>
+                  </div>
+                </div>
+
+                {/* Shipping Address */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Shipping Address</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    {selectedProcessingOrder.shippingAddress ? (
+                      <div className="whitespace-pre-line">{selectedProcessingOrder.shippingAddress}</div>
+                    ) : (
+                      <div className="text-gray-500 italic">No shipping address provided</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Order Items */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Order Items</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    {selectedProcessingOrder.lineItems && Array.isArray(selectedProcessingOrder.lineItems) && selectedProcessingOrder.lineItems.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedProcessingOrder.lineItems.map((item: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                            <div>
+                              <div className="font-medium">{item.name || item.title}</div>
+                              <div className="text-sm text-gray-600">SKU: {item.sku}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">Qty: {item.quantity}</div>
+                              <div className="text-sm text-gray-600">${item.price ? (parseFloat(item.price) * item.quantity).toFixed(2) : "N/A" || "N/A"}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-center py-4">
+                        {selectedProcessingOrder.lineItems ? 'No items available' : 'Line items not loaded'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tracking Information */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Shipping Information</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div>
+                      <span className="text-gray-600">Tracking Number:</span> 
+                      <span className={`font-medium ml-2 ${selectedProcessingOrder.trackingNumber ? 'text-green-600' : 'text-gray-500'}`}>
+                        {selectedProcessingOrder.trackingNumber || 'Tracking Not Yet Updated'}
+                      </span>
+                    </div>
+                    <div><span className="text-gray-600">Status:</span> <span className="font-medium">Processing</span></div>
+                    <div><span className="text-gray-600">Created:</span> <span className="font-medium">{new Date(selectedProcessingOrder.createdAt).toLocaleString()}</span></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

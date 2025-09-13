@@ -3,7 +3,6 @@ import db from '@/lib/database';
 
 interface InvoiceRequest {
   customerEmail: string;
-  customerName?: string;
   palletItems: {
     'Vital-24K': number;
     'Active-26K': number;
@@ -11,7 +10,7 @@ interface InvoiceRequest {
     'Power-30K': number;
     'Ultra-32K': number;
   };
-  billingAddress: {
+  shippingAddress: {
     firstName: string;
     lastName: string;
     address1: string;
@@ -31,9 +30,17 @@ export async function POST(request: NextRequest) {
     const body: InvoiceRequest = await request.json();
     
     // Validate required fields
-    if (!body.customerEmail || !body.palletItems || !body.billingAddress) {
+    if (!body.customerEmail || !body.palletItems || !body.shippingAddress) {
       return NextResponse.json({ 
-        error: 'Missing required fields: customerEmail, palletItems, billingAddress' 
+        error: 'Missing required fields: customerEmail, palletItems, shippingAddress' 
+      }, { status: 400 });
+    }
+
+    // Validate shipping address fields
+    const { firstName, lastName, address1, city, province, zip } = body.shippingAddress;
+    if (!firstName || !lastName || !address1 || !city || !province || !zip) {
+      return NextResponse.json({ 
+        error: 'Missing required shipping address fields: firstName, lastName, address1, city, province, zip' 
       }, { status: 400 });
     }
 
@@ -56,12 +63,15 @@ export async function POST(request: NextRequest) {
     }
 
     // First, we need to get or create the Shopify customer
+    // Create customer name from shipping address
+    const customerName = `${body.shippingAddress.firstName} ${body.shippingAddress.lastName}`.trim();
+    
     let shopifyCustomerId = await getOrCreateShopifyCustomer(
       shop, 
       accessToken, 
       body.customerEmail, 
-      body.customerName,
-      body.billingAddress,
+      customerName,
+      body.shippingAddress,
       body.existingCustomerId
     );
 
@@ -105,10 +115,13 @@ export async function POST(request: NextRequest) {
           id: shopifyCustomerId
         },
         line_items: lineItemsWithVariants,
-        billing_address: body.billingAddress,
+        shipping_address: body.shippingAddress,
+        billing_address: body.shippingAddress, // Use shipping address as billing address too
         use_customer_default_address: false
       }
     };
+
+    console.log('Creating draft order with shipping address:', body.shippingAddress);
 
     const draftOrderResponse = await fetch(`https://${shop}.myshopify.com/admin/api/2024-10/draft_orders.json`, {
       method: 'POST',
@@ -129,13 +142,11 @@ export async function POST(request: NextRequest) {
     }
 
     const draftOrder = await draftOrderResponse.json();
+    console.log('Draft order created with shipping address:', draftOrder.draft_order.shipping_address);
     const draftOrderId = draftOrder.draft_order.id;
 
-    // Create a shorter, more readable quote ID using last 2 digits
-    const shortQuoteId = `#D${draftOrderId.toString().slice(-2)}`;
-    
-    // Save quote to database
-    const db = (await import('@/lib/database')).default;
+    // Use Shopify's draft order name as the quote ID (e.g., #D1234)
+    const shopifyQuoteId = draftOrder.draft_order.name || `#D${draftOrderId}`;
     
     // Get or create customer
     let customerId = body.existingCustomerId;
@@ -158,8 +169,8 @@ export async function POST(request: NextRequest) {
             source, status, customertype, createdat, updatedat, totalorders, totalspent, assignedto
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         `).run(
-          customerId, body.customerEmail, body.billingAddress.firstName, body.billingAddress.lastName,
-          body.billingAddress.phone, body.billingAddress.company || null, 'quote', 'contact', 
+          customerId, body.customerEmail, body.shippingAddress.firstName, body.shippingAddress.lastName,
+          body.shippingAddress.phone, body.shippingAddress.company || null, 'quote', 'contact', 
           'Contact', now, now, 0, 0, body.assignedTo || null
         );
       }
@@ -171,38 +182,72 @@ export async function POST(request: NextRequest) {
     await db.prepare(`
       INSERT INTO quotes (
         quote_id, shopify_draft_order_id, customer_id, customer_email,
-        total_amount, pallet_items, custom_message, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'quoted')
+        total_amount, pallet_items, custom_message, shipping_address, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'quoted')
     `).run(
-      shortQuoteId, draftOrderId, customerId, body.customerEmail,
-      draftOrder.draft_order.total_price, JSON.stringify(palletItems), body.customMessage || null
+      shopifyQuoteId, draftOrderId, customerId, body.customerEmail,
+      draftOrder.draft_order.total_price, JSON.stringify(palletItems), body.customMessage || null,
+      body.shippingAddress ? JSON.stringify(body.shippingAddress) : null
     );
     
     // Send the invoice
     const invoiceData = {
       draft_order_invoice: {
         to: body.customerEmail,
-        subject: `Quote ${shortQuoteId} from Kinetic Dog Food`,
+        subject: `Quote ${shopifyQuoteId} from Kinetic Dog Food`,
         custom_message: body.customMessage || 'Thank you for your business! Please review and complete your payment.'
       }
     };
 
-    const invoiceResponse = await fetch(`https://${shop}.myshopify.com/admin/api/2024-10/draft_orders/${draftOrderId}/send_invoice.json`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': accessToken
-      },
-      body: JSON.stringify(invoiceData)
-    });
+    // Retry mechanism for sending invoice (Shopify needs time to calculate)
+    let invoiceResponse;
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 seconds
+
+    while (retryCount < maxRetries) {
+      // Wait before retry (except first attempt)
+      if (retryCount > 0) {
+        console.log(`Retrying invoice send (attempt ${retryCount + 1}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+
+      invoiceResponse = await fetch(`https://${shop}.myshopify.com/admin/api/2024-10/draft_orders/${draftOrderId}/send_invoice.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': accessToken
+        },
+        body: JSON.stringify(invoiceData)
+      });
+
+      if (invoiceResponse.ok) {
+        break; // Success, exit retry loop
+      }
+
+      const error = await invoiceResponse.text();
+      console.error(`Invoice sending failed (attempt ${retryCount + 1}):`, error);
+      
+      // Check if it's the "not finished calculating" error
+      if (error.includes('not finished calculating')) {
+        retryCount++;
+        if (retryCount < maxRetries) {
+          continue; // Retry
+        }
+      } else {
+        // Different error, don't retry
+        break;
+      }
+    }
 
     if (!invoiceResponse.ok) {
       const error = await invoiceResponse.text();
-      console.error('Invoice sending failed:', error);
+      console.error('Invoice sending failed after all retries:', error);
       return NextResponse.json({ 
-        error: 'Draft order created but failed to send invoice',
+        error: 'Draft order created but failed to send invoice after retries',
         draftOrderId,
-        details: error
+        details: error,
+        suggestion: 'The draft order was created successfully. You can manually send the invoice from Shopify admin or try again in a few moments.'
       }, { status: 500 });
     }
 
@@ -215,7 +260,7 @@ export async function POST(request: NextRequest) {
       customerEmail: body.customerEmail,
       totalAmount: draftOrder.draft_order.total_price,
       quoteUrl: draftOrder.draft_order.invoice_url,
-      quoteId: shortQuoteId // Clean quote ID like #D85
+      quoteId: shopifyQuoteId // Shopify's draft order name (e.g., #D1234)
     });
 
   } catch (error) {
@@ -227,7 +272,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function getOrCreateShopifyCustomer(shop: string, accessToken: string, email: string, name?: string, billingAddress?: any, existingCustomerId?: string): Promise<number | null> {
+async function getOrCreateShopifyCustomer(shop: string, accessToken: string, email: string, name?: string, shippingAddress?: any, existingCustomerId?: string): Promise<number | null> {
   try {
     // First, try to find existing customer
     const searchResponse = await fetch(`https://${shop}.myshopify.com/admin/api/2024-10/customers/search.json?query=email:${email}`, {
@@ -250,9 +295,9 @@ async function getOrCreateShopifyCustomer(shop: string, accessToken: string, ema
     const customerData = {
       customer: {
         email: email,
-        first_name: firstName || billingAddress?.firstName || '',
-        last_name: lastName || billingAddress?.lastName || '',
-        phone: billingAddress?.phone || ''
+        first_name: firstName || shippingAddress?.firstName || '',
+        last_name: lastName || shippingAddress?.lastName || '',
+        phone: shippingAddress?.phone || ''
       }
     };
 

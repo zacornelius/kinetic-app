@@ -166,8 +166,14 @@ export default function DataExplorer() {
             let processedLineItems = [];
             if (order.lineItems) {
               try {
-                const lineItems = JSON.parse(order.lineItems);
-                processedLineItems = lineItems.map((item: any) => {
+                // Check if lineItems is already an object or needs parsing
+                const lineItems = typeof order.lineItems === 'string' 
+                  ? JSON.parse(order.lineItems) 
+                  : order.lineItems;
+                
+                // Ensure lineItems is an array
+                if (Array.isArray(lineItems)) {
+                  processedLineItems = lineItems.map((item: any) => {
                   // Use the same logic as the line items table
                   const effectiveSKU = (() => {
                     // Handle "Build a Pallet" - extract product name from name field
@@ -211,8 +217,12 @@ export default function DataExplorer() {
                     vendor: item.vendor || 'Unknown'
                   };
                 });
+                } else {
+                  console.warn('Line items is not an array:', lineItems);
+                  processedLineItems = [];
+                }
               } catch (error) {
-                console.error('Error parsing line items:', error);
+                console.error('Error parsing line items:', error, 'Line items data:', order.lineItems);
                 processedLineItems = [];
               }
             }

@@ -55,80 +55,36 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Get the draft order details first
-    const draftOrderResponse = await fetch(
-      `https://${shop}.myshopify.com/admin/api/2024-10/draft_orders/${quote.shopify_draft_order_id}.json`,
+    // Convert draft order to real order using Shopify's "pay later" approach
+    // This is much simpler and more reliable than creating a new order via API
+    const convertDraftOrderResponse = await fetch(
+      `https://${shop}.myshopify.com/admin/api/2024-10/draft_orders/${quote.shopify_draft_order_id}/complete.json`,
       {
-        headers: {
-          'X-Shopify-Access-Token': accessToken
-        }
-      }
-    );
-
-    if (!draftOrderResponse.ok) {
-      const errorText = await draftOrderResponse.text();
-      console.error('Failed to get draft order:', errorText);
-      return NextResponse.json({ 
-        error: "Failed to get draft order details",
-        details: errorText
-      }, { status: 500 });
-    }
-
-    const draftOrderData = await draftOrderResponse.json();
-    const draftOrder = draftOrderData.draft_order;
-
-    // Create a new order directly with pending financial status
-    const newOrderData = {
-      order: {
-        line_items: draftOrder.line_items,
-        customer: draftOrder.customer,
-        billing_address: draftOrder.billing_address,
-        shipping_address: draftOrder.shipping_address || draftOrder.billing_address,
-        note: `PO Number: ${poNumber}\nOriginal Quote: ${quoteId}\nManual Payment Required`,
-        tags: 'pending,quote-converted',
-        financial_status: 'pending',
-        payment_gateway_names: ['manual']
-      }
-    };
-
-    const createOrderResponse = await fetch(
-      `https://${shop}.myshopify.com/admin/api/2024-10/orders.json`,
-      {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'X-Shopify-Access-Token': accessToken
         },
-        body: JSON.stringify(newOrderData)
+        body: JSON.stringify({
+          draft_order: {
+            payment_pending: true,
+            note: `PO Number: ${poNumber}\nInvoice Email: ${invoiceEmail}\nOriginal Quote: ${quoteId}\nQuote ID: ${quote.id}\nManual Payment Required`
+          }
+        })
       }
     );
 
-    if (!createOrderResponse.ok) {
-      const errorText = await createOrderResponse.text();
-      console.error('Failed to create order:', errorText);
+    if (!convertDraftOrderResponse.ok) {
+      const errorText = await convertDraftOrderResponse.text();
+      console.error('Failed to convert draft order to order:', errorText);
       return NextResponse.json({ 
-        error: "Failed to create order",
+        error: "Failed to convert draft order to order",
         details: errorText
       }, { status: 500 });
     }
 
-    const createdOrder = await createOrderResponse.json();
-    const realOrderId = createdOrder.order.id;
-
-    // Delete the original draft order since we created a new order
-    const deleteDraftResponse = await fetch(
-      `https://${shop}.myshopify.com/admin/api/2024-10/draft_orders/${quote.shopify_draft_order_id}.json`,
-      {
-        method: 'DELETE',
-        headers: {
-          'X-Shopify-Access-Token': accessToken
-        }
-      }
-    );
-
-    if (!deleteDraftResponse.ok) {
-      console.warn('Failed to delete original draft order, but continuing with conversion');
-    }
+    const convertedOrderData = await convertDraftOrderResponse.json();
+    const realOrderId = convertedOrderData.draft_order.order_id;
 
     // Update quote status to pending
     const finalUpdateQuery = `
@@ -139,16 +95,8 @@ export async function POST(request: NextRequest) {
     
     await db.prepare(finalUpdateQuery).run(quoteId);
 
-    // Send invoice to procurement email
-    const invoiceData = {
-      order: {
-        id: realOrderId,
-        email: invoiceEmail,
-        note: `PO Number: ${poNumber}\nOriginal Quote: ${quoteId}`
-      }
-    };
-
-    const invoiceResponse = await fetch(
+    // Create a pending transaction for the order
+    const transactionResponse = await fetch(
       `https://${shop}.myshopify.com/admin/api/2024-10/orders/${realOrderId}/transactions.json`,
       {
         method: 'POST',
@@ -168,8 +116,8 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    if (!invoiceResponse.ok) {
-      console.error('Failed to create pending transaction');
+    if (!transactionResponse.ok) {
+      console.error('Failed to create pending transaction, but order was created successfully');
     }
 
     return NextResponse.json({

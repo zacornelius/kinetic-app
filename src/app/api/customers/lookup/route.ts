@@ -34,25 +34,36 @@ export async function GET(request: NextRequest) {
         c.createdat as "createdAt",
         c.updatedat as "updatedAt"
       FROM customers c
-      WHERE 1=0
+      WHERE 
     `;
     
     const params: any[] = [];
+    const conditions: string[] = [];
     
     if (email) {
-      query += ' OR LOWER(c.email) LIKE LOWER(?)';
+      conditions.push('LOWER(c.email) LIKE LOWER(?)');
       params.push(`%${email}%`);
     }
     
     if (phone) {
-      query += ' OR (c.phone LIKE ? OR c.phone LIKE ?)';
-      params.push(`%${phone}%`, `%${phone.replace(/\D/g, '')}%`);
+      const digitsOnly = phone.replace(/\D/g, '');
+      if (digitsOnly.length > 0) {
+        conditions.push('(c.phone LIKE ? OR c.phone LIKE ?)');
+        params.push(`%${phone}%`, `%${digitsOnly}%`);
+      } else {
+        // If phone search term has no digits, only search the original term
+        conditions.push('c.phone LIKE ?');
+        params.push(`%${phone}%`);
+      }
     }
     
     if (name) {
-      query += ' OR (LOWER(COALESCE(c.firstname, \'\')) LIKE LOWER(?) OR LOWER(COALESCE(c.lastname, \'\')) LIKE LOWER(?) OR LOWER(COALESCE(c.firstname, \'\') || \' \' || COALESCE(c.lastname, \'\')) LIKE LOWER(?))';
+      conditions.push('(LOWER(COALESCE(c.firstname, \'\')) LIKE LOWER(?) OR LOWER(COALESCE(c.lastname, \'\')) LIKE LOWER(?) OR LOWER(COALESCE(c.firstname, \'\') || \' \' || COALESCE(c.lastname, \'\')) LIKE LOWER(?))');
       params.push(`%${name}%`, `%${name}%`, `%${name}%`);
     }
+    
+    // Join conditions with OR
+    query += conditions.join(' OR ');
     
     query += ' ORDER BY c.customertype DESC, c.updatedat DESC LIMIT 10';
     

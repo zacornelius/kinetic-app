@@ -39,23 +39,43 @@ export async function POST() {
     const syncResult = await db.prepare(syncQuery).run();
     console.log(`Synced ${syncResult.changes} customers from shopify_customers to customers table`);
 
-    // Update customer order counts and totals
-    console.log('Updating customer order counts and totals...');
+    // Update customer order counts, totals, and customer type from ALL order sources
+    console.log('Updating customer order counts, totals, and customer type from all sources...');
     const updateQuery = `
       UPDATE customers 
       SET 
         totalorders = (
-          SELECT COUNT(*) 
-          FROM shopify_orders 
-          WHERE LOWER(customeremail) = LOWER(customers.email)
+          SELECT COUNT(*) FROM (
+            SELECT id FROM shopify_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+            UNION ALL
+            SELECT id FROM distributor_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+            UNION ALL
+            SELECT id FROM digital_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+          ) all_orders
         ),
         totalspent = (
-          SELECT COALESCE(SUM(totalamount), 0)
-          FROM shopify_orders 
-          WHERE LOWER(customeremail) = LOWER(customers.email)
+          SELECT COALESCE(SUM(totalamount), 0) FROM (
+            SELECT totalamount FROM shopify_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+            UNION ALL
+            SELECT totalamount FROM distributor_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+            UNION ALL
+            SELECT totalamount FROM digital_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+          ) all_orders
         ),
+        customertype = CASE 
+          WHEN (
+            SELECT COUNT(*) FROM (
+              SELECT id FROM shopify_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+              UNION ALL
+              SELECT id FROM distributor_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+              UNION ALL
+              SELECT id FROM digital_orders WHERE LOWER(customeremail) = LOWER(customers.email)
+            ) all_orders
+          ) > 0 THEN 'Customer'
+          ELSE 'Contact'
+        END,
         updatedat = CURRENT_TIMESTAMP
-      WHERE source = 'shopify'
+      WHERE 1=1
     `;
     
     const updateResult = await db.prepare(updateQuery).run();
@@ -65,8 +85,7 @@ export async function POST() {
     const newCustomersQuery = `
       SELECT id, email, firstname, lastname 
       FROM customers 
-      WHERE source = 'shopify' 
-      AND updatedat > CURRENT_TIMESTAMP - INTERVAL '1 minute'
+      WHERE updatedat > CURRENT_TIMESTAMP - INTERVAL '1 minute'
       ORDER BY updatedat DESC
       LIMIT 10
     `;

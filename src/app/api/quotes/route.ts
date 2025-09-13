@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
         q.total_amount as "totalAmount",
         q.pallet_items as "palletItems",
         q.custom_message as "customMessage",
+        q.shipping_address as "shippingAddress",
         q.created_at as "createdAt",
         q.updated_at as "updatedAt",
         c.firstname as "customerFirstName",

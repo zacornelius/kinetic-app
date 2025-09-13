@@ -95,10 +95,19 @@ class PostgresDatabase {
   }
 
   // Transaction method for PostgreSQL
-  transaction(callback: () => { insertedCount: number; updatedCount: number }) {
-    // Return the callback function to match SQLite better-sqlite3 API
-    // The callback will be called later with insertMany()
-    return callback;
+  async transaction(callback: () => Promise<{ insertedCount: number; updatedCount: number }>) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await callback();
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 
