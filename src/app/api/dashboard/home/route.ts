@@ -47,16 +47,14 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Return only the data needed for home tab
-    const result = {
+    return NextResponse.json({
       success: true,
       data: {
         lineItems: Array.isArray(lineItems) ? lineItems : [],
         customers: customersData?.customers || customersData || []
       },
       timestamp: new Date().toISOString()
-    };
-
-    return NextResponse.json(result);
+    });
 
   } catch (error) {
     console.error('Home dashboard API error:', error);
