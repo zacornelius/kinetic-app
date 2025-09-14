@@ -5,8 +5,6 @@ import PWAInstaller from "@/components/PWAInstaller";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import ProfileDropdown from "@/components/ProfileDropdown";
-import { VirtualList } from "@/components/VirtualList";
-import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 
 type Category = "bulk" | "issues" | "questions";
 
@@ -3655,7 +3653,6 @@ export default function Home() {
       )}
 
     </div>
-    <PerformanceMonitor />
     </ProtectedRoute>
   );
 }
