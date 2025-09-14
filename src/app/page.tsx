@@ -833,19 +833,41 @@ export default function Home() {
     setCustomerNotes([]);
     
     try {
-      // Load customer timeline and notes - use email as fallback if no ID
+      // Load customer details using consolidated API
       const customerId = customer.id || customer.email;
-      const timelineResponse = await fetch(`/api/customers/${customerId}/timeline?_t=${Date.now()}`);
-      const notesResponse = await fetch(`/api/customers/notes?customerId=${customerId}&_t=${Date.now()}`);
+      const response = await fetch(`/api/customers/consolidated?action=details&id=${customerId}&include=full,timeline&_t=${Date.now()}`);
       
-      if (timelineResponse.ok) {
-        const timelineData = await timelineResponse.json();
-        setCustomerTimeline(Array.isArray(timelineData.interactions) ? timelineData.interactions : []);
-      }
-      
-      if (notesResponse.ok) {
-        const notesData = await notesResponse.json();
-        setCustomerNotes(Array.isArray(notesData.notes) ? notesData.notes : []);
+      if (response.ok) {
+        const data = await response.json();
+        const customerData = data.customer;
+        
+        if (customerData) {
+          // Update the modal with full customer data
+          setTopCustomersModal({
+            ...customer,
+            ...customerData,
+            // Ensure we have the expected property names
+            firstname: customerData.firstName || customer.firstname,
+            lastname: customerData.lastName || customer.lastname,
+            total_spent: customer.total_spent,
+            order_count: customer.order_count,
+            customerType: customerData.customerType,
+            customercategory: customerData.customerCategory,
+            phone: customerData.phone,
+            assignedto: customerData.assignedTo,
+            address: customerData.shippingAddress || customerData.billingAddress,
+            notes: customerData.notes,
+            id: customerData.id
+          });
+          
+          // Set timeline and notes
+          if (data.timeline) {
+            setCustomerTimeline(Array.isArray(data.timeline) ? data.timeline : []);
+          }
+          if (data.notes) {
+            setCustomerNotes(Array.isArray(data.notes) ? data.notes : []);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading customer details:', error);

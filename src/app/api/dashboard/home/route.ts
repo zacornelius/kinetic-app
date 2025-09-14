@@ -298,15 +298,15 @@ export async function GET(request: NextRequest) {
       monthlyPallets: [] // Will be calculated on frontend
     };
 
-    // Process top customers data
+    // Process top customers data (using snake_case to match frontend expectations)
     const topCustomers = topCustomersResult.map((customer: any) => ({
       email: customer.email,
-      firstName: customer.firstname,
-      lastName: customer.lastname,
-      companyName: customer.companyname,
-      orderCount: parseInt(customer.order_count),
-      totalSpent: parseFloat(customer.total_spent),
-      lastOrderDate: customer.last_order_date
+      firstname: customer.firstname,
+      lastname: customer.lastname,
+      companyname: customer.companyname,
+      order_count: parseInt(customer.order_count),
+      total_spent: parseFloat(customer.total_spent),
+      last_order_date: customer.last_order_date
     }));
 
     // Process line items data
