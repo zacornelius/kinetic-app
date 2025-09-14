@@ -218,7 +218,7 @@ export default function Home() {
   const [bagsSoldData, setBagsSoldData] = useState<any>(null);
   const [yearlyBreakdownData, setYearlyBreakdownData] = useState<any[]>([]);
   const [dashboardView, setDashboardView] = useState<'personal' | 'leaderboard'>('personal');
-  const [salesLoading, setSalesLoading] = useState(false);
+  const [salesLoading, setSalesLoading] = useState(true);
 
   // Invoice creation state
   const [showQuoteForm, setShowQuoteForm] = useState(false);
@@ -403,8 +403,8 @@ export default function Home() {
     }));
   };
 
-  // Load sales dashboard data with caching
-  const loadSalesData = async () => {
+  // Load sales dashboard data with caching - DISABLED (using new loadHomeDashboard instead)
+  const loadSalesData_DISABLED = async () => {
     if (!user?.email) return;
     
     const cacheKey = `sales-${user.email}`;
@@ -495,7 +495,7 @@ export default function Home() {
     }
     
     try {
-      setSalesLoading(true);
+      // setSalesLoading(true); // DISABLED - using new loadHomeDashboard instead
       
       // Initialize variables for caching
       let yearlyBreakdownData = [];
@@ -701,7 +701,7 @@ export default function Home() {
     } catch (error) {
       console.error('Error loading sales data:', error);
     } finally {
-      setSalesLoading(false);
+      // setSalesLoading(false); // DISABLED - using new loadHomeDashboard instead
     }
   };
 
@@ -772,13 +772,12 @@ export default function Home() {
     invalidateCache();
     await refresh();
     if (user?.email) {
-      await loadSalesData();
       await loadQuotes();
     }
     if (activeTab === 'customers') {
       await loadCustomers();
     }
-  }, [invalidateCache, refresh, user?.email, loadSalesData, loadQuotes, activeTab, loadCustomers]);
+  }, [invalidateCache, refresh, user?.email, loadQuotes, activeTab, loadCustomers]);
 
 
 
@@ -1077,7 +1076,9 @@ export default function Home() {
   };
 
   async function refresh() {
-    if (!user?.email) return;
+    if (!user?.email) {
+      return;
+    }
     
     // For home tab, use the consolidated API
     if (activeTab === "home") {
@@ -1117,75 +1118,98 @@ export default function Home() {
   }
 
   async function loadHomeDashboard() {
-    if (!user?.email) return;
-    
-    const cacheKey = `home-dashboard-${user.email}`;
-    const cachedData = getCachedData(cacheKey);
-    
-    if (cachedData) {
-      // Set all the data from cache
-      setInquiries(Array.isArray(cachedData.inquiries) ? cachedData.inquiries : []);
-      setOrders(Array.isArray(cachedData.orders) ? cachedData.orders : []);
-      setUsers(Array.isArray(cachedData.users) ? cachedData.users : []);
-      setQuotes(Array.isArray(cachedData.quotes) ? cachedData.quotes : []);
-      setAllInquiries(Array.isArray(cachedData.inquiries) ? cachedData.inquiries : []);
-      
-      // Set dashboard data
-      if (cachedData.salesData) {
-        setSalesData(cachedData.salesData.personal);
-        setMonthlyPalletsData(cachedData.salesData.monthlyPallets || []);
-      }
-      if (cachedData.topCustomers) {
-        setTopCustomers(cachedData.topCustomers);
-      }
-      if (cachedData.lineItems) {
-        setLineItems(cachedData.lineItems);
-      }
-      if (cachedData.customers) {
-        setCustomers(cachedData.customers);
-      }
-      
+    if (!user?.email) {
       return;
     }
-
+    
     try {
-      const response = await fetch(`/api/dashboard/home?userEmail=${encodeURIComponent(user.email)}&view=personal&_t=${Date.now()}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch home dashboard: ${response.status}`);
+      // Load all the dashboard data using our optimized APIs in parallel
+      const [salesResponse, topCustomersResponse, trendsResponse, bagsResponse, leaderboardResponse] = await Promise.all([
+        fetch(`/api/sales/dashboard?userEmail=${encodeURIComponent(user.email)}&view=personal&_t=${Date.now()}`),
+        fetch(`/api/sales/top-customers?userEmail=${encodeURIComponent(user.email)}&view=personal&limit=5&_t=${Date.now()}`),
+        fetch(`/api/sales/trends?userEmail=${encodeURIComponent(user.email)}&view=personal&_t=${Date.now()}`),
+        fetch(`/api/sales/bags?userEmail=${encodeURIComponent(user.email)}&view=personal&_t=${Date.now()}`),
+        fetch(`/api/sales/dashboard?userEmail=${encodeURIComponent(user.email)}&view=leaderboard&_t=${Date.now()}`)
+      ]);
+
+      // Collect all data first before setting any state
+      let salesData = null;
+      let monthlyPalletsData = [];
+      let topCustomers = [];
+      let yearlyBreakdownData = [];
+      let bagsSoldData = null;
+      let leaderboardData = [];
+
+      // Process all responses
+      if (salesResponse.ok) {
+        const salesResult = await salesResponse.json();
+        salesData = salesResult.personal;
+        monthlyPalletsData = salesResult.monthlyData || [];
       }
-      
-      const result = await response.json();
-      const data = result.data;
-      
-      // Set all the data
-      setInquiries(Array.isArray(data.inquiries) ? data.inquiries : []);
-      setOrders(Array.isArray(data.orders) ? data.orders : []);
-      setUsers(Array.isArray(data.users) ? data.users : []);
-      setQuotes(Array.isArray(data.quotes) ? data.quotes : []);
-      setAllInquiries(Array.isArray(data.inquiries) ? data.inquiries : []);
-      
-      // Set dashboard data
-      if (data.salesData) {
-        setSalesData(data.salesData.personal);
-        setMonthlyPalletsData(data.salesData.monthlyPallets || []);
+
+      if (topCustomersResponse.ok) {
+        const topCustomersResult = await topCustomersResponse.json();
+        topCustomers = topCustomersResult.topCustomers || [];
       }
-      if (data.topCustomers) {
-        setTopCustomers(data.topCustomers);
+
+      if (trendsResponse.ok) {
+        const trendsResult = await trendsResponse.json();
+        yearlyBreakdownData = trendsResult.trends || [];
       }
-      if (data.lineItems) {
-        setLineItems(data.lineItems);
+
+      if (bagsResponse.ok) {
+        const bagsResult = await bagsResponse.json();
+        bagsSoldData = bagsResult;
       }
-      if (data.customers) {
-        setCustomers(data.customers);
+
+      if (leaderboardResponse.ok) {
+        const leaderboardResult = await leaderboardResponse.json();
+        leaderboardData = leaderboardResult.leaderboard || [];
       }
-      
-      // Cache the entire response
-      setCachedData(cacheKey, data);
-      
+
+      // Set all state at once - this makes all sections appear together
+      setSalesData(salesData);
+      setMonthlyPalletsData(monthlyPalletsData);
+      setTopCustomers(topCustomers);
+      setYearlyBreakdownData(yearlyBreakdownData);
+      setBagsSoldData(bagsSoldData);
+      setLeaderboardData(leaderboardData);
+
+      // Load other data (inquiries, orders, users, quotes) using existing APIs
+      const [inquiriesRes, ordersRes, usersRes, quotesRes] = await Promise.all([
+        fetch(`/api/inquiries?_t=${Date.now()}`),
+        fetch("/api/orders", { cache: "no-store" }),
+        fetch("/api/users"),
+        fetch(`/api/quotes?assignedTo=${encodeURIComponent(user.email)}`)
+      ]);
+
+      if (inquiriesRes.ok) {
+        const inquiriesData = await inquiriesRes.json();
+        setInquiries(inquiriesData);
+        setAllInquiries(inquiriesData);
+      }
+
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        setOrders(ordersData);
+      }
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        setUsers(usersData);
+      }
+
+      if (quotesRes.ok) {
+        const quotesData = await quotesRes.json();
+        setQuotes(quotesData);
+      }
+
     } catch (error) {
       console.error('Error loading home dashboard:', error);
       // Fallback to individual API calls if consolidated API fails
       await loadIndividualAPIs();
+    } finally {
+      setSalesLoading(false);
     }
   }
 
@@ -1277,10 +1301,11 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category]);
 
-  // Load quotes when user becomes available
+  // Load quotes and refresh data when user becomes available
   useEffect(() => {
     if (user?.email) {
       loadQuotes();
+      refresh(); // Load home dashboard data
     }
   }, [user?.email]);
 
@@ -1312,6 +1337,10 @@ export default function Home() {
 
   useEffect(() => {
     loadUsers();
+    // Load data when component mounts (if user is already available)
+    if (user?.email) {
+      refresh();
+    }
   }, []);
 
   // Load all inquiries for counting on initial load
@@ -1341,10 +1370,6 @@ export default function Home() {
   }, [customerAssignedFilter, customerStatusFilter, customerSearch, customerCurrentPage]);
 
   useEffect(() => {
-    if (activeTab === "home") {
-      loadSalesData();
-    }
-    
     // Force scroll to top when tab changes
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1598,15 +1623,9 @@ export default function Home() {
   function renderHomeTab() {
     return (
       <div className="space-y-4">
-
-        {salesLoading ? (
-          <div className="text-center py-8">
-            <div className="text-white">Loading sales data...</div>
-          </div>
-        ) : (
-          <>
-            {/* Sales This Month - Top Priority */}
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        {/* Content loads when ready - no loading state needed here */}
+        {/* Sales This Month - Top Priority */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
                 <h3 className="text-xl font-bold text-gray-900">My Sales This Month</h3>
@@ -1621,7 +1640,7 @@ export default function Home() {
                   <div className="text-xs text-gray-600">Orders</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold" style={{color: '#915A9D'}}>{salesData?.bagsSoldThisMonth || 0}</div>
+                  <div className="text-2xl font-bold" style={{color: '#915A9D'}}>{bagsSoldData?.bagsSold || 0}</div>
                   <div className="text-xs text-gray-600">Bags Sold</div>
                 </div>
               </div>
@@ -1635,9 +1654,6 @@ export default function Home() {
               </div>
               
               <div className="space-y-3">
-                {console.log('Leaderboard data in render:', leaderboardData)}
-                {console.log('Dave in leaderboardData:', leaderboardData.find(m => m.owner.toLowerCase() === 'dave@kineticdogfood.com'))}
-                {console.log('All owners in leaderboard:', leaderboardData.map(m => m.owner))}
                 {leaderboardData.map((member, index) => {
                   return (
                     <div key={member.owner} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1831,8 +1847,8 @@ export default function Home() {
                 )}
               </div>
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -2425,8 +2441,20 @@ export default function Home() {
     );
   }
 
+  // Check if we need to show loading for home tab
+  const { loading: authLoading } = useAuth();
+  const shouldShowLoading = authLoading || (activeTab === "home" && salesLoading);
+
   return (
     <ProtectedRoute>
+      {shouldShowLoading ? (
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="text-white text-lg">Loading...</div>
+          </div>
+        </div>
+      ) : (
       <div className="min-h-screen bg-black">
         {/* Fixed Team Kinetic Header */}
         <div className="fixed top-0 left-0 right-0 bg-black z-[9999] border-b border-gray-800">
@@ -3732,6 +3760,7 @@ export default function Home() {
       )}
 
     </div>
+      )}
     </ProtectedRoute>
   );
 }
