@@ -3,25 +3,20 @@ import db from "@/lib/database";
 
 export async function GET() {
   try {
-    // Get all orders with line items from all order tables
+    // Get all orders with line items from all_orders table
     const orders = await db.prepare(`
       SELECT 
-        id,
-        ordernumber as "orderNumber",
-        customeremail as "customerEmail",
-        customername as "customerName",
-        lineitems as "lineItems",
-        business_unit as "businessUnit",
-        createdat as "createdAt"
-      FROM (
-        SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, createdat::timestamp as createdat FROM shopify_orders
-        UNION ALL
-        SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, createdat::timestamp as createdat FROM distributor_orders
-        UNION ALL
-        SELECT id, ordernumber, customeremail, customername, lineitems, business_unit, createdat as createdat FROM digital_orders
-      ) o
-      WHERE lineitems IS NOT NULL AND lineitems != '' AND lineitems != 'null' AND lineitems != 'undefined'
-      ORDER BY createdat DESC
+        o.id,
+        o.ordernumber as "orderNumber",
+        o.customeremail as "customerEmail",
+        o.customername as "customerName",
+        o.lineitems as "lineItems",
+        COALESCE(o.business_unit, c.business_unit) as "businessUnit",
+        o.createdat as "createdAt"
+      FROM all_orders o
+      LEFT JOIN customers c ON o.customer_id = c.id
+      WHERE o.lineitems IS NOT NULL AND o.lineitems != '' AND o.lineitems != 'null' AND o.lineitems != 'undefined'
+      ORDER BY o.createdat DESC
     `).all();
     
     // Parse line items from JSON and flatten them

@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
         o.id,
         o.createdat as "createdAt",
         o.ordernumber as "orderNumber",
-        o.shopifyorderid as "shopifyOrderId",
         o.customeremail as "customerEmail",
         o.customername as "customerName",
         o.totalamount as "totalAmount",
@@ -56,7 +55,7 @@ export async function GET(request: NextRequest) {
         c.assignedto as "assignedOwner",
         o.source,
         o.sourceid as "sourceId",
-        o.business_unit as "businessUnit",
+        COALESCE(o.business_unit, c.business_unit) as "businessUnit",
         CASE 
           WHEN o.notes LIKE '%PO Number:%' THEN 
             TRIM(SUBSTRING(o.notes FROM 'PO Number: ([^\n]+)'))
@@ -67,14 +66,8 @@ export async function GET(request: NextRequest) {
             TRIM(SUBSTRING(o.notes FROM 'Invoice Email: ([^\n]+)'))
           ELSE NULL 
         END as "invoiceEmail"
-      FROM (
-        SELECT id, createdat::timestamp as createdat, ordernumber, shopifyorderid, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail, lineitems, 'shopify' as source, id as sourceid, business_unit FROM shopify_orders
-        UNION ALL
-        SELECT id, createdat::timestamp as createdat, ordernumber, null as shopifyorderid, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail, lineitems, source, sourceid, business_unit FROM distributor_orders
-        UNION ALL
-        SELECT id, createdat as createdat, ordernumber, null as shopifyorderid, customeremail, customername, totalamount, currency, status, shippingaddress, trackingnumber, notes, owneremail, lineitems, source, sourceid, business_unit FROM digital_orders
-      ) o
-      LEFT JOIN customers c ON LOWER(o.customeremail) = LOWER(c.email)
+      FROM all_orders o
+      LEFT JOIN customers c ON o.customer_id = c.id
       WHERE 1=1
     `;
     const params: any[] = [];

@@ -335,7 +335,7 @@ export default function Home() {
 
     try {
       setCustomerSearchLoading(true);
-      const response = await fetch(`/api/customers/lookup?email=${encodeURIComponent(query)}&phone=${encodeURIComponent(query)}&name=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/customers/consolidated?action=search&search=${encodeURIComponent(query)}&include=basic&limit=10`);
       if (response.ok) {
         const data = await response.json();
         setCustomerSearchResults(data.customers || []);
@@ -717,35 +717,42 @@ export default function Home() {
       
       if (cachedCustomers) {
         setCustomers(cachedCustomers.customers || []);
-        setCustomerTotalCustomers(cachedCustomers.total || 0);
+        setCustomerTotalCustomers(cachedCustomers.pagination?.total || 0);
         return;
       }
       
-      // Use enhanced customer API with better search functionality
+      // Use consolidated customer API
       const params = new URLSearchParams();
+      params.append('action', 'list');
+      params.append('include', 'basic');
       params.append('limit', customerLimit.toString());
       params.append('offset', (customerCurrentPage * customerLimit).toString());
+      
+      // Build filters object
+      const filters: any = {};
+      if (customerStatusFilter) {
+        filters.status = customerStatusFilter;
+      }
+      if (customerAssignedFilter) {
+        filters.assignedTo = customerAssignedFilter;
+      }
+      
+      if (Object.keys(filters).length > 0) {
+        params.append('filters', JSON.stringify(filters));
+      }
       
       if (customerSearch) {
         params.append('search', customerSearch);
       }
       
-      if (customerStatusFilter) {
-        params.append('status', customerStatusFilter);
-      }
-      
-      if (customerAssignedFilter) {
-        params.append('assignedTo', customerAssignedFilter);
-      }
-      
       // Add cache busting
       params.append('_t', Date.now().toString());
-      const response = await fetch(`/api/customers/enhanced?${params}`);
+      const response = await fetch(`/api/customers/consolidated?${params}`);
       const data = await response.json();
       
       if (response.ok && data.customers) {
         // Cache the customer data
-        setCachedData(cacheKey, { customers: data.customers, total: data.pagination?.total || 0 });
+        setCachedData(cacheKey, data);
         setCustomers(data.customers);
         setCustomerTotalCustomers(data.pagination?.total || 0);
       } else {
@@ -781,34 +788,20 @@ export default function Home() {
     try {
       setLoadingCustomer(true);
       
-      // Load customer data
-      const customerResponse = await fetch(`/api/customers/enhanced?search=${customerId}&limit=1&_t=${Date.now()}`);
-      if (!customerResponse.ok) {
-        throw new Error(`Failed to fetch customer: ${customerResponse.status}`);
+      // Load customer data with full details and timeline in one call
+      const response = await fetch(`/api/customers/consolidated?action=details&id=${customerId}&include=full,timeline&_t=${Date.now()}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch customer: ${response.status}`);
       }
-      const customerData = await customerResponse.json();
+      const data = await response.json();
       
-      if (customerData.customers && customerData.customers.length > 0) {
-        const customer = customerData.customers[0];
+      if (data.customer) {
+        const customer = data.customer;
         setSelectedCustomer(customer);
         
-        // Load notes
-        const notesResponse = await fetch(`/api/customers/notes?customerId=${customerId}`);
-        if (notesResponse.ok) {
-          const notesData = await notesResponse.json();
-          setCustomerNotes(notesData.notes || []);
-        } else {
-          setCustomerNotes([]);
-        }
-        
-        // Load timeline
-        const timelineResponse = await fetch(`/api/customers/${customerId}/timeline`);
-        if (timelineResponse.ok) {
-          const timelineData = await timelineResponse.json();
-          setCustomerTimeline(timelineData.interactions || []);
-        } else {
-          setCustomerTimeline([]);
-        }
+        // Set notes and timeline from the consolidated response
+        setCustomerNotes(customer.notes || []);
+        setCustomerTimeline(customer.timeline || []);
         
         setShowCustomerModal(true);
       }
@@ -1094,26 +1087,38 @@ export default function Home() {
     const cachedOrders = getCachedData('orders');
     
     if (cachedInquiries && cachedOrders) {
-      setInquiries(cachedInquiries);
-      setOrders(cachedOrders);
+      setInquiries(Array.isArray(cachedInquiries) ? cachedInquiries : []);
+      setOrders(Array.isArray(cachedOrders) ? cachedOrders : []);
       return;
     }
 
-    const [inquiriesRes, ordersRes] = await Promise.all([
+    // Only load orders if we're on the home tab (where orders are needed)
+    const promises = [
       fetch(`/api/inquiries${params}`, { 
         cache: "no-store"
-      }),
-      fetch("/api/orders", { cache: "no-store" })
-    ]);
-    const inquiriesData = await inquiriesRes.json();
-    const ordersData = await ordersRes.json();
+      })
+    ];
+    
+    if (activeTab === "home") {
+      promises.push(fetch("/api/orders", { cache: "no-store" }));
+    }
+    
+    const responses = await Promise.all(promises);
+    const inquiriesData = await responses[0].json();
+    
+    // Only process orders if we fetched them
+    if (activeTab === "home" && responses[1]) {
+      const ordersData = await responses[1].json();
+      const safeOrdersData = Array.isArray(ordersData) ? ordersData : [];
+      setCachedData('orders', safeOrdersData);
+      setOrders(safeOrdersData);
+    }
+    
+    const safeInquiriesData = Array.isArray(inquiriesData) ? inquiriesData : [];
     
     // Cache the results
-    setCachedData(cacheKey, inquiriesData);
-    setCachedData('orders', ordersData);
-    
-    setInquiries(inquiriesData);
-    setOrders(ordersData);
+    setCachedData(cacheKey, safeInquiriesData);
+    setInquiries(safeInquiriesData);
     
     // Load quotes for current user (only if user is loaded)
     if (user?.email) {
@@ -1480,7 +1485,7 @@ export default function Home() {
     Array.isArray(allInquiries) ? allInquiries.filter(q => q.status === "active" && q.assignedOwner === user?.email) : [], [allInquiries, user]);
 
   const currentOrders = useMemo(() => 
-    orders.filter(o => o.assignedOwner === user?.email && o.status !== "delivered" && o.status !== "cancelled"), [orders, user]);
+    Array.isArray(orders) ? orders.filter(o => o.assignedOwner === user?.email && o.status !== "delivered" && o.status !== "cancelled") : [], [orders, user]);
 
   const pendingOrders = useMemo(() => 
     currentOrders.filter(o => o.status === "pending"), [currentOrders]);
@@ -1489,6 +1494,8 @@ export default function Home() {
     currentOrders.filter(o => o.status === "processing"), [currentOrders]);
 
   const allCustomerOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    
     const customerMap = new Map();
     orders.forEach(order => {
       const key = order.customerEmail;
@@ -2305,15 +2312,15 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-2 ml-2">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      customer.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
-                      customer.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                      customer.customerType === 'Customer' ? 'bg-green-100 text-green-800' :
+                      customer.customerType === 'Contact' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {customer.customertype || 'Unknown'}
+                      {customer.customerType || 'Unknown'}
                     </span>
-                    {customer.customercategory && (
+                    {customer.customerCategory && (
                       <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        {customer.customercategory}
+                        {customer.customerCategory}
                       </span>
                     )}
                   </div>
@@ -2474,13 +2481,13 @@ export default function Home() {
                     </h2>
                     
                     {/* Customer Type Bubble */}
-                    {selectedCustomer.customertype && (
+                    {selectedCustomer.customerType && (
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedCustomer.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
-                        selectedCustomer.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                        selectedCustomer.customerType === 'Customer' ? 'bg-green-100 text-green-800' :
+                        selectedCustomer.customerType === 'Contact' ? 'bg-blue-100 text-blue-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {selectedCustomer.customertype}
+                        {selectedCustomer.customerType}
                       </span>
                     )}
                   </div>
@@ -2617,13 +2624,13 @@ export default function Home() {
                     </h2>
                     
                     {/* Customer Type Bubble */}
-                    {topCustomersModal.customertype && (
+                    {topCustomersModal.customerType && (
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        topCustomersModal.customertype === 'Customer' ? 'bg-green-100 text-green-800' :
-                        topCustomersModal.customertype === 'Contact' ? 'bg-blue-100 text-blue-800' :
+                        topCustomersModal.customerType === 'Customer' ? 'bg-green-100 text-green-800' :
+                        topCustomersModal.customerType === 'Contact' ? 'bg-blue-100 text-blue-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {topCustomersModal.customertype}
+                        {topCustomersModal.customerType}
                       </span>
                     )}
                   </div>
