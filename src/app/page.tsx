@@ -1077,40 +1077,30 @@ export default function Home() {
   };
 
   async function refresh() {
+    if (!user?.email) return;
+    
+    // For home tab, use the consolidated API
+    if (activeTab === "home") {
+      await loadHomeDashboard();
+      return;
+    }
+    
+    // For other tabs, use the existing logic
     const params = category === "all" ? `?_t=${Date.now()}` : `?category=${category}&_t=${Date.now()}`;
     const cacheKey = `inquiries-${category}`;
     
     // Check cache first
     const cachedInquiries = getCachedData(cacheKey);
-    const cachedOrders = getCachedData('orders');
     
-    if (cachedInquiries && cachedOrders) {
+    if (cachedInquiries) {
       setInquiries(Array.isArray(cachedInquiries) ? cachedInquiries : []);
-      setOrders(Array.isArray(cachedOrders) ? cachedOrders : []);
       return;
     }
 
-    // Only load orders if we're on the home tab (where orders are needed)
-    const promises = [
-      fetch(`/api/inquiries${params}`, { 
-        cache: "no-store"
-      })
-    ];
-    
-    if (activeTab === "home") {
-      promises.push(fetch("/api/orders", { cache: "no-store" }));
-    }
-    
-    const responses = await Promise.all(promises);
-    const inquiriesData = await responses[0].json();
-    
-    // Only process orders if we fetched them
-    if (activeTab === "home" && responses[1]) {
-      const ordersData = await responses[1].json();
-      const safeOrdersData = Array.isArray(ordersData) ? ordersData : [];
-      setCachedData('orders', safeOrdersData);
-      setOrders(safeOrdersData);
-    }
+    const response = await fetch(`/api/inquiries${params}`, { 
+      cache: "no-store"
+    });
+    const inquiriesData = await response.json();
     
     const safeInquiriesData = Array.isArray(inquiriesData) ? inquiriesData : [];
     
@@ -1118,17 +1108,106 @@ export default function Home() {
     setCachedData(cacheKey, safeInquiriesData);
     setInquiries(safeInquiriesData);
     
-    // Load quotes for current user (only if user is loaded)
-    if (user?.email) {
-      await loadQuotes();
-    }
-    
     // Only load all inquiries if we don't have them yet or if category is "all"
     if (category === "all" || allInquiries.length === 0) {
       const allInquiriesRes = await fetch(`/api/inquiries?_t=${Date.now()}`);
       const allInquiriesData = await allInquiriesRes.json();
       setAllInquiries(allInquiriesData);
     }
+  }
+
+  async function loadHomeDashboard() {
+    if (!user?.email) return;
+    
+    const cacheKey = `home-dashboard-${user.email}`;
+    const cachedData = getCachedData(cacheKey);
+    
+    if (cachedData) {
+      // Set all the data from cache
+      setInquiries(Array.isArray(cachedData.inquiries) ? cachedData.inquiries : []);
+      setOrders(Array.isArray(cachedData.orders) ? cachedData.orders : []);
+      setUsers(Array.isArray(cachedData.users) ? cachedData.users : []);
+      setQuotes(Array.isArray(cachedData.quotes) ? cachedData.quotes : []);
+      setAllInquiries(Array.isArray(cachedData.inquiries) ? cachedData.inquiries : []);
+      
+      // Set dashboard data
+      if (cachedData.salesData) {
+        setSalesData(cachedData.salesData.personal);
+        setMonthlyPalletsData(cachedData.salesData.monthlyPallets || []);
+      }
+      if (cachedData.topCustomers) {
+        setTopCustomers(cachedData.topCustomers);
+      }
+      if (cachedData.lineItems) {
+        setLineItems(cachedData.lineItems);
+      }
+      if (cachedData.customers) {
+        setCustomers(cachedData.customers);
+      }
+      
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/dashboard/home?userEmail=${encodeURIComponent(user.email)}&view=personal&_t=${Date.now()}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch home dashboard: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      const data = result.data;
+      
+      // Set all the data
+      setInquiries(Array.isArray(data.inquiries) ? data.inquiries : []);
+      setOrders(Array.isArray(data.orders) ? data.orders : []);
+      setUsers(Array.isArray(data.users) ? data.users : []);
+      setQuotes(Array.isArray(data.quotes) ? data.quotes : []);
+      setAllInquiries(Array.isArray(data.inquiries) ? data.inquiries : []);
+      
+      // Set dashboard data
+      if (data.salesData) {
+        setSalesData(data.salesData.personal);
+        setMonthlyPalletsData(data.salesData.monthlyPallets || []);
+      }
+      if (data.topCustomers) {
+        setTopCustomers(data.topCustomers);
+      }
+      if (data.lineItems) {
+        setLineItems(data.lineItems);
+      }
+      if (data.customers) {
+        setCustomers(data.customers);
+      }
+      
+      // Cache the entire response
+      setCachedData(cacheKey, data);
+      
+    } catch (error) {
+      console.error('Error loading home dashboard:', error);
+      // Fallback to individual API calls if consolidated API fails
+      await loadIndividualAPIs();
+    }
+  }
+
+  async function loadIndividualAPIs() {
+    // Fallback function that loads data using individual API calls
+    const promises = [
+      fetch(`/api/inquiries?_t=${Date.now()}`),
+      fetch("/api/orders", { cache: "no-store" }),
+      fetch("/api/users"),
+      fetch(`/api/quotes?assignedTo=${encodeURIComponent(user?.email || '')}`)
+    ];
+    
+    const responses = await Promise.all(promises);
+    const [inquiriesData, ordersData, usersData, quotesData] = await Promise.all(
+      responses.map(r => r.json())
+    );
+    
+    setInquiries(Array.isArray(inquiriesData) ? inquiriesData : []);
+    setOrders(Array.isArray(ordersData) ? ordersData : []);
+    setUsers(Array.isArray(usersData) ? usersData : []);
+    setQuotes(Array.isArray(quotesData) ? quotesData : []);
+    setAllInquiries(Array.isArray(inquiriesData) ? inquiriesData : []);
   }
 
   async function loadUsers() {
