@@ -221,6 +221,9 @@ async function searchCustomers(include: string[], search: string, limit: number)
 
 // Get detailed customer information with timeline
 async function getCustomerDetails(customerId: string, include: string[]) {
+  // Determine if customerId is an email or ID
+  const isEmail = customerId.includes('@');
+  
   // Get basic customer info
   const customerQuery = `
     SELECT 
@@ -257,7 +260,7 @@ async function getCustomerDetails(customerId: string, include: string[]) {
       WHERE customer_id = ? AND shippingaddress IS NOT NULL
       ORDER BY customer_id, createdat DESC
     ) latest_orders ON c.id = latest_orders.customer_id
-    WHERE c.id = ?
+    WHERE ${isEmail ? 'c.email = ?' : 'c.id = ?'}
   `;
 
   const customer = await db.prepare(customerQuery).get(customerId, customerId, customerId);
@@ -265,6 +268,9 @@ async function getCustomerDetails(customerId: string, include: string[]) {
   if (!customer) {
     return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
   }
+
+  // Use the actual customer ID from the database for subsequent queries
+  const actualCustomerId = customer.id;
 
   const processedCustomer = {
     id: customer.id,
@@ -296,31 +302,31 @@ async function getCustomerDetails(customerId: string, include: string[]) {
 
   // Get timeline if requested
   if (include.includes('timeline') || include.includes('full')) {
-    const timeline = await getCustomerTimelineData(customerId);
+    const timeline = await getCustomerTimelineData(actualCustomerId);
     processedCustomer.timeline = timeline;
   }
 
   // Get orders if requested
   if (include.includes('orders') || include.includes('full')) {
-    const orders = await getCustomerOrders(customerId);
+    const orders = await getCustomerOrders(actualCustomerId);
     processedCustomer.orders = orders;
   }
 
   // Get inquiries if requested
   if (include.includes('inquiries') || include.includes('full')) {
-    const inquiries = await getCustomerInquiries(customerId);
+    const inquiries = await getCustomerInquiries(actualCustomerId);
     processedCustomer.inquiries = inquiries;
   }
 
   // Get notes if requested
   if (include.includes('notes') || include.includes('full')) {
-    const notes = await getCustomerNotes(customerId);
+    const notes = await getCustomerNotes(actualCustomerId);
     processedCustomer.notes = notes;
   }
 
   // Get quotes if requested
   if (include.includes('quotes') || include.includes('full')) {
-    const quotes = await getCustomerQuotes(customerId);
+    const quotes = await getCustomerQuotes(actualCustomerId);
     processedCustomer.quotes = quotes;
   }
 

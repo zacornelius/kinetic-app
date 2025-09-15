@@ -447,6 +447,27 @@ export default function Home() {
       setLeaderboardData(cachedSalesData.leaderboard || []);
       setYearlyBreakdownData(cachedSalesData.yearlyBreakdown || []);
       
+      // Load fresh leaderboard data from API even with cache
+      const leaderboardResponse = await fetch(`/api/sales/consolidated?action=dashboard&userEmail=${user.email}&view=leaderboard&_t=${Date.now()}`);
+      if (leaderboardResponse.ok) {
+        const leaderboardResult = await leaderboardResponse.json();
+        const leaderboard = leaderboardResult.leaderboard || [];
+        
+        // Transform API data to match frontend format and sort by bags sold
+        const top3 = leaderboard
+          .map((member: any) => ({
+            owner: member.owner,
+            displayName: member.displayName,
+            bagsSold: parseInt(member.bagsSoldThisMonth || 0),
+            revenue: parseFloat(member.thisMonthSales || 0),
+            orders: parseInt(member.thisMonthOrders || 0)
+          }))
+          .sort((a, b) => b.bagsSold - a.bagsSold); // Sort by bags sold descending
+        
+        setLeaderboardData(top3);
+        setLeaderboardBagsData(top3);
+      }
+      
       // Still calculate monthly values even with cached data
       if (dashboardView === 'personal') {
         // Get Ian's customer emails
@@ -504,7 +525,7 @@ export default function Home() {
       let monthlyPalletsData = [];
       
       // Load sales data for personal view
-      const personalResponse = await fetch(`/api/sales/dashboard?userEmail=${user.email}&view=personal&_t=${Date.now()}`);
+      const personalResponse = await fetch(`/api/sales/consolidated?action=dashboard&userEmail=${user.email}&view=personal&_t=${Date.now()}`);
       if (personalResponse.ok) {
         const personalResult = await personalResponse.json();
         salesData = personalResult.personal;
@@ -602,74 +623,23 @@ export default function Home() {
         yearlyBreakdownData = yearlyBreakdown;
       }
       
-      // Calculate leaderboard from line items
-      const thisMonth = new Date();
-      const thisMonthStart = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
-      const thisMonthEnd = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 0);
-      
-      // Get all unique owners from customers
-      const owners = [...new Set(customers.map((c: any) => c.assignedto).filter(Boolean))];
-      
-      // Get user profiles to map emails to names
-      const userProfilesResponse = await fetch(`/api/users?_t=${Date.now()}`);
-      let userProfiles: any[] = [];
-      if (userProfilesResponse.ok) {
-        userProfiles = await userProfilesResponse.json();
+      // Load leaderboard data from sales consolidated API
+      const leaderboardResponse = await fetch(`/api/sales/consolidated?action=dashboard&userEmail=${user.email}&view=leaderboard&_t=${Date.now()}`);
+      if (leaderboardResponse.ok) {
+        const leaderboardResult = await leaderboardResponse.json();
+        const leaderboard = leaderboardResult.leaderboard || [];
+        
+        // Transform API data to match frontend format and sort by bags sold
+        top3 = leaderboard
+          .map((member: any) => ({
+            owner: member.owner,
+            displayName: member.displayName,
+            bagsSold: parseInt(member.bagsSoldThisMonth || 0),
+            revenue: parseFloat(member.thisMonthSales || 0),
+            orders: parseInt(member.thisMonthOrders || 0)
+          }))
+          .sort((a, b) => b.bagsSold - a.bagsSold); // Sort by bags sold descending
       }
-      
-      // Calculate stats for each owner
-      const ownerStats = owners.map(owner => {
-        // Get customers assigned to this owner
-        const ownerCustomers = customers.filter((c: any) => c.assignedto === owner);
-        const customerEmailSet = new Set(ownerCustomers.map((c: any) => c.email));
-        
-        // Filter line items for this owner's customers this month
-        const ownerLineItems = lineItems.filter((item: any) => {
-          const orderDate = new Date(item.createdAt);
-          return customerEmailSet.has(item.customerEmail) && 
-                 orderDate >= thisMonthStart && 
-                 orderDate <= thisMonthEnd;
-        });
-        
-        // Calculate bags, revenue, orders
-        let bagsSold = 0;
-        let revenue = 0;
-        const orderNumbers = new Set();
-        
-        ownerLineItems.forEach((item: any) => {
-          let effectiveQuantity = 0;
-          if (item.title === 'Build a Pallet') {
-            effectiveQuantity = item.quantity || 0;
-          } else if (item.title?.includes('Pallet')) {
-            effectiveQuantity = (item.quantity || 0) * 50;
-          } else {
-            effectiveQuantity = item.quantity || 0;
-          }
-          
-          bagsSold += effectiveQuantity;
-          revenue += item.totalPrice || 0;
-          orderNumbers.add(item.orderNumber);
-        });
-        
-        // Find user profile for this owner
-        const userProfile = userProfiles.find((u: any) => u.email.toLowerCase() === owner.toLowerCase());
-        const displayName = userProfile 
-          ? `${userProfile.firstname} ${userProfile.lastname}`.trim()
-          : owner.split('@')[0];
-        
-        return {
-          owner,
-          displayName,
-          bagsSold,
-          revenue,
-          orders: orderNumbers.size
-        };
-      });
-      
-      // Sort by bags sold and take top 3
-      top3 = ownerStats
-        .sort((a, b) => b.bagsSold - a.bagsSold)
-        .slice(0, 3);
       
       setLeaderboardData(top3);
       setLeaderboardBagsData(top3);
@@ -681,7 +651,7 @@ export default function Home() {
       if (cachedTopCustomers) {
         setTopCustomers(cachedTopCustomers);
       } else {
-        const topCustomersResponse = await fetch(`/api/sales/top-customers?userEmail=${user.email}&view=${dashboardView}&limit=50&_t=${Date.now()}`);
+        const topCustomersResponse = await fetch(`/api/sales/consolidated?action=top-customers&userEmail=${user.email}&view=${dashboardView}&limit=50&_t=${Date.now()}`);
         if (topCustomersResponse.ok) {
           const topCustomersResult = await topCustomersResponse.json();
           const topCustomers = topCustomersResult.topCustomers || [];
@@ -860,12 +830,12 @@ export default function Home() {
             id: customerData.id
           });
           
-          // Set timeline and notes
-          if (data.timeline) {
-            setCustomerTimeline(Array.isArray(data.timeline) ? data.timeline : []);
+          // Set timeline and notes from customer data
+          if (customerData.timeline) {
+            setCustomerTimeline(Array.isArray(customerData.timeline) ? customerData.timeline : []);
           }
-          if (data.notes) {
-            setCustomerNotes(Array.isArray(data.notes) ? data.notes : []);
+          if (customerData.notes) {
+            setCustomerNotes(Array.isArray(customerData.notes) ? customerData.notes : []);
           }
         }
       }
@@ -1170,44 +1140,19 @@ export default function Home() {
       return;
     }
 
+    // For home tab, just use the existing loadSalesData function
+    // which already calls our working consolidated APIs
+    await loadSalesData();
+    
+    // Load customers using the consolidated API (same as customers tab)
     try {
-      const response = await fetch(`/api/dashboard/home?userEmail=${encodeURIComponent(user.email)}&view=personal&_t=${Date.now()}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch home dashboard: ${response.status}`);
+      const customersRes = await fetch(`/api/customers/consolidated?action=list&include=basic&limit=1000&_t=${Date.now()}`);
+      if (customersRes.ok) {
+        const customersData = await customersRes.json();
+        setCustomers(customersData.customers || []);
       }
-      
-      const result = await response.json();
-      const data = result.data;
-      
-      // Set all the data
-      setInquiries(Array.isArray(data.inquiries) ? data.inquiries : []);
-      setOrders(Array.isArray(data.orders) ? data.orders : []);
-      setUsers(Array.isArray(data.users) ? data.users : []);
-      setQuotes(Array.isArray(data.quotes) ? data.quotes : []);
-      setAllInquiries(Array.isArray(data.inquiries) ? data.inquiries : []);
-      
-      // Set dashboard data
-      if (data.salesData) {
-        setSalesData(data.salesData.personal);
-        setMonthlyPalletsData(data.salesData.monthlyPallets || []);
-      }
-      if (data.topCustomers) {
-        setTopCustomers(data.topCustomers);
-      }
-      if (data.lineItems) {
-        setLineItems(data.lineItems);
-      }
-      if (data.customers) {
-        setCustomers(data.customers);
-      }
-      
-      // Cache the entire response
-      setCachedData(cacheKey, data);
-      
     } catch (error) {
-      console.error('Error loading home dashboard:', error);
-      // Fallback to individual API calls if consolidated API fails
-      await loadIndividualAPIs();
+      console.error('Error loading customers:', error);
     }
   }
 
